@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 13px;
+      color: #333;
+      padding: 16px;
+      background: #fff;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #e5e5e5;
+    }
+    .header h1 {
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .logo { font-size: 20px; }
+
+    .section { margin-bottom: 16px; }
+    .section label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 6px;
+      font-size: 12px;
+      color: #666;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+    }
+    input:focus, select:focus {
+      border-color: #0066ff;
+      box-shadow: 0 0 0 2px rgba(0,102,255,0.1);
+    }
+
+    .btn {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-primary {
+      background: #0066ff;
+      color: white;
+    }
+    .btn-primary:hover { background: #0052cc; }
+    .btn-primary:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .btn-secondary {
+      background: #f5f5f5;
+      color: #333;
+      margin-top: 8px;
+    }
+    .btn-secondary:hover { background: #eee; }
+
+    .job-list {
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #eee;
+      border-radius: 6px;
+    }
+    .job-item {
+      padding: 10px 12px;
+      border-bottom: 1px solid #f0f0f0;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .job-item:last-child { border-bottom: none; }
+    .job-item:hover { background: #f5f8ff; }
+    .job-item.selected { background: #e8f0fe; border-left: 3px solid #0066ff; }
+    .job-item .name { font-weight: 500; font-size: 13px; }
+    .job-item .meta { font-size: 11px; color: #888; margin-top: 2px; }
+
+    .diagrams-list { margin-top: 12px; }
+    .diagram-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: #f9f9f9;
+      border-radius: 6px;
+      margin-bottom: 6px;
+    }
+    .diagram-item .info { font-size: 12px; }
+    .diagram-item .badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: #e8f0fe;
+      color: #0066ff;
+    }
+
+    .message {
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 12px;
+      font-size: 12px;
+    }
+    .message.success { background: #d4edda; color: #155724; }
+    .message.error { background: #f8d7da; color: #721c24; }
+    .message.info { background: #e8f0fe; color: #004085; }
+
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #888;
+    }
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid #ddd;
+      border-top-color: #0066ff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <span class="logo">🔥</span>
+    <h1>FireQA 다이어그램</h1>
+  </div>
+
+  <!-- Step 1: Server URL -->
+  <div class="section">
+    <label>FireQA 서버 주소</label>
+    <input type="text" id="serverUrl" value="http://localhost:3000" placeholder="http://localhost:3000">
+  </div>
+
+  <!-- Step 2: Load Jobs -->
+  <div class="section">
+    <button class="btn btn-secondary" id="loadBtn" onclick="loadJobs()">
+      다이어그램 목록 불러오기
+    </button>
+  </div>
+
+  <!-- Step 3: Job List -->
+  <div id="jobListSection" style="display:none;">
+    <div class="section">
+      <label>생성된 다이어그램 선택</label>
+      <div class="job-list" id="jobList"></div>
+    </div>
+  </div>
+
+  <!-- Step 4: Diagram Selection -->
+  <div id="diagramSection" style="display:none;">
+    <div class="section">
+      <label>다이어그램 목록</label>
+      <div class="diagrams-list" id="diagramsList"></div>
+    </div>
+    <button class="btn btn-primary" id="createBtn" onclick="createAll()" disabled>
+      FigJam에 생성하기
+    </button>
+  </div>
+
+  <!-- Status Messages -->
+  <div id="statusArea"></div>
+
+  <script>
+    let currentJobs = [];
+    let selectedJob = null;
+    let selectedDiagrams = [];
+    let selectedWireframe = null;
+
+    async function loadJobs() {
+      const serverUrl = document.getElementById('serverUrl').value.replace(/\/$/, '');
+      const statusArea = document.getElementById('statusArea');
+
+      statusArea.innerHTML = '<div class="loading"><div class="spinner"></div><br>목록을 불러오는 중...</div>';
+
+      try {
+        // 다이어그램 + 와이어프레임 모두 가져오기
+        const [diagRes, wireRes] = await Promise.all([
+          fetch(`${serverUrl}/api/jobs?type=diagrams`),
+          fetch(`${serverUrl}/api/jobs?type=wireframes`),
+        ]);
+
+        const diagData = diagRes.ok ? await diagRes.json() : { jobs: [] };
+        const wireData = wireRes.ok ? await wireRes.json() : { jobs: [] };
+        currentJobs = [...(diagData.jobs || []), ...(wireData.jobs || [])];
+
+        if (currentJobs.length === 0) {
+          statusArea.innerHTML = '<div class="message info">완료된 항목이 없습니다. FireQA 웹에서 먼저 생성해주세요.</div>';
+          return;
+        }
+
+        statusArea.innerHTML = '';
+        renderJobList();
+      } catch (error) {
+        statusArea.innerHTML = `<div class="message error">연결 실패: ${error.message}<br>서버가 실행 중인지 확인해주세요.</div>`;
+      }
+    }
+
+    function renderJobList() {
+      const container = document.getElementById('jobList');
+      container.innerHTML = currentJobs.map((job, i) => `
+        <div class="job-item" data-index="${i}" onclick="selectJob(${i})">
+          <div class="name">${job.type === 'wireframes' ? '🖼 ' : '📊 '}${job.projectName}</div>
+          <div class="meta">${job.fileName} · ${new Date(job.createdAt).toLocaleDateString('ko-KR')}</div>
+        </div>
+      `).join('');
+
+      document.getElementById('jobListSection').style.display = 'block';
+    }
+
+    async function selectJob(index) {
+      const serverUrl = document.getElementById('serverUrl').value.replace(/\/$/, '');
+      const job = currentJobs[index];
+      selectedJob = job;
+
+      // Highlight selected
+      document.querySelectorAll('.job-item').forEach((el, i) => {
+        el.classList.toggle('selected', i === index);
+      });
+
+      const statusArea = document.getElementById('statusArea');
+      statusArea.innerHTML = '<div class="loading"><div class="spinner"></div><br>데이터를 불러오는 중...</div>';
+
+      try {
+        if (job.type === 'wireframes') {
+          const res = await fetch(`${serverUrl}/api/wireframes/${job.id}`);
+          if (!res.ok) throw new Error(`데이터 조회 실패: ${res.status}`);
+          const data = await res.json();
+          selectedWireframe = data;
+          selectedDiagrams = [];
+          statusArea.innerHTML = '';
+          renderWireframe();
+        } else {
+          const res = await fetch(`${serverUrl}/api/diagrams/${job.id}`);
+          if (!res.ok) throw new Error(`데이터 조회 실패: ${res.status}`);
+          const data = await res.json();
+          selectedDiagrams = data.diagrams || [];
+          selectedWireframe = null;
+          statusArea.innerHTML = '';
+          renderDiagrams();
+        }
+      } catch (error) {
+        statusArea.innerHTML = `<div class="message error">${error.message}</div>`;
+      }
+    }
+
+    function renderWireframe() {
+      const container = document.getElementById('diagramsList');
+      const screens = selectedWireframe?.screens || [];
+      const flows = selectedWireframe?.flows || [];
+      container.innerHTML = `
+        <div class="diagram-item">
+          <div class="info">📱 ${screens.length}개 화면</div>
+          <span class="badge">${flows.length}개 흐름</span>
+        </div>
+      `;
+      document.getElementById('diagramSection').style.display = 'block';
+      document.getElementById('createBtn').disabled = false;
+      document.getElementById('createBtn').textContent = 'Figma에 와이어프레임 생성하기';
+    }
+
+    function renderDiagrams() {
+      const container = document.getElementById('diagramsList');
+      container.innerHTML = selectedDiagrams.map((d, i) => `
+        <div class="diagram-item">
+          <div class="info">${d.title}</div>
+          <span class="badge">${d.nodes?.length || 0}개 노드</span>
+        </div>
+      `).join('');
+
+      document.getElementById('diagramSection').style.display = 'block';
+      document.getElementById('createBtn').disabled = false;
+      document.getElementById('createBtn').textContent = 'FigJam에 생성하기';
+    }
+
+    function createAll() {
+      // 와이어프레임 모드
+      if (selectedWireframe) {
+        const createBtn = document.getElementById('createBtn');
+        createBtn.disabled = true;
+        createBtn.textContent = '생성 중...';
+
+        parent.postMessage({
+          pluginMessage: {
+            type: 'create-wireframe',
+            wireframeData: selectedWireframe,
+          }
+        }, '*');
+
+        window.onmessage = (event) => {
+          const msg = event.data.pluginMessage;
+          if (!msg) return;
+          const statusArea = document.getElementById('statusArea');
+          if (msg.type === 'success') {
+            statusArea.innerHTML = '<div class="message success">' + msg.message + '</div>';
+          } else if (msg.type === 'error') {
+            statusArea.innerHTML = '<div class="message error">' + msg.message + '</div>';
+          }
+          createBtn.textContent = 'Figma에 와이어프레임 생성하기';
+          createBtn.disabled = false;
+        };
+        return;
+      }
+
+      if (selectedDiagrams.length === 0) return;
+
+      const createBtn = document.getElementById('createBtn');
+      createBtn.disabled = true;
+      createBtn.textContent = '생성 중...';
+
+      let created = 0;
+
+      function createNext() {
+        if (created >= selectedDiagrams.length) {
+          createBtn.textContent = 'FigJam에 생성하기';
+          createBtn.disabled = false;
+          return;
+        }
+
+        const diagram = selectedDiagrams[created];
+
+        parent.postMessage({
+          pluginMessage: {
+            type: 'create-diagram',
+            diagram: diagram,
+            diagramIndex: created,
+            totalDiagrams: selectedDiagrams.length,
+          }
+        }, '*');
+
+        created++;
+      }
+
+      // Listen for responses
+      window.onmessage = (event) => {
+        const msg = event.data.pluginMessage;
+        if (!msg) return;
+
+        const statusArea = document.getElementById('statusArea');
+
+        if (msg.type === 'success') {
+          statusArea.innerHTML = `<div class="message success">${msg.message}</div>`;
+          // Create next diagram after a short delay
+          setTimeout(createNext, 500);
+        } else if (msg.type === 'error') {
+          statusArea.innerHTML = `<div class="message error">${msg.message}</div>`;
+          createBtn.textContent = 'FigJam에 생성하기';
+          createBtn.disabled = false;
+        }
+      };
+
+      createNext();
+    }
+  </script>
+</body>
+</html>
