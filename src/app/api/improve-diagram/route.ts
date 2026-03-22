@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
+import { openai, MODEL } from "@/lib/openai/client";
 import {
   diagramWithNodesSchema,
   MERMAID_RULES,
 } from "@/lib/openai/schemas/diagram-with-nodes";
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const MODEL = process.env.OPENAI_MODEL || "gpt-4o";
 
 export async function POST(request: NextRequest) {
   try {

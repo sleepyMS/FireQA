@@ -3,15 +3,12 @@ import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { prisma } from "@/lib/db";
 import { parseDocument } from "@/lib/parsers";
-import OpenAI from "openai";
+import { openai, MODEL } from "@/lib/openai/client";
 import { wireframeJsonSchema } from "@/lib/openai/schemas/wireframe";
 import {
   WIREFRAME_SYSTEM_PROMPT,
   buildWireframeUserPrompt,
 } from "@/lib/openai/prompts/wireframe-system";
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const MODEL = process.env.OPENAI_MODEL || "gpt-4o";
 
 export async function POST(request: NextRequest) {
   try {
