@@ -283,6 +283,8 @@ interface WireframeScreen {
   id: string;
   title: string;
   description: string;
+  screenType?: string;
+  step?: number;
   elements: { type: string; label: string; variant: string }[];
 }
 
@@ -298,11 +300,16 @@ interface WireframeData {
   flows: WireframeFlow[];
 }
 
-var SCREEN_W = 360;
+var SCREEN_WIDTHS: Record<string, number> = {
+  mobile: 360,
+  desktop: 800,
+  modal: 480,
+  toast: 320,
+};
 var SCREEN_PADDING = 24;
 var ELEMENT_GAP = 12;
-var SCREEN_H_GAP = 300;
-var SCREEN_V_GAP = 400;
+var STEP_X_GAP = 200;
+var SAME_STEP_Y_GAP = 80;
 
 var ELEMENT_STYLES: Record<string, { h: number; fill: { r: number; g: number; b: number }; radius: number }> = {
   header: { h: 48, fill: { r: 0.15, g: 0.15, b: 0.15 }, radius: 0 },
@@ -332,25 +339,17 @@ async function createWireframe(data: WireframeData) {
     figma.loadFontAsync({ family: "Inter", style: "Regular" }),
   ]);
 
-  // FigJam인지 Figma인지 감지
   var isFigJam = figma.editorType === "figjam";
 
-  // dagre로 화면 배치 계산
-  var g = new dagre.graphlib.Graph();
-  g.setGraph({
-    rankdir: "LR",
-    nodesep: SCREEN_V_GAP,
-    ranksep: SCREEN_H_GAP,
-    edgesep: 100,
-    marginx: 60,
-    marginy: 60,
-    ranker: "network-simplex",
-  });
-  g.setDefaultEdgeLabel(function () { return {}; });
-
+  // 화면별 너비/높이 계산
+  var screenWidths: Record<string, number> = {};
   var screenHeights: Record<string, number> = {};
+
   for (var i = 0; i < screens.length; i++) {
     var s = screens[i];
+    var sw = SCREEN_WIDTHS[s.screenType || "desktop"] || SCREEN_WIDTHS.desktop;
+    screenWidths[s.id] = sw;
+
     var h = 72;
     for (var j = 0; j < s.elements.length; j++) {
       var style = ELEMENT_STYLES[s.elements[j].type] || ELEMENT_STYLES.text;
@@ -358,29 +357,42 @@ async function createWireframe(data: WireframeData) {
     }
     h += SCREEN_PADDING * 2;
     screenHeights[s.id] = Math.max(h, 300);
-    g.setNode(s.id, { width: SCREEN_W + 120, height: screenHeights[s.id] + 100 });
   }
 
-  var edgeSet: Record<string, boolean> = {};
-  for (var fi = 0; fi < flows.length; fi++) {
-    var key = flows[fi].from + "->" + flows[fi].to;
-    if (!edgeSet[key]) {
-      edgeSet[key] = true;
-      g.setEdge(flows[fi].from, flows[fi].to);
-    }
+  // step 기반 좌→우 배치 (같은 step은 세로로 나열)
+  var stepGroups: Record<number, WireframeScreen[]> = {};
+  for (var si2 = 0; si2 < screens.length; si2++) {
+    var step = screens[si2].step || 1;
+    if (!stepGroups[step]) stepGroups[step] = [];
+    stepGroups[step].push(screens[si2]);
   }
 
-  dagre.layout(g);
+  var sortedSteps = Object.keys(stepGroups).map(Number).sort(function (a, b) { return a - b; });
 
   var screenPositions = new Map<string, { x: number; y: number }>();
   var createdFrames = new Map<string, SceneNode>();
+  var curX = 0;
 
-  g.nodes().forEach(function (nodeId: string) {
-    var n = g.node(nodeId);
-    if (n) {
-      screenPositions.set(nodeId, { x: n.x - n.width / 2, y: n.y - n.height / 2 });
+  for (var stepIdx = 0; stepIdx < sortedSteps.length; stepIdx++) {
+    var stepNum = sortedSteps[stepIdx];
+    var group = stepGroups[stepNum];
+
+    // 이 step에서 가장 넓은 화면의 너비
+    var maxW = 0;
+    for (var gi = 0; gi < group.length; gi++) {
+      var w = screenWidths[group[gi].id] || 360;
+      if (w > maxW) maxW = w;
     }
-  });
+
+    // 같은 step 내 화면들을 세로로 배치
+    var curY = 0;
+    for (var gj = 0; gj < group.length; gj++) {
+      screenPositions.set(group[gj].id, { x: curX, y: curY });
+      curY += screenHeights[group[gj].id] + SAME_STEP_Y_GAP;
+    }
+
+    curX += maxW + STEP_X_GAP;
+  }
 
   // 각 화면 생성
   for (var si = 0; si < screens.length; si++) {
@@ -393,7 +405,8 @@ async function createWireframe(data: WireframeData) {
       // Figma Frame으로 화면 생성
       var frame = figma.createFrame();
       frame.name = screen.title;
-      frame.resize(SCREEN_W, screenH);
+      var screenW = screenWidths[screen.id] || 360;
+      frame.resize(screenW, screenH);
       frame.x = pos.x;
       frame.y = pos.y;
       frame.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
@@ -402,18 +415,20 @@ async function createWireframe(data: WireframeData) {
       frame.strokes = [{ type: "SOLID", color: { r: 0.85, g: 0.85, b: 0.85 } }];
       frame.clipsContent = true;
 
-      // 화면 이름 라벨 (프레임 위에)
+      // step 번호 + 화면 이름 라벨 (프레임 위에)
+      var stepLabel = screen.step ? "Step " + screen.step + " · " : "";
+      var typeLabel = screen.screenType ? " [" + screen.screenType + "]" : "";
       var titleLabel = figma.createText();
-      titleLabel.characters = screen.title;
-      titleLabel.fontSize = 14;
+      titleLabel.characters = stepLabel + screen.title + typeLabel;
+      titleLabel.fontSize = 13;
       titleLabel.fontName = { family: "Inter", style: "Bold" };
-      titleLabel.fills = [{ type: "SOLID", color: { r: 0.2, g: 0.2, b: 0.2 } }];
+      titleLabel.fills = [{ type: "SOLID", color: { r: 0.35, g: 0.35, b: 0.45 } }];
       titleLabel.x = pos.x;
       titleLabel.y = pos.y - 24;
 
       // 상태바 영역
       var statusBar = figma.createRectangle();
-      statusBar.resize(SCREEN_W, 44);
+      statusBar.resize(screenW, 44);
       statusBar.fills = [{ type: "SOLID", color: { r: 0.97, g: 0.97, b: 0.97 } }];
       frame.appendChild(statusBar);
       statusBar.x = 0;
@@ -435,7 +450,7 @@ async function createWireframe(data: WireframeData) {
       for (var ei = 0; ei < screen.elements.length; ei++) {
         var elem = screen.elements[ei];
         var elemStyle = ELEMENT_STYLES[elem.type] || ELEMENT_STYLES.text;
-        var elemW = SCREEN_W - SCREEN_PADDING * 2;
+        var elemW = screenW - SCREEN_PADDING * 2;
 
         if (elem.type === "divider") {
           var divLine = figma.createRectangle();
@@ -450,7 +465,7 @@ async function createWireframe(data: WireframeData) {
 
         if (elem.type === "header") {
           var headerBg = figma.createRectangle();
-          headerBg.resize(SCREEN_W, elemStyle.h);
+          headerBg.resize(screenW, elemStyle.h);
           headerBg.fills = [{ type: "SOLID", color: elemStyle.fill }];
           frame.appendChild(headerBg);
           headerBg.x = 0;
@@ -604,7 +619,8 @@ async function createWireframe(data: WireframeData) {
         var toPos2 = screenPositions.get(flow.to);
         if (!fromPos2 || !toPos2) continue;
 
-        var fromX = fromPos2.x + SCREEN_W;
+        var fromScreenW = screenWidths[flow.from] || 360;
+        var fromX = fromPos2.x + fromScreenW;
         var fromY = fromPos2.y + (screenHeights[flow.from] || 300) / 2;
         var toX = toPos2.x;
         var toY = toPos2.y + (screenHeights[flow.to] || 300) / 2;

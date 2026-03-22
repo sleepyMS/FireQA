@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   FileText,
   GitBranch,
+  Smartphone,
   Search,
   MoreHorizontal,
   Pencil,
@@ -138,7 +139,7 @@ export default function HistoryPage() {
     {
       label: "와이어프레임",
       value: "wireframes",
-      icon: <FileText className="mr-1 h-3 w-3" />,
+      icon: <Smartphone className="mr-1 h-3 w-3" />,
     },
   ];
 
@@ -202,6 +203,8 @@ export default function HistoryPage() {
                 >
                   {job.type === "test-cases" ? (
                     <FileText className="h-5 w-5 text-blue-600" />
+                  ) : job.type === "wireframes" ? (
+                    <Smartphone className="h-5 w-5 text-pink-600" />
                   ) : (
                     <GitBranch className="h-5 w-5 text-purple-600" />
                   )}

@@ -14,6 +14,7 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get("file") as File;
     const projectName = formData.get("projectName") as string;
+    const screenTypeMode = (formData.get("screenTypeMode") as string) || "auto";
 
     if (!file || !projectName) {
       return NextResponse.json(
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
 
       const { result, tokenUsage } = await callOpenAIWithSchema(
         WIREFRAME_SYSTEM_PROMPT,
-        buildWireframeUserPrompt(input),
+        buildWireframeUserPrompt(input, screenTypeMode),
         wireframeJsonSchema
       );
       await completeJob(jobId, result, tokenUsage);

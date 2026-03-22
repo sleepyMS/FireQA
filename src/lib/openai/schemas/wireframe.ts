@@ -12,6 +12,11 @@ export const wireframeJsonSchema = {
             id: { type: "string" as const },
             title: { type: "string" as const },
             description: { type: "string" as const },
+            screenType: {
+              type: "string" as const,
+              enum: ["mobile", "desktop", "modal", "toast"],
+            },
+            step: { type: "integer" as const },
             elements: {
               type: "array" as const,
               items: {
@@ -43,7 +48,7 @@ export const wireframeJsonSchema = {
               },
             },
           },
-          required: ["id", "title", "description", "elements"],
+          required: ["id", "title", "description", "screenType", "step", "elements"],
           additionalProperties: false,
         },
       },
