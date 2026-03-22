@@ -17,6 +17,8 @@ export async function createGenerationJob(
 ): Promise<CreateJobResult> {
   const buffer = Buffer.from(await file.arrayBuffer());
   const parsed = await parseDocument(buffer, file.name, file.type);
+  // PostgreSQL은 text 필드에 null 바이트(\0)를 허용하지 않음
+  parsed.text = parsed.text.replace(/\0/g, "");
 
   const project = await prisma.project.create({
     data: { name: projectName },
