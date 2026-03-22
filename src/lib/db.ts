@@ -1,4 +1,3 @@
-import { join } from "path";
 import { PrismaClient } from "@/generated/prisma/client";
 
 const globalForPrisma = globalThis as unknown as {
@@ -7,8 +6,6 @@ const globalForPrisma = globalThis as unknown as {
 
 export const prisma =
   globalForPrisma.prisma ??
-  new PrismaClient({
-    datasourceUrl: `file:${join(process.cwd(), "prisma", "dev.db")}`,
-  });
+  new PrismaClient();
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;

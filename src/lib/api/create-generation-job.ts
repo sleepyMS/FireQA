@@ -1,5 +1,3 @@
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
 import { prisma } from "@/lib/db";
 import { parseDocument } from "@/lib/parsers";
 import type { JobType } from "@/types/enums";
@@ -20,11 +18,6 @@ export async function createGenerationJob(
   const buffer = Buffer.from(await file.arrayBuffer());
   const parsed = await parseDocument(buffer, file.name, file.type);
 
-  const uploadDir = join(process.cwd(), "uploads");
-  await mkdir(uploadDir, { recursive: true });
-  const filePath = join(uploadDir, `${Date.now()}_${file.name}`);
-  await writeFile(filePath, buffer);
-
   const project = await prisma.project.create({
     data: { name: projectName },
   });
@@ -35,7 +28,7 @@ export async function createGenerationJob(
       fileName: file.name,
       fileType: file.type,
       fileSize: file.size,
-      storagePath: filePath,
+      storagePath: "",
       parsedText: parsed.text,
     },
   });
