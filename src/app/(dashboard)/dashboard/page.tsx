@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { FileText, GitBranch, Smartphone, Clock, Plus } from "lucide-react";
+import { STATUS_CONFIG, JOB_TYPE_LABEL, JobType, JobStatus } from "@/types/enums";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/db";
@@ -9,7 +10,7 @@ import { prisma } from "@/lib/db";
 export default async function DashboardPage() {
   const [projectCount, jobCount, recentJobs] = await Promise.all([
     prisma.project.count(),
-    prisma.generationJob.count({ where: { status: "completed" } }),
+    prisma.generationJob.count({ where: { status: JobStatus.COMPLETED } }),
     prisma.generationJob.findMany({
       take: 5,
       orderBy: { createdAt: "desc" },
@@ -141,8 +142,10 @@ export default async function DashboardPage() {
                   className="flex items-center justify-between rounded-lg border p-3"
                 >
                   <div className="flex items-center gap-3">
-                    {job.type === "test-cases" ? (
+                    {job.type === JobType.TEST_CASES ? (
                       <FileText className="h-4 w-4 text-blue-600" />
+                    ) : job.type === JobType.WIREFRAMES ? (
+                      <Smartphone className="h-4 w-4 text-pink-600" />
                     ) : (
                       <GitBranch className="h-4 w-4 text-purple-600" />
                     )}
@@ -152,28 +155,20 @@ export default async function DashboardPage() {
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {job.upload.fileName} &middot;{" "}
-                        {job.type === "test-cases"
-                          ? "TC 생성"
-                          : "다이어그램"}
+                        {JOB_TYPE_LABEL[job.type] || job.type}
                       </p>
                     </div>
                   </div>
                   <span
                     className={`text-xs font-medium ${
-                      job.status === "completed"
+                      job.status === JobStatus.COMPLETED
                         ? "text-green-600"
-                        : job.status === "failed"
+                        : job.status === JobStatus.FAILED
                           ? "text-red-600"
                           : "text-yellow-600"
                     }`}
                   >
-                    {job.status === "completed"
-                      ? "완료"
-                      : job.status === "failed"
-                        ? "실패"
-                        : job.status === "processing"
-                          ? "처리중"
-                          : "대기"}
+                    {STATUS_CONFIG[job.status]?.label || job.status}
                   </span>
                 </div>
               ))}

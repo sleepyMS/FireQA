@@ -10,6 +10,8 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Smartphone, ArrowRight } from "lucide-react";
+import { JobStatusDisplay } from "@/components/job-status-display";
+import { JobStatus } from "@/types/enums";
 
 export default async function WireframeResultPage({
   params,
@@ -37,23 +39,13 @@ export default async function WireframeResultPage({
         </p>
       </div>
 
-      {job.status === "processing" && (
-        <div className="flex items-center justify-center py-20 text-muted-foreground">
-          <div className="text-center">
-            <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-            <p>와이어프레임을 생성하고 있습니다...</p>
-          </div>
-        </div>
-      )}
+      <JobStatusDisplay
+        status={job.status}
+        error={job.error}
+        loadingMessage="와이어프레임을 생성하고 있습니다..."
+      />
 
-      {job.status === "failed" && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center text-red-700">
-          <p className="font-medium">생성에 실패했습니다.</p>
-          {job.error && <p className="mt-2 text-sm">{job.error}</p>}
-        </div>
-      )}
-
-      {job.status === "completed" && result && (
+      {job.status === JobStatus.COMPLETED && result && (
         <div className="space-y-6">
           {/* 요약 */}
           <div className="flex items-center gap-4">

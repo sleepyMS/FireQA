@@ -1,24 +1,12 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { sanitizeMermaid } from "@/lib/mermaid/sanitize";
 
 interface MermaidPreviewProps {
   code: string;
   onRenderError?: (error: string) => void;
   onRenderSuccess?: () => void;
-}
-
-function sanitizeMermaidCode(code: string): string {
-  let s = code.trim();
-  s = s.replace(
-    /\(\(([^)]*)\)\)/g,
-    (_, c) => `(("${c.replace(/"/g, "'")}"))`
-  );
-  s = s.replace(
-    /\[([^\]"]*[가-힣/()][^\]"]*)\]/g,
-    (_, c) => `["${c.replace(/"/g, "'")}"]`
-  );
-  return s;
 }
 
 function renderInIframe(code: string): Promise<{ svg: string } | { error: string }> {
@@ -111,7 +99,7 @@ export function MermaidPreview({
       }
 
       // 2차: 정제 코드
-      const sanitized = sanitizeMermaidCode(code);
+      const sanitized = sanitizeMermaid(code);
       if (sanitized !== code) {
         const result2 = await renderInIframe(sanitized);
         if (cancelled) return;

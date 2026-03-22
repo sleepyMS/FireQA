@@ -83,8 +83,10 @@ async function createDiagram(diagram: Diagram, diagramIndex: number) {
   }
 
   // 폰트 로드
-  await figma.loadFontAsync({ family: "Inter", style: "Medium" });
-  await figma.loadFontAsync({ family: "Inter", style: "Regular" });
+  await Promise.all([
+    figma.loadFontAsync({ family: "Inter", style: "Medium" }),
+    figma.loadFontAsync({ family: "Inter", style: "Regular" }),
+  ]);
 
   // dagre 레이아웃 계산
   var positions = calculateLayout(nodes, edges);
@@ -324,9 +326,11 @@ async function createWireframe(data: WireframeData) {
     return;
   }
 
-  await figma.loadFontAsync({ family: "Inter", style: "Bold" });
-  await figma.loadFontAsync({ family: "Inter", style: "Medium" });
-  await figma.loadFontAsync({ family: "Inter", style: "Regular" });
+  await Promise.all([
+    figma.loadFontAsync({ family: "Inter", style: "Bold" }),
+    figma.loadFontAsync({ family: "Inter", style: "Medium" }),
+    figma.loadFontAsync({ family: "Inter", style: "Regular" }),
+  ]);
 
   // FigJam인지 Figma인지 감지
   var isFigJam = figma.editorType === "figjam";

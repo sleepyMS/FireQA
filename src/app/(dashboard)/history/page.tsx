@@ -34,6 +34,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+import { STATUS_CONFIG, JOB_TYPE_LABEL, JOB_TYPE_PATH } from "@/types/enums";
+
 interface Job {
   id: string;
   type: string;
@@ -43,23 +45,6 @@ interface Job {
   project: { id: string; name: string };
   upload: { fileName: string };
 }
-
-const statusLabel: Record<string, string> = {
-  completed: "완료",
-  failed: "실패",
-  processing: "처리중",
-  pending: "대기",
-};
-
-const statusVariant: Record<
-  string,
-  "default" | "destructive" | "secondary" | "outline"
-> = {
-  completed: "default",
-  failed: "destructive",
-  processing: "secondary",
-  pending: "outline",
-};
 
 export default function HistoryPage() {
   const router = useRouter();
@@ -95,12 +80,8 @@ export default function HistoryPage() {
   }, [type]);
 
   const handleNavigate = (job: Job) => {
-    const pathMap: Record<string, string> = {
-      "test-cases": `/generate/${job.id}`,
-      "diagrams": `/diagrams/${job.id}`,
-      "wireframes": `/wireframes/${job.id}`,
-    };
-    router.push(pathMap[job.type] || `/generate/${job.id}`);
+    const basePath = JOB_TYPE_PATH[job.type] || "/generate";
+    router.push(`${basePath}/${job.id}`);
   };
 
   const openEdit = (job: Job) => {
@@ -202,7 +183,7 @@ export default function HistoryPage() {
             <Search className="mb-4 h-12 w-12 opacity-50" />
             <p>
               {type
-                ? `${type === "test-cases" ? "TC 생성" : type === "wireframes" ? "와이어프레임" : "다이어그램"} 이력이 없습니다.`
+                ? `${JOB_TYPE_LABEL[type] || type} 이력이 없습니다.`
                 : "아직 생성 이력이 없습니다."}
             </p>
           </CardContent>
@@ -230,9 +211,7 @@ export default function HistoryPage() {
                     </CardTitle>
                     <p className="text-xs text-muted-foreground">
                       {job.upload.fileName} &middot;{" "}
-                      {job.type === "test-cases"
-                        ? "TC 생성"
-                        : "다이어그램"}{" "}
+                      {JOB_TYPE_LABEL[job.type] || job.type}{" "}
                       &middot;{" "}
                       {new Date(job.createdAt).toLocaleDateString("ko-KR")}
                       {job.tokenUsage
@@ -243,8 +222,8 @@ export default function HistoryPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <Badge variant={statusVariant[job.status] ?? "outline"}>
-                    {statusLabel[job.status] ?? job.status}
+                  <Badge variant={STATUS_CONFIG[job.status]?.variant ?? "outline"}>
+                    {STATUS_CONFIG[job.status]?.label ?? job.status}
                   </Badge>
 
                   <DropdownMenu>

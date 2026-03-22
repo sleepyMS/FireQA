@@ -3,6 +3,8 @@ export const dynamic = "force-dynamic";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { TestCaseResults } from "@/components/test-cases/test-case-results";
+import { JobStatusDisplay } from "@/components/job-status-display";
+import { JobStatus } from "@/types/enums";
 
 export default async function GenerateResultPage({
   params,
@@ -30,23 +32,13 @@ export default async function GenerateResultPage({
         </p>
       </div>
 
-      {job.status === "processing" && (
-        <div className="flex items-center justify-center py-20 text-muted-foreground">
-          <div className="text-center">
-            <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-            <p>테스트케이스를 생성하고 있습니다...</p>
-          </div>
-        </div>
-      )}
+      <JobStatusDisplay
+        status={job.status}
+        error={job.error}
+        loadingMessage="테스트케이스를 생성하고 있습니다..."
+      />
 
-      {job.status === "failed" && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center text-red-700">
-          <p className="font-medium">생성에 실패했습니다.</p>
-          {job.error && <p className="mt-2 text-sm">{job.error}</p>}
-        </div>
-      )}
-
-      {job.status === "completed" && result && (
+      {job.status === JobStatus.COMPLETED && result && (
         <TestCaseResults
           jobId={job.id}
           projectName={job.project.name}

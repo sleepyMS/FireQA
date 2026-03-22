@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
-import { prisma } from "@/lib/db";
-import { parseDocument } from "@/lib/parsers";
+import { createGenerationJob, completeJob, failJob } from "@/lib/api/create-generation-job";
+import { errorResponse } from "@/lib/api/error-response";
 import { generateDiagrams } from "@/lib/openai/generate";
+import { JobType } from "@/types/enums";
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,73 +17,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 1. Parse document
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const parsed = await parseDocument(buffer, file.name, file.type);
+    const { jobId, parsedText } = await createGenerationJob(
+      file,
+      projectName,
+      JobType.DIAGRAMS
+    );
 
-    // 2. Save file to disk
-    const uploadDir = join(process.cwd(), "uploads");
-    await mkdir(uploadDir, { recursive: true });
-    const filePath = join(uploadDir, `${Date.now()}_${file.name}`);
-    await writeFile(filePath, buffer);
-
-    // 3. Create project & upload in DB
-    const project = await prisma.project.create({
-      data: { name: projectName },
-    });
-
-    const upload = await prisma.upload.create({
-      data: {
-        projectId: project.id,
-        fileName: file.name,
-        fileType: file.type,
-        fileSize: file.size,
-        storagePath: filePath,
-        parsedText: parsed.text,
-      },
-    });
-
-    // 4. Create job
-    const job = await prisma.generationJob.create({
-      data: {
-        projectId: project.id,
-        uploadId: upload.id,
-        type: "diagrams",
-        status: "processing",
-      },
-    });
-
-    // 5. Generate diagrams
     try {
-      const { result, tokenUsage } = await generateDiagrams(parsed.text);
-
-      await prisma.generationJob.update({
-        where: { id: job.id },
-        data: {
-          status: "completed",
-          result: JSON.stringify(result),
-          tokenUsage,
-        },
-      });
+      const { result, tokenUsage } = await generateDiagrams(parsedText);
+      await completeJob(jobId, result, tokenUsage);
     } catch (genError) {
-      await prisma.generationJob.update({
-        where: { id: job.id },
-        data: {
-          status: "failed",
-          error:
-            genError instanceof Error
-              ? genError.message
-              : "알 수 없는 오류",
-        },
-      });
+      await failJob(jobId, genError);
     }
 
-    return NextResponse.json({ jobId: job.id });
+    return NextResponse.json({ jobId });
   } catch (error) {
-    console.error("다이어그램 생성 오류:", error);
-    return NextResponse.json(
-      { error: "다이어그램 생성에 실패했습니다." },
-      { status: 500 }
-    );
+    return errorResponse(error, "다이어그램 생성에 실패했습니다.");
   }
 }
