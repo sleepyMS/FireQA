@@ -3,8 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "dev": "FIREQA_SERVER_URL=http://localhost:3000 node build.mjs --watch",
     "build": "node build.mjs",
-    "watch": "node build.mjs --watch"
+    "build:dev": "FIREQA_SERVER_URL=http://localhost:3000 node build.mjs",
+    "watch": "FIREQA_SERVER_URL=http://localhost:3000 node build.mjs --watch"
   },
   "devDependencies": {
     "@figma/plugin-typings": "^1.104.0",

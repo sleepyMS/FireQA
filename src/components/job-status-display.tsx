@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { JobStatus } from "@/types/enums";
 
 interface JobStatusDisplayProps {
@@ -11,12 +15,29 @@ export function JobStatusDisplay({
   error,
   loadingMessage = "생성하고 있습니다...",
 }: JobStatusDisplayProps) {
+  const router = useRouter();
+
+  // PROCESSING 상태일 때 5초마다 자동 새로고침
+  // (사용자가 직접 URL로 접근했을 때를 위한 폴백)
+  useEffect(() => {
+    if (status !== JobStatus.PROCESSING) return;
+
+    const interval = setInterval(() => {
+      router.refresh();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [status, router]);
+
   if (status === JobStatus.PROCESSING) {
     return (
       <div className="flex items-center justify-center py-20 text-muted-foreground">
         <div className="text-center">
           <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
           <p>{loadingMessage}</p>
+          <p className="mt-2 text-xs text-muted-foreground/60">
+            완료되면 자동으로 결과가 표시됩니다
+          </p>
         </div>
       </div>
     );

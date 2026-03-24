@@ -1,50 +1,70 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createGenerationJob, completeJob, failJob } from "@/lib/api/create-generation-job";
-import { errorResponse } from "@/lib/api/error-response";
-import { callOpenAIWithSchema } from "@/lib/openai/call-with-schema";
+import { JobType } from "@/types/enums";
+import { Stage } from "@/types/sse";
+import { createSSEStream } from "@/lib/sse/create-sse-stream";
+import { streamOpenAIWithSchema } from "@/lib/sse/stream-openai";
 import { wireframeJsonSchema } from "@/lib/openai/schemas/wireframe";
 import {
   WIREFRAME_SYSTEM_PROMPT,
   buildWireframeUserPrompt,
 } from "@/lib/openai/prompts/wireframe-system";
-import { JobType } from "@/types/enums";
+
+// Vercel 서버리스 타임아웃 확장 (5분)
+export const maxDuration = 300;
 
 export async function POST(request: NextRequest) {
-  try {
-    const formData = await request.formData();
-    const file = formData.get("file") as File;
-    const projectName = formData.get("projectName") as string;
-    const screenTypeMode = (formData.get("screenTypeMode") as string) || "auto";
+  const formData = await request.formData();
+  const file = formData.get("file") as File;
+  const projectName = formData.get("projectName") as string;
+  const screenTypeMode = (formData.get("screenTypeMode") as string) || "auto";
 
-    if (!file || !projectName) {
-      return NextResponse.json(
-        { error: "파일과 프로젝트 이름이 필요합니다." },
-        { status: 400 }
-      );
-    }
-
-    const { jobId, parsedText } = await createGenerationJob(
-      file,
-      projectName,
-      JobType.WIREFRAMES
+  if (!file || !projectName) {
+    return NextResponse.json(
+      { error: "파일과 프로젝트 이름이 필요합니다." },
+      { status: 400 }
     );
+  }
+
+  const user = await getCurrentUser(request);
+  if (!user) {
+    return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
+  }
+
+  return createSSEStream(async (writer) => {
+    writer.send({ type: "stage", stage: Stage.PARSING, message: "문서를 파싱하고 있습니다...", progress: 10 });
+
+    const { jobId, parsedText } = await createGenerationJob(file, projectName, JobType.WIREFRAMES, {
+      userId: user.userId,
+      organizationId: user.organizationId,
+    });
+    writer.send({ type: "job_created", jobId });
 
     try {
       let input = parsedText;
       if (input.length > 60000) input = input.slice(0, 60000);
 
-      const { result, tokenUsage } = await callOpenAIWithSchema(
-        WIREFRAME_SYSTEM_PROMPT,
-        buildWireframeUserPrompt(input, screenTypeMode),
-        wireframeJsonSchema
-      );
+      writer.send({ type: "stage", stage: Stage.GENERATING, message: "AI가 와이어프레임을 생성하고 있습니다...", progress: 30 });
+
+      const { result, tokenUsage } = await streamOpenAIWithSchema({
+        systemPrompt: WIREFRAME_SYSTEM_PROMPT,
+        userPrompt: buildWireframeUserPrompt(input, screenTypeMode),
+        jsonSchema: wireframeJsonSchema,
+        writer,
+        signal: request.signal,
+      });
+
+      writer.send({ type: "stage", stage: Stage.SAVING, message: "결과를 저장하고 있습니다...", progress: 95 });
       await completeJob(jobId, result, tokenUsage);
-    } catch (genError) {
-      await failJob(jobId, genError);
+
+      writer.send({ type: "complete", data: result, tokenUsage });
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : "와이어프레임 생성에 실패했습니다.";
+      try { await failJob(jobId, err); } catch { /* DB 에러 무시 */ }
+      writer.send({ type: "error", message: errMsg });
     }
 
-    return NextResponse.json({ jobId });
-  } catch (error) {
-    return errorResponse(error, "와이어프레임 생성에 실패했습니다.");
-  }
+    writer.close();
+  }, request.signal);
 }

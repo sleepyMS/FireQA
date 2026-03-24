@@ -1,17 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth/get-current-user";
 
 // GET /api/jobs?type=diagrams - 완료된 Job 목록 (FigJam 플러그인 선택용)
 // GET /api/jobs?all=1&type=test-cases - 이력 페이지용 전체 목록
 export async function GET(request: NextRequest) {
   try {
+    const user = await getCurrentUser(request);
+    if (!user) {
+      return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
+    }
+
     const type = request.nextUrl.searchParams.get("type");
     const all = request.nextUrl.searchParams.get("all");
 
     if (all) {
       // 이력 페이지용: 모든 상태의 Job 목록
       const jobs = await prisma.generationJob.findMany({
-        where: type ? { type } : undefined,
+        where: {
+          project: { organizationId: user.organizationId },
+          ...(type ? { type } : {}),
+        },
         orderBy: { createdAt: "desc" },
         include: { project: true, upload: true },
         take: 50,
@@ -24,6 +33,7 @@ export async function GET(request: NextRequest) {
     const jobs = await prisma.generationJob.findMany({
       where: {
         status: "completed",
+        project: { organizationId: user.organizationId },
         ...(type ? { type } : {}),
       },
       orderBy: { createdAt: "desc" },
@@ -52,6 +62,11 @@ export async function GET(request: NextRequest) {
 // PATCH /api/jobs - 프로젝트명 수정
 export async function PATCH(request: NextRequest) {
   try {
+    const user = await getCurrentUser(request);
+    if (!user) {
+      return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
+    }
+
     const { id, projectName } = await request.json();
 
     if (!id || !projectName?.trim()) {
@@ -90,6 +105,11 @@ export async function PATCH(request: NextRequest) {
 // DELETE /api/jobs - Job 삭제 (관련 Project, Upload도 함께 삭제)
 export async function DELETE(request: NextRequest) {
   try {
+    const user = await getCurrentUser(request);
+    if (!user) {
+      return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
+    }
+
     const { id } = await request.json();
 
     if (!id) {
@@ -108,6 +128,14 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json(
         { error: "해당 이력을 찾을 수 없습니다." },
         { status: 404 }
+      );
+    }
+
+    // 사용자 조직 소속 확인
+    if (job.project.organizationId !== user.organizationId) {
+      return NextResponse.json(
+        { error: "해당 이력에 대한 권한이 없습니다." },
+        { status: 403 }
       );
     }
 

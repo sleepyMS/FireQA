@@ -37,9 +37,42 @@ var DECISION_W = 320;
 var DECISION_H = 190;
 var DIAGRAM_X_OFFSET = 2500;
 
-figma.showUI(__html__, { width: 400, height: 520 });
+figma.showUI(__html__, { width: 400, height: 560 });
 
-figma.ui.onmessage = function (msg: { type: string; diagram?: Diagram; diagramIndex?: number; wireframeData?: WireframeData }) {
+figma.ui.onmessage = async function (msg: {
+  type: string;
+  diagram?: Diagram;
+  diagramIndex?: number;
+  wireframeData?: WireframeData;
+  key?: string;
+  value?: string;
+}) {
+  // ─── clientStorage 중계 (플러그인 UI에서 직접 접근 불가) ───
+  if (msg.type === "get-storage") {
+    const value = await figma.clientStorage.getAsync(msg.key || "");
+    figma.ui.postMessage({ type: "storage-result", key: msg.key, value });
+    return;
+  }
+
+  if (msg.type === "set-storage") {
+    await figma.clientStorage.setAsync(msg.key || "", msg.value || "");
+    figma.ui.postMessage({ type: "storage-saved", key: msg.key });
+    return;
+  }
+
+  if (msg.type === "clear-storage") {
+    await figma.clientStorage.deleteAsync(msg.key || "");
+    figma.ui.postMessage({ type: "storage-cleared", key: msg.key });
+    return;
+  }
+
+  // ─── 브라우저 열기 (Device Auth 플로우) ───
+  if (msg.type === "open-browser" && msg.value) {
+    figma.openExternal(msg.value);
+    return;
+  }
+
+  // ─── 다이어그램/와이어프레임 생성 ───
   if (msg.type === "create-diagram" && msg.diagram) {
     createDiagram(msg.diagram, msg.diagramIndex || 0)
       .then(function () {

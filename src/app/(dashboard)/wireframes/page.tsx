@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Smartphone,
@@ -8,7 +8,6 @@ import {
   Sparkles,
   Shuffle,
   FileText,
-  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +15,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dropzone } from "@/components/upload/dropzone";
 import { cn } from "@/lib/utils";
+import { useSSE } from "@/hooks/use-sse";
+import { GenerationProgress } from "@/components/generation-progress";
+import { GenerationError } from "@/components/generation-error";
+import { RecentJobsPanel } from "@/components/recent-jobs-panel";
 
 const SCREEN_TYPE_OPTIONS = [
   {
@@ -49,37 +52,63 @@ export default function WireframesPage() {
   const [projectName, setProjectName] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [screenTypeMode, setScreenTypeMode] = useState<string>("auto");
-  const [isGenerating, setIsGenerating] = useState(false);
+
+  const sse = useSSE("/api/wireframes");
+
+  // 완료 시 결과 페이지로 리다이렉트
+  useEffect(() => {
+    if (sse.result && sse.jobId) {
+      router.push(`/wireframes/${sse.jobId}`);
+    }
+  }, [sse.result, sse.jobId, router]);
 
   const handleFileSelected = (selectedFile: File) => {
     setFile(selectedFile);
   };
 
-  const handleGenerate = async () => {
+  const handleGenerate = () => {
     if (!file || !projectName.trim()) return;
 
-    setIsGenerating(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("projectName", projectName);
-      formData.append("screenTypeMode", screenTypeMode);
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("projectName", projectName);
+    formData.append("screenTypeMode", screenTypeMode);
 
-      const res = await fetch("/api/wireframes", {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
-
-      if (data.jobId) {
-        router.push(`/wireframes/${data.jobId}`);
-      }
-    } catch {
-      console.error("생성 실패");
-    } finally {
-      setIsGenerating(false);
-    }
+    sse.start(formData);
   };
+
+  // 스트리밍 중이면 진행상태 표시
+  if (sse.isStreaming) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">와이어프레임 생성</h2>
+          <p className="text-muted-foreground">
+            {projectName} — AI가 와이어프레임을 생성하고 있습니다.
+          </p>
+        </div>
+        <GenerationProgress
+          stage={sse.stage}
+          message={sse.message}
+          progress={sse.progress}
+          chunkInfo={sse.chunkInfo}
+          charsReceived={sse.charsReceived}
+          onCancel={sse.cancel}
+        />
+      </div>
+    );
+  }
+
+  if (sse.error) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">와이어프레임 생성</h2>
+        </div>
+        <GenerationError error={sse.error} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -91,96 +120,91 @@ export default function WireframesPage() {
         </p>
       </div>
 
-      <div className="max-w-xl space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">1. 프로젝트 이름</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <Label htmlFor="projectName">프로젝트 이름</Label>
-              <Input
-                id="projectName"
-                placeholder="예: 공간 제휴 신청"
-                value={projectName}
-                onChange={(e) => setProjectName(e.target.value)}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">2. 기획 문서 업로드</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Dropzone onFileSelected={handleFileSelected} />
-            {file && (
-              <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
-                <FileText className="h-4 w-4" />
-                {file.name} ({(file.size / 1024).toFixed(1)} KB)
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">1. 프로젝트 이름</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <Label htmlFor="projectName">프로젝트 이름</Label>
+                <Input
+                  id="projectName"
+                  placeholder="예: 공간 제휴 신청"
+                  value={projectName}
+                  onChange={(e) => setProjectName(e.target.value)}
+                />
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">3. 화면 타입</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-2">
-              {SCREEN_TYPE_OPTIONS.map((opt) => {
-                const isSelected = screenTypeMode === opt.value;
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setScreenTypeMode(opt.value)}
-                    className={cn(
-                      "flex items-center gap-2 rounded-lg border-2 p-3 text-left text-sm transition-all",
-                      isSelected
-                        ? "border-primary bg-primary/5"
-                        : "border-transparent bg-muted/50 hover:bg-muted"
-                    )}
-                  >
-                    <opt.icon
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">2. 기획 문서 업로드</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Dropzone onFileSelected={handleFileSelected} />
+              {file && (
+                <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
+                  <FileText className="h-4 w-4" />
+                  {file.name} ({(file.size / 1024).toFixed(1)} KB)
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">3. 화면 타입</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-2">
+                {SCREEN_TYPE_OPTIONS.map((opt) => {
+                  const isSelected = screenTypeMode === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setScreenTypeMode(opt.value)}
                       className={cn(
-                        "h-5 w-5 shrink-0",
-                        isSelected ? "text-primary" : "text-muted-foreground"
+                        "flex items-center gap-2 rounded-lg border-2 p-3 text-left text-sm transition-all",
+                        isSelected
+                          ? "border-primary bg-primary/5"
+                          : "border-transparent bg-muted/50 hover:bg-muted"
                       )}
-                    />
-                    <div>
-                      <p className="font-medium">{opt.label}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {opt.description}
-                      </p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+                    >
+                      <opt.icon
+                        className={cn(
+                          "h-5 w-5 shrink-0",
+                          isSelected ? "text-primary" : "text-muted-foreground"
+                        )}
+                      />
+                      <div>
+                        <p className="font-medium">{opt.label}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {opt.description}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
 
-        <Button
-          className="w-full"
-          size="lg"
-          disabled={!file || !projectName.trim() || isGenerating}
-          onClick={handleGenerate}
-        >
-          {isGenerating ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              생성 중...
-            </>
-          ) : (
-            <>
-              <Smartphone className="mr-2 h-4 w-4" />
-              와이어프레임 생성하기
-            </>
-          )}
-        </Button>
+          <Button
+            className="w-full"
+            size="lg"
+            disabled={!file || !projectName.trim() || sse.isStreaming}
+            onClick={handleGenerate}
+          >
+            <Smartphone className="mr-2 h-4 w-4" />
+            와이어프레임 생성하기
+          </Button>
+        </div>
+
+        <RecentJobsPanel type="wireframes" />
       </div>
     </div>
   );

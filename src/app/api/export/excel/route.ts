@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { buildExcelWorkbook } from "@/lib/excel/builder";
+import { getCurrentUser } from "@/lib/auth/get-current-user";
 
 export async function GET(request: NextRequest) {
   try {
+    const user = await getCurrentUser(request);
+    if (!user) {
+      return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
+    }
+
     const jobId = request.nextUrl.searchParams.get("jobId");
 
     if (!jobId) {

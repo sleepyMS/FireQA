@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import {
   Upload,
   FileText,
-  Loader2,
   Sparkles,
   LayoutTemplate,
 } from "lucide-react";
@@ -16,6 +15,10 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dropzone } from "@/components/upload/dropzone";
 import { cn } from "@/lib/utils";
+import { useSSE } from "@/hooks/use-sse";
+import { GenerationProgress } from "@/components/generation-progress";
+import { GenerationError } from "@/components/generation-error";
+import { RecentJobsPanel } from "@/components/recent-jobs-panel";
 
 interface Template {
   id: string;
@@ -23,13 +26,13 @@ interface Template {
   description: string | null;
   sheetConfig: string;
   columnConfig: string;
+  parsedSheets?: { name: string }[];
 }
 
 export default function GeneratePage() {
   const router = useRouter();
   const [projectName, setProjectName] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
   const [parsedPreview, setParsedPreview] = useState<string | null>(null);
 
   // Template selection
@@ -39,12 +42,28 @@ export default function GeneratePage() {
     null
   );
 
+  const sse = useSSE("/api/generate");
+
   useEffect(() => {
     fetch("/api/templates")
       .then((res) => res.json())
-      .then((data) => setTemplates(data.templates || []))
+      .then((data) =>
+        setTemplates(
+          (data.templates || []).map((t: Template) => ({
+            ...t,
+            parsedSheets: JSON.parse(t.sheetConfig || "[]"),
+          }))
+        )
+      )
       .catch(() => {});
   }, []);
+
+  // 완료 시 결과 페이지로 리다이렉트
+  useEffect(() => {
+    if (sse.result && sse.jobId) {
+      router.push(`/generate/${sse.jobId}`);
+    }
+  }, [sse.result, sse.jobId, router]);
 
   const selectedTemplate = templates.find((t) => t.id === selectedTemplateId);
 
@@ -70,34 +89,52 @@ export default function GeneratePage() {
     }
   };
 
-  const handleGenerate = async () => {
+  const handleGenerate = () => {
     if (!file || !projectName.trim()) return;
 
-    setIsGenerating(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("projectName", projectName);
-      formData.append("type", "test-cases");
-      if (mode === "template" && selectedTemplateId) {
-        formData.append("templateId", selectedTemplateId);
-      }
-
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
-
-      if (data.jobId) {
-        router.push(`/generate/${data.jobId}`);
-      }
-    } catch {
-      console.error("생성 실패");
-    } finally {
-      setIsGenerating(false);
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("projectName", projectName);
+    formData.append("type", "test-cases");
+    if (mode === "template" && selectedTemplateId) {
+      formData.append("templateId", selectedTemplateId);
     }
+
+    sse.start(formData);
   };
+
+  // 스트리밍 중이면 진행상태 표시
+  if (sse.isStreaming) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">TC 자동 생성</h2>
+          <p className="text-muted-foreground">
+            {projectName} — AI가 테스트케이스를 생성하고 있습니다.
+          </p>
+        </div>
+        <GenerationProgress
+          stage={sse.stage}
+          message={sse.message}
+          progress={sse.progress}
+          chunkInfo={sse.chunkInfo}
+          charsReceived={sse.charsReceived}
+          onCancel={sse.cancel}
+        />
+      </div>
+    );
+  }
+
+  if (sse.error) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">TC 자동 생성</h2>
+        </div>
+        <GenerationError error={sse.error} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -222,9 +259,7 @@ export default function GeneratePage() {
                   ) : (
                     <div className="space-y-1.5">
                       {templates.map((tmpl) => {
-                        const sheetList = JSON.parse(
-                          tmpl.sheetConfig || "[]"
-                        ) as { name: string }[];
+                        const sheetList = tmpl.parsedSheets || [];
                         const isSelected = selectedTemplateId === tmpl.id;
                         return (
                           <button
@@ -275,47 +310,42 @@ export default function GeneratePage() {
             disabled={
               !file ||
               !projectName.trim() ||
-              isGenerating ||
+              sse.isStreaming ||
               (mode === "template" && !selectedTemplateId)
             }
             onClick={handleGenerate}
           >
-            {isGenerating ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                생성 중...
-              </>
-            ) : (
-              <>
-                <Upload className="mr-2 h-4 w-4" />
-                {mode === "auto"
-                  ? "AI 자율로 TC 생성하기"
-                  : `"${selectedTemplate?.name || "템플릿"}" 기준으로 TC 생성하기`}
-              </>
-            )}
+            <Upload className="mr-2 h-4 w-4" />
+            {mode === "auto"
+              ? "AI 자율로 TC 생성하기"
+              : `"${selectedTemplate?.name || "템플릿"}" 기준으로 TC 생성하기`}
           </Button>
         </div>
 
-        {/* Right: Preview */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">문서 미리보기</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {parsedPreview ? (
-              <pre className="max-h-[500px] overflow-auto whitespace-pre-wrap rounded-md bg-muted p-4 text-xs">
-                {parsedPreview}
-              </pre>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-20 text-center text-muted-foreground">
-                <FileText className="mb-4 h-12 w-12 opacity-50" />
-                <p className="text-sm">
-                  기획 문서를 업로드하면 내용이 여기에 표시됩니다.
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* Right: Preview + Recent Jobs */}
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">문서 미리보기</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {parsedPreview ? (
+                <pre className="max-h-[500px] overflow-auto whitespace-pre-wrap rounded-md bg-muted p-4 text-xs">
+                  {parsedPreview}
+                </pre>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-20 text-center text-muted-foreground">
+                  <FileText className="mb-4 h-12 w-12 opacity-50" />
+                  <p className="text-sm">
+                    기획 문서를 업로드하면 내용이 여기에 표시됩니다.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <RecentJobsPanel type="test-cases" />
+        </div>
       </div>
     </div>
   );

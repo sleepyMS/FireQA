@@ -36,3 +36,20 @@ export const JOB_TYPE_PATH: Record<string, string> = {
   [JobType.DIAGRAMS]: "/diagrams",
   [JobType.WIREFRAMES]: "/wireframes",
 };
+
+export const UserRole = {
+  OWNER: "owner",
+  ADMIN: "admin",
+  MEMBER: "member",
+} as const;
+
+export type UserRole = (typeof UserRole)[keyof typeof UserRole];
+
+export const DeviceAuthStatus = {
+  PENDING: "pending",
+  APPROVED: "approved",
+  EXPIRED: "expired",
+} as const;
+
+export type DeviceAuthStatus =
+  (typeof DeviceAuthStatus)[keyof typeof DeviceAuthStatus];

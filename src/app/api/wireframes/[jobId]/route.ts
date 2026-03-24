@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth/get-current-user";
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ jobId: string }> }
 ) {
   try {
+    const user = await getCurrentUser(request);
+    if (!user) {
+      return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
+    }
+
     const { jobId } = await params;
     const job = await prisma.generationJob.findUnique({
       where: { id: jobId },
@@ -14,6 +20,14 @@ export async function GET(
 
     if (!job || !job.result || job.type !== "wireframes") {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    // 사용자 조직 소속 확인
+    if (job.project.organizationId !== user.organizationId) {
+      return NextResponse.json(
+        { error: "해당 데이터에 대한 권한이 없습니다." },
+        { status: 403 }
+      );
     }
 
     const result = JSON.parse(job.result);

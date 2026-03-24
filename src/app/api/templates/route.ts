@@ -1,10 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth/get-current-user";
 
 // GET /api/templates - 템플릿 목록
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const user = await getCurrentUser(request);
+    if (!user) {
+      return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
+    }
+
     const templates = await prisma.qATemplate.findMany({
+      where: {
+        OR: [
+          { organizationId: user.organizationId },
+          { isDefault: true },
+        ],
+      },
       orderBy: { createdAt: "desc" },
     });
     return NextResponse.json({ templates });
@@ -20,6 +32,11 @@ export async function GET() {
 // POST /api/templates - 템플릿 생성
 export async function POST(request: NextRequest) {
   try {
+    const user = await getCurrentUser(request);
+    if (!user) {
+      return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
+    }
+
     const body = await request.json();
     const { name, description, sheets, columns, constraints, requirements } = body;
 
@@ -34,6 +51,7 @@ export async function POST(request: NextRequest) {
       data: {
         name,
         description: description || null,
+        organizationId: user.organizationId,
         sheetConfig: JSON.stringify(sheets),
         columnConfig: JSON.stringify(columns || []),
         constraints: constraints || "",
@@ -54,6 +72,11 @@ export async function POST(request: NextRequest) {
 // DELETE /api/templates - 템플릿 삭제
 export async function DELETE(request: NextRequest) {
   try {
+    const user = await getCurrentUser(request);
+    if (!user) {
+      return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
+    }
+
     const { id } = await request.json();
     await prisma.qATemplate.delete({ where: { id } });
     return NextResponse.json({ success: true });

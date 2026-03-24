@@ -13,7 +13,8 @@ interface CreateJobResult {
 export async function createGenerationJob(
   file: File,
   projectName: string,
-  jobType: JobType
+  jobType: JobType,
+  auth: { userId: string; organizationId: string }
 ): Promise<CreateJobResult> {
   const buffer = Buffer.from(await file.arrayBuffer());
   const parsed = await parseDocument(buffer, file.name, file.type);
@@ -21,12 +22,17 @@ export async function createGenerationJob(
   parsed.text = parsed.text.replace(/\0/g, "");
 
   const project = await prisma.project.create({
-    data: { name: projectName },
+    data: {
+      name: projectName,
+      organizationId: auth.organizationId,
+      createdById: auth.userId,
+    },
   });
 
   const upload = await prisma.upload.create({
     data: {
       projectId: project.id,
+      organizationId: auth.organizationId,
       fileName: file.name,
       fileType: file.type,
       fileSize: file.size,
@@ -39,6 +45,7 @@ export async function createGenerationJob(
     data: {
       projectId: project.id,
       uploadId: upload.id,
+      userId: auth.userId,
       type: jobType,
       status: JobStatus.PROCESSING,
     },

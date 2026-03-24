@@ -1,23 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createGenerationJob, completeJob, failJob } from "@/lib/api/create-generation-job";
-import { errorResponse } from "@/lib/api/error-response";
-import { generateTestCases } from "@/lib/openai/generate";
 import { JobType } from "@/types/enums";
+import { Stage } from "@/types/sse";
+import { createSSEStream } from "@/lib/sse/create-sse-stream";
+import { streamOpenAIWithSchema } from "@/lib/sse/stream-openai";
+import { streamOpenAIChunked } from "@/lib/sse/stream-openai-chunked-tc";
+import {
+  TEST_CASE_SYSTEM_PROMPT,
+  buildTestCaseUserPrompt,
+} from "@/lib/openai/prompts/test-case-system";
+import { testCaseJsonSchema } from "@/lib/openai/schemas/test-case";
+import { splitDocument } from "@/lib/text/split-document";
+import type { TestCaseGenerationResult } from "@/types/test-case";
+
+// Vercel 서버리스 타임아웃 확장 (5분)
+export const maxDuration = 300;
 
 export async function POST(request: NextRequest) {
-  try {
-    const formData = await request.formData();
-    const file = formData.get("file") as File;
-    const projectName = formData.get("projectName") as string;
-    const templateId = formData.get("templateId") as string | null;
+  const formData = await request.formData();
+  const file = formData.get("file") as File;
+  const projectName = formData.get("projectName") as string;
+  const templateId = formData.get("templateId") as string | null;
 
-    if (!file || !projectName) {
-      return NextResponse.json(
-        { error: "파일과 프로젝트 이름이 필요합니다." },
-        { status: 400 }
-      );
-    }
+  if (!file || !projectName) {
+    return NextResponse.json(
+      { error: "파일과 프로젝트 이름이 필요합니다." },
+      { status: 400 }
+    );
+  }
+
+  const user = await getCurrentUser(request);
+  if (!user) {
+    return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
+  }
+
+  return createSSEStream(async (writer) => {
+    writer.send({ type: "stage", stage: Stage.PARSING, message: "문서를 파싱하고 있습니다...", progress: 10 });
 
     let templateGuideline: string | undefined;
     if (templateId) {
@@ -29,26 +49,66 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const { jobId, parsedText } = await createGenerationJob(
-      file,
-      projectName,
-      JobType.TEST_CASES
-    );
+    const { jobId, parsedText } = await createGenerationJob(file, projectName, JobType.TEST_CASES, {
+      userId: user.userId,
+      organizationId: user.organizationId,
+    });
+    writer.send({ type: "job_created", jobId });
 
     try {
-      const { result, tokenUsage } = await generateTestCases(
-        parsedText,
-        templateGuideline
-      );
+      const systemPrompt = templateGuideline
+        ? TEST_CASE_SYSTEM_PROMPT + templateGuideline
+        : TEST_CASE_SYSTEM_PROMPT;
+
+      const chunks = splitDocument(parsedText);
+
+      writer.send({
+        type: "stage",
+        stage: Stage.GENERATING,
+        message: chunks.length > 1
+          ? `AI가 TC를 생성하고 있습니다... (${chunks.length}개 청크)`
+          : "AI가 TC를 생성하고 있습니다...",
+        progress: 20,
+      });
+
+      let result: TestCaseGenerationResult;
+      let tokenUsage: number;
+
+      if (chunks.length === 1) {
+        const res = await streamOpenAIWithSchema<TestCaseGenerationResult>({
+          systemPrompt,
+          userPrompt: buildTestCaseUserPrompt(parsedText),
+          jsonSchema: testCaseJsonSchema,
+          writer,
+          signal: request.signal,
+        });
+        result = res.result;
+        tokenUsage = res.tokenUsage;
+      } else {
+        const res = await streamOpenAIChunked({
+          chunks,
+          systemPrompt,
+          buildUserPrompt: buildTestCaseUserPrompt,
+          jsonSchema: testCaseJsonSchema,
+          writer,
+          signal: request.signal,
+        });
+        result = res.result;
+        tokenUsage = res.totalTokens;
+      }
+
+      writer.send({ type: "stage", stage: Stage.SAVING, message: "결과를 저장하고 있습니다...", progress: 95 });
       await completeJob(jobId, result, tokenUsage);
-    } catch (genError) {
-      await failJob(jobId, genError);
+
+      writer.send({ type: "complete", data: result, tokenUsage });
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : "TC 생성에 실패했습니다.";
+      try { await failJob(jobId, err); } catch { /* DB 에러 무시 */ }
+      writer.send({ type: "error", message: errMsg });
     }
 
-    return NextResponse.json({ jobId });
-  } catch (error) {
-    return errorResponse(error, "TC 생성에 실패했습니다.");
-  }
+    writer.close();
+  }, request.signal);
 }
 
 function buildTemplateGuideline(template: {

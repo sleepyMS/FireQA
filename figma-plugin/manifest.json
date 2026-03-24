@@ -1,13 +1,13 @@
 {
   "name": "FireQA",
-  "id": "fireqa-figma-plugin",
+  "id": "1618296186536480339",
   "api": "1.0.0",
   "main": "dist/main.js",
   "ui": "dist/ui.html",
   "documentAccess": "dynamic-page",
   "editorType": ["figma", "figjam"],
   "networkAccess": {
-    "allowedDomains": ["*"],
-    "reasoning": "FireQA 서버에서 다이어그램 데이터를 가져옵니다."
+    "allowedDomains": ["https://fire-qa.vercel.app"],
+    "reasoning": "FireQA 서버에서 다이어그램/와이어프레임 데이터를 가져오고 Device Authorization 인증을 수행합니다."
   }
 }

@@ -8,27 +8,99 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// ─── 인증 & 멀티테넌시 ───
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  plan      String   @default("free") // "free" | "pro" | "enterprise"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users      User[]
+  projects   Project[]
+  uploads    Upload[]
+  templates  QATemplate[]
+}
+
+model User {
+  id             String   @id @default(cuid())
+  supabaseId     String   @unique // Supabase Auth uid
+  email          String   @unique
+  name           String?
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role           String   @default("member") // "owner" | "admin" | "member"
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  apiTokens      ApiToken[]
+  jobs           GenerationJob[]
+  projects       Project[]      @relation("CreatedBy")
+
+  @@index([supabaseId])
+  @@index([organizationId])
+}
+
+model ApiToken {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String    @default("Figma Plugin") // 토큰 용도 식별
+  tokenHash  String    @unique // SHA-256 해시로 저장
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([tokenHash])
+}
+
+model DeviceAuth {
+  id         String   @id @default(cuid())
+  deviceCode String   @unique
+  userId     String?
+  token      String?  // 승인 후 발급된 API 토큰 (평문, 1회 조회 후 삭제)
+  status     String   @default("pending") // "pending" | "approved" | "expired"
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([deviceCode])
+}
+
+// ─── 비즈니스 모델 ───
+
 model Project {
-  id          String          @id @default(cuid())
-  name        String
-  description String?
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  uploads     Upload[]
-  jobs        GenerationJob[]
+  id             String          @id @default(cuid())
+  name           String
+  description    String?
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdById    String?
+  createdBy      User?           @relation("CreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  uploads        Upload[]
+  jobs           GenerationJob[]
+
+  @@index([organizationId])
 }
 
 model Upload {
-  id          String          @id @default(cuid())
-  projectId   String
-  project     Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  fileName    String
-  fileType    String
-  fileSize    Int
-  storagePath String
-  parsedText  String?
-  createdAt   DateTime        @default(now())
-  jobs        GenerationJob[]
+  id             String          @id @default(cuid())
+  projectId      String
+  project        Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  fileName       String
+  fileType       String
+  fileSize       Int
+  storagePath    String
+  parsedText     String?
+  createdAt      DateTime        @default(now())
+  jobs           GenerationJob[]
+
+  @@index([organizationId])
 }
 
 model GenerationJob {
@@ -37,6 +109,8 @@ model GenerationJob {
   project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   uploadId   String
   upload     Upload   @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   type       String   // "test-cases" | "diagrams" | "wireframes"
   status     String   @default("pending") // "pending" | "processing" | "completed" | "failed"
   config     String   @default("{}") // JSON
@@ -45,6 +119,8 @@ model GenerationJob {
   tokenUsage Int?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+
+  @@index([userId])
 }
 
 model DiagramVersion {
@@ -63,14 +139,18 @@ model DiagramVersion {
 }
 
 model QATemplate {
-  id           String   @id @default(cuid())
-  name         String
-  description  String?
-  sheetConfig  String   @default("[]") // JSON
-  columnConfig String   @default("{}") // JSON
-  constraints  String   @default("") // 제약조건 (최우선 준수)
-  requirements String   @default("") // 요구사항 (희망 사항)
-  isDefault    Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id             String       @id @default(cuid())
+  name           String
+  description    String?
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sheetConfig    String       @default("[]") // JSON
+  columnConfig   String       @default("{}") // JSON
+  constraints    String       @default("") // 제약조건 (최우선 준수)
+  requirements   String       @default("") // 요구사항 (희망 사항)
+  isDefault      Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId])
 }

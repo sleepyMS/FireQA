@@ -19,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { MermaidPreview } from "./mermaid-preview";
+import { useSSEInline } from "@/hooks/use-sse-inline";
 import type { Diagram } from "@/types/diagram";
 
 interface DiagramResultsProps {
@@ -51,6 +52,10 @@ export function DiagramResults({ jobId, diagrams }: DiagramResultsProps) {
   const [diagramStates, setDiagramStates] = useState<
     Record<string, DiagramState>
   >({});
+
+  // SSE 스트리밍 훅 — fix/improve 시 실시간 진행 표시
+  const fixSSE = useSSEInline<{ fixedCode: string; nodes: unknown[]; edges: unknown[] }>("/api/fix-mermaid");
+  const improveSSE = useSSEInline<{ improvedCode: string; nodes: unknown[]; edges: unknown[] }>("/api/improve-diagram");
 
   // 각 다이어그램의 버전 히스토리를 DB에서 로드
   useEffect(function () {
@@ -163,23 +168,19 @@ export function DiagramResults({ jobId, diagrams }: DiagramResultsProps) {
 
   const handleRenderError = useCallback(function (title: string, err: string) {
     setDiagramStates(function (prev) {
-      return {
-        ...prev,
-        [title]: { ...prev[title], error: err },
-      };
+      if (prev[title]?.error === err) return prev;
+      return { ...prev, [title]: { ...prev[title], error: err } };
     });
   }, []);
 
   const handleRenderSuccess = useCallback(function (title: string) {
     setDiagramStates(function (prev) {
-      return {
-        ...prev,
-        [title]: { ...prev[title], error: null },
-      };
+      if (prev[title]?.error === null) return prev;
+      return { ...prev, [title]: { ...prev[title], error: null } };
     });
   }, []);
 
-  // AI 구문 오류 수정
+  // AI 구문 오류 수정 (SSE 스트리밍)
   async function handleFixWithAI(title: string) {
     const state = diagramStates[title];
     if (!state || state.fixing) return;
@@ -190,13 +191,7 @@ export function DiagramResults({ jobId, diagrams }: DiagramResultsProps) {
 
     try {
       const currentCode = getCurrentCode(title);
-      const res = await fetch("/api/fix-mermaid", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: currentCode, error: state.error }),
-      });
-      if (!res.ok) throw new Error("수정 실패");
-      const data = await res.json();
+      const data = await fixSSE.execute({ code: currentCode, error: state.error });
 
       // 새 버전으로 저장
       const vRes = await fetch("/api/diagram-versions", {
@@ -241,7 +236,7 @@ export function DiagramResults({ jobId, diagrams }: DiagramResultsProps) {
     }
   }
 
-  // AI 개선 요청
+  // AI 개선 요청 (SSE 스트리밍)
   async function handleImprove(title: string) {
     const state = diagramStates[title];
     const instruction = instructions[title];
@@ -253,16 +248,10 @@ export function DiagramResults({ jobId, diagrams }: DiagramResultsProps) {
 
     try {
       const currentCode = getCurrentCode(title);
-      const res = await fetch("/api/improve-diagram", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          code: currentCode,
-          instruction: instruction.trim(),
-        }),
+      const data = await improveSSE.execute({
+        code: currentCode,
+        instruction: instruction.trim(),
       });
-      if (!res.ok) throw new Error("개선 실패");
-      const data = await res.json();
 
       // 새 버전으로 저장
       const vRes = await fetch("/api/diagram-versions", {
@@ -523,12 +512,12 @@ export function DiagramResults({ jobId, diagrams }: DiagramResultsProps) {
                         onClick={function () {
                           handleFixWithAI(diagram.title);
                         }}
-                        disabled={state.fixing || state.fixAttempts >= 3}
+                        disabled={state.fixing || state.fixAttempts >= 3 || fixSSE.isStreaming}
                       >
                         {state.fixing ? (
                           <>
                             <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                            AI가 수정하고 있습니다...
+                            AI가 수정 중...{fixSSE.charsReceived > 0 && ` (${(fixSSE.charsReceived / 1024).toFixed(1)} KB)`}
                           </>
                         ) : state.fixAttempts >= 3 ? (
                           "최대 수정 횟수 초과"
@@ -618,13 +607,14 @@ export function DiagramResults({ jobId, diagrams }: DiagramResultsProps) {
                     }}
                     disabled={
                       !instructions[diagram.title]?.trim() ||
-                      state?.improving
+                      state?.improving ||
+                      improveSSE.isStreaming
                     }
                   >
                     {state?.improving ? (
                       <>
                         <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                        수정 중...
+                        수정 중...{improveSSE.charsReceived > 0 && ` (${(improveSSE.charsReceived / 1024).toFixed(1)} KB)`}
                       </>
                     ) : (
                       <>

@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth/get-current-user";
 
 // GET /api/diagram-versions?jobId=xxx&title=yyy — 버전 목록 조회
 export async function GET(request: NextRequest) {
   try {
+    const user = await getCurrentUser(request);
+    if (!user) {
+      return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
+    }
+
     const jobId = request.nextUrl.searchParams.get("jobId");
     const title = request.nextUrl.searchParams.get("title");
 
@@ -32,6 +38,11 @@ export async function GET(request: NextRequest) {
 // POST /api/diagram-versions — 새 버전 추가 (nodes/edges 포함)
 export async function POST(request: NextRequest) {
   try {
+    const user = await getCurrentUser(request);
+    if (!user) {
+      return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
+    }
+
     const { jobId, diagramTitle, mermaidCode, nodes, edges, instruction } =
       await request.json();
 
@@ -76,6 +87,11 @@ export async function POST(request: NextRequest) {
 // PATCH /api/diagram-versions — 특정 버전을 확정 (LLM 호출 없이 즉시)
 export async function PATCH(request: NextRequest) {
   try {
+    const user = await getCurrentUser(request);
+    if (!user) {
+      return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
+    }
+
     const { jobId, diagramTitle, versionId } = await request.json();
 
     if (!jobId || !diagramTitle || !versionId) {

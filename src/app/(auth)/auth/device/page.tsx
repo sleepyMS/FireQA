@@ -1,0 +1,110 @@
+"use client";
+
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+
+function DeviceAuthContent() {
+  const searchParams = useSearchParams();
+  const code = searchParams.get("code");
+
+  const [status, setStatus] = useState<"loading" | "confirm" | "success" | "error">("loading");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!code) {
+      setStatus("error");
+      setError("인증 코드가 없습니다.");
+      return;
+    }
+
+    // Device code가 유효한지 확인
+    fetch(`/api/auth/device?code=${code}`)
+      .then((res) => {
+        if (res.ok || res.status === 202) {
+          setStatus("confirm");
+        } else {
+          setStatus("error");
+          setError("유효하지 않거나 만료된 인증 코드입니다.");
+        }
+      })
+      .catch(() => {
+        setStatus("error");
+        setError("서버에 연결할 수 없습니다.");
+      });
+  }, [code]);
+
+  async function handleApprove() {
+    setStatus("loading");
+
+    const res = await fetch("/api/auth/device", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code, action: "approve" }),
+    });
+
+    if (res.ok) {
+      setStatus("success");
+    } else {
+      const body = await res.json();
+      setStatus("error");
+      setError(body.error || "승인에 실패했습니다.");
+    }
+  }
+
+  return (
+    <div className="rounded-xl border bg-white p-8 shadow-sm text-center">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold">FireQA</h1>
+        <p className="mt-1 text-sm text-gray-500">Figma 플러그인 연결</p>
+      </div>
+
+      {status === "loading" && (
+        <p className="text-gray-500">확인 중...</p>
+      )}
+
+      {status === "confirm" && (
+        <div className="space-y-4">
+          <p className="text-sm text-gray-700">
+            Figma 플러그인에서 FireQA 계정 연결을 요청했습니다.
+          </p>
+          <div className="rounded-lg bg-blue-50 p-4">
+            <p className="text-xs text-gray-500">인증 코드</p>
+            <p className="font-mono text-lg font-bold tracking-widest">{code?.slice(0, 8)}...</p>
+          </div>
+          <button
+            onClick={handleApprove}
+            className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            플러그인 연결 승인
+          </button>
+          <p className="text-xs text-gray-400">
+            본인이 요청하지 않았다면 이 페이지를 닫으세요.
+          </p>
+        </div>
+      )}
+
+      {status === "success" && (
+        <div className="space-y-2">
+          <div className="text-4xl">&#x2705;</div>
+          <p className="font-medium text-green-700">연결 완료!</p>
+          <p className="text-sm text-gray-500">Figma 플러그인으로 돌아가세요. 이 페이지를 닫아도 됩니다.</p>
+        </div>
+      )}
+
+      {status === "error" && (
+        <div className="space-y-2">
+          <div className="text-4xl">&#x274C;</div>
+          <p className="text-sm text-red-600">{error}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function DeviceAuthPage() {
+  return (
+    <Suspense fallback={<p className="text-center text-gray-500">로딩 중...</p>}>
+      <DeviceAuthContent />
+    </Suspense>
+  );
+}
