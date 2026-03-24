@@ -8,9 +8,17 @@ import { NextRequest, NextResponse } from "next/server";
 export async function updateSupabaseSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // 환경변수 미설정 시 인증 없이 통과 (빌드 시점 또는 설정 누락 방어)
+  if (!supabaseUrl || !supabaseKey) {
+    return { supabaseResponse, user: null };
+  }
+
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseKey,
     {
       cookies: {
         getAll() {
