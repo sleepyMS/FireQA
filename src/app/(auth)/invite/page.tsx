@@ -45,7 +45,12 @@ function InviteContent() {
         return;
       }
 
-      // 로그인 상태 — sessionStorage 잔여 토큰 제거
+      // 로그인 상태 — 자동 수락 여부 확인 후 토큰 제거
+      const pendingToken =
+        typeof window !== "undefined"
+          ? sessionStorage.getItem("pendingInviteToken")
+          : null;
+      const shouldAutoAccept = pendingToken === token;
       if (typeof window !== "undefined") {
         sessionStorage.removeItem("pendingInviteToken");
       }
@@ -59,7 +64,12 @@ function InviteContent() {
           role: data.role,
           expiresAt: data.expiresAt,
         });
-        setStatus("valid");
+        if (shouldAutoAccept) {
+          // 로그인 후 redirect로 돌아온 경우 — 자동 수락
+          handleAccept();
+        } else {
+          setStatus("valid");
+        }
       } else {
         setStatus("invalid");
         setError(data.reason || "유효하지 않은 초대입니다.");
@@ -68,20 +78,6 @@ function InviteContent() {
 
     verify();
   }, [token]);
-
-  // 로그인 후 redirect로 돌아왔을 때 자동 수락
-  useEffect(() => {
-    if (status !== "valid") return;
-    const pending =
-      typeof window !== "undefined"
-        ? sessionStorage.getItem("pendingInviteToken")
-        : null;
-    if (pending && pending === token) {
-      sessionStorage.removeItem("pendingInviteToken");
-      handleAccept();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status]);
 
   async function handleAccept() {
     setAccepting(true);

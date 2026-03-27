@@ -130,22 +130,32 @@ export default function SettingsMembers() {
   }
 
   async function refreshMembers() {
-    const res = await fetch("/api/organization/members");
-    const data = await res.json();
-    setMembers(data.members ?? []);
+    try {
+      const res = await fetch("/api/organization/members");
+      if (!res.ok) return;
+      const data = await res.json();
+      setMembers(data.members ?? []);
+    } catch {
+      // silent fail — user can refresh page to recover
+    }
   }
 
   async function refreshInvitations() {
-    const res = await fetch("/api/invitations");
-    const data = await res.json();
-    // 기존에 token이 저장된 항목은 유지 (새로고침 전까지 복사 가능)
-    setInvitations((prev) => {
-      const tokenMap = new Map(prev.map((inv) => [inv.id, inv.token]));
-      return (data.invitations ?? []).map((inv: Invitation) => ({
-        ...inv,
-        token: tokenMap.get(inv.id),
-      }));
-    });
+    try {
+      const res = await fetch("/api/invitations");
+      if (!res.ok) return;
+      const data = await res.json();
+      // 기존에 token이 저장된 항목은 유지 (새로고침 전까지 복사 가능)
+      setInvitations((prev) => {
+        const tokenMap = new Map(prev.map((inv) => [inv.id, inv.token]));
+        return (data.invitations ?? []).map((inv: Invitation) => ({
+          ...inv,
+          token: tokenMap.get(inv.id),
+        }));
+      });
+    } catch {
+      // silent fail — user can refresh page to recover
+    }
   }
 
   // 역할 변경 — ⋯ 메뉴에서 호출, 확인 Dialog 표시
