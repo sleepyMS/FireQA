@@ -9,17 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { ROLE_LABEL } from "@/types/enums";
 
-const AVATAR_COLORS = [
-  "bg-indigo-500",
-  "bg-emerald-500",
-  "bg-amber-500",
-  "bg-rose-500",
-  "bg-sky-500",
-] as const;
-
-function getOrgAvatarColor(name: string): string {
-  return AVATAR_COLORS[(name.charCodeAt(0) || 0) % AVATAR_COLORS.length];
-}
 
 function InviteContent() {
   const searchParams = useSearchParams();
@@ -120,14 +109,13 @@ function InviteContent() {
     }
   }
 
-  const avatarColor = info ? getOrgAvatarColor(info.organizationName) : "bg-indigo-500";
   const initial = info ? info.organizationName[0]?.toUpperCase() ?? "?" : "?";
 
   // 조직 배너 (valid, login-needed 상태에서 공통 사용)
   const OrgBanner = info ? (
     <div className="bg-gradient-to-br from-indigo-500 to-violet-500 px-6 py-5 text-center text-white">
       <div
-        className={`mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-2xl text-2xl font-bold text-white ${avatarColor} bg-white/20`}
+        className="mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-2xl text-2xl font-bold text-white bg-white/20"
       >
         {initial}
       </div>
@@ -228,7 +216,7 @@ function InviteContent() {
               조직 관리자에게 새 초대 링크를 요청하세요
             </p>
           </div>
-          <Link href="/dashboard">
+          <Link href="/">
             <Button variant="outline" className="w-full">
               홈으로 돌아가기
             </Button>
