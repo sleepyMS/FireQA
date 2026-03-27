@@ -312,13 +312,21 @@ function calculateLayout(
 
 // ========== 와이어프레임 생성 ==========
 
+interface WireframeElement {
+  type: string;
+  label: string;
+  variant: string;
+  width?: string;         // "full" | "half" | "third"
+  sublabel?: string | null;
+}
+
 interface WireframeScreen {
   id: string;
   title: string;
   description: string;
   screenType?: string;
   step?: number;
-  elements: { type: string; label: string; variant: string }[];
+  elements: WireframeElement[];
 }
 
 interface WireframeFlow {
@@ -340,22 +348,309 @@ var SCREEN_WIDTHS: Record<string, number> = {
   toast: 320,
 };
 var SCREEN_PADDING = 24;
-var ELEMENT_GAP = 12;
+var ELEMENT_GAP = 10;
+var COL_GAP = 8;
 var STEP_X_GAP = 200;
 var SAME_STEP_Y_GAP = 80;
 
 var ELEMENT_STYLES: Record<string, { h: number; fill: { r: number; g: number; b: number }; radius: number }> = {
-  header: { h: 48, fill: { r: 0.15, g: 0.15, b: 0.15 }, radius: 0 },
-  nav: { h: 40, fill: { r: 0.93, g: 0.93, b: 0.96 }, radius: 8 },
-  text: { h: 24, fill: { r: 1, g: 1, b: 1 }, radius: 0 },
-  input: { h: 44, fill: { r: 0.97, g: 0.97, b: 0.97 }, radius: 8 },
-  button: { h: 44, fill: { r: 0.2, g: 0.4, b: 1 }, radius: 10 },
-  image: { h: 120, fill: { r: 0.92, g: 0.92, b: 0.95 }, radius: 8 },
-  list: { h: 48, fill: { r: 0.98, g: 0.98, b: 0.99 }, radius: 6 },
-  card: { h: 80, fill: { r: 0.96, g: 0.97, b: 1 }, radius: 12 },
-  divider: { h: 1, fill: { r: 0.88, g: 0.88, b: 0.88 }, radius: 0 },
-  icon: { h: 32, fill: { r: 1, g: 1, b: 1 }, radius: 0 },
+  header:   { h: 48,  fill: { r: 0.15, g: 0.15, b: 0.15 }, radius: 0 },
+  nav:      { h: 44,  fill: { r: 0.96, g: 0.96, b: 0.98 }, radius: 8 },
+  text:     { h: 24,  fill: { r: 1,    g: 1,    b: 1    }, radius: 0 },
+  input:    { h: 44,  fill: { r: 0.97, g: 0.97, b: 0.97 }, radius: 8 },
+  search:   { h: 44,  fill: { r: 0.97, g: 0.97, b: 0.97 }, radius: 22 },
+  button:   { h: 44,  fill: { r: 0.2,  g: 0.4,  b: 1    }, radius: 10 },
+  image:    { h: 120, fill: { r: 0.92, g: 0.92, b: 0.95 }, radius: 8 },
+  list:     { h: 56,  fill: { r: 0.98, g: 0.98, b: 0.99 }, radius: 6 },
+  card:     { h: 88,  fill: { r: 0.96, g: 0.97, b: 1    }, radius: 12 },
+  divider:  { h: 1,   fill: { r: 0.88, g: 0.88, b: 0.88 }, radius: 0 },
+  icon:     { h: 32,  fill: { r: 1,    g: 1,    b: 1    }, radius: 0 },
+  tabs:     { h: 44,  fill: { r: 1,    g: 1,    b: 1    }, radius: 0 },
+  dropdown: { h: 44,  fill: { r: 0.97, g: 0.97, b: 0.97 }, radius: 8 },
+  checkbox: { h: 28,  fill: { r: 1,    g: 1,    b: 1    }, radius: 0 },
+  radio:    { h: 28,  fill: { r: 1,    g: 1,    b: 1    }, radius: 0 },
+  toggle:   { h: 28,  fill: { r: 1,    g: 1,    b: 1    }, radius: 0 },
+  badge:    { h: 22,  fill: { r: 0.2,  g: 0.4,  b: 1    }, radius: 11 },
+  table:    { h: 124, fill: { r: 0.98, g: 0.98, b: 0.99 }, radius: 6 },
+  progress: { h: 28,  fill: { r: 1,    g: 1,    b: 1    }, radius: 0 },
 };
+
+// ─── Figma 요소 생성 헬퍼 ─────────────────────────────────────────────────────
+
+function makeRect(
+  frame: FrameNode,
+  x: number, y: number, w: number, h: number,
+  fill: { r: number; g: number; b: number },
+  radius?: number,
+  strokeColor?: { r: number; g: number; b: number },
+  strokeWeight?: number
+): RectangleNode {
+  var rect = figma.createRectangle();
+  rect.resize(w, h);
+  rect.fills = [{ type: "SOLID", color: fill }];
+  if (radius !== undefined) rect.cornerRadius = radius;
+  if (strokeColor) {
+    rect.strokeWeight = strokeWeight || 1;
+    rect.strokes = [{ type: "SOLID", color: strokeColor }];
+  }
+  frame.appendChild(rect);
+  rect.x = x;
+  rect.y = y;
+  return rect;
+}
+
+function makeText(
+  frame: FrameNode,
+  x: number, y: number,
+  chars: string,
+  size: number,
+  weight: "Bold" | "Medium" | "Regular",
+  color: { r: number; g: number; b: number },
+  fixedW?: number, fixedH?: number,
+  alignH?: "LEFT" | "CENTER" | "RIGHT",
+  alignV?: "TOP" | "CENTER" | "BOTTOM"
+): TextNode {
+  var txt = figma.createText();
+  txt.characters = chars;
+  txt.fontSize = size;
+  txt.fontName = { family: "Inter", style: weight };
+  txt.fills = [{ type: "SOLID", color: color }];
+  if (fixedW !== undefined && fixedH !== undefined) txt.resize(fixedW, fixedH);
+  if (alignH) txt.textAlignHorizontal = alignH;
+  if (alignV) txt.textAlignVertical = alignV;
+  frame.appendChild(txt);
+  txt.x = x;
+  txt.y = y;
+  return txt;
+}
+
+function getElementHeight(elem: WireframeElement): number {
+  if (elem.type === "card") return elem.sublabel ? 88 : 70;
+  if (elem.type === "list") return elem.sublabel ? 56 : 44;
+  return (ELEMENT_STYLES[elem.type] || ELEMENT_STYLES.text).h;
+}
+
+// 공유 색상 상수
+var C_WHITE =   { r: 1,    g: 1,    b: 1    };
+var C_BLUE  =   { r: 0.2,  g: 0.4,  b: 1    };
+var C_DARK  =   { r: 0.25, g: 0.25, b: 0.3  };
+var C_MUTED =   { r: 0.5,  g: 0.5,  b: 0.55 };
+var C_GRAY_TXT= { r: 0.6,  g: 0.6,  b: 0.6  };
+var C_BORDER =  { r: 0.9,  g: 0.9,  b: 0.92 };
+var C_CHEVRON = { r: 0.65, g: 0.65, b: 0.7  };
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+function groupElementsIntoRows(
+  elements: WireframeElement[]
+): Array<{ items: WireframeElement[] }> {
+  var rows: Array<{ items: WireframeElement[] }> = [];
+  var i = 0;
+  while (i < elements.length) {
+    var el = elements[i];
+    var w = el.width || "full";
+    if (w === "full") {
+      rows.push({ items: [el] });
+      i++;
+    } else {
+      var maxCols = w === "half" ? 2 : 3;
+      var group: WireframeElement[] = [el];
+      while (
+        group.length < maxCols &&
+        i + group.length < elements.length &&
+        (elements[i + group.length].width || "full") === w
+      ) {
+        group.push(elements[i + group.length]);
+      }
+      rows.push({ items: group });
+      i += group.length;
+    }
+  }
+  return rows;
+}
+
+function calculateScreenHeight(rows: Array<{ items: WireframeElement[] }>): number {
+  var h = 44 + SCREEN_PADDING;
+  for (var ri = 0; ri < rows.length; ri++) {
+    var maxH = 0;
+    var items = rows[ri].items;
+    for (var ii = 0; ii < items.length; ii++) {
+      var eh = getElementHeight(items[ii]);
+      if (eh > maxH) maxH = eh;
+    }
+    h += maxH + ELEMENT_GAP;
+  }
+  return Math.max(h + SCREEN_PADDING, 300);
+}
+
+function renderElement(
+  frame: FrameNode,
+  elem: WireframeElement,
+  x: number, y: number, w: number
+): number {
+  var type = elem.type;
+  var label = elem.label || "";
+  var variant = elem.variant || "default";
+  var sublabel = elem.sublabel || null;
+  var style = ELEMENT_STYLES[type] || ELEMENT_STYLES.text;
+  var h = getElementHeight(elem);
+
+  if (type === "divider") {
+    makeRect(frame, x, y, w, 1, style.fill);
+    return 1;
+  }
+
+  if (type === "header") {
+    makeRect(frame, x, y, w, h, style.fill);
+    makeText(frame, SCREEN_PADDING, y + Math.floor((h - 14) / 2), label, 14, "Bold", C_WHITE);
+    return h;
+  }
+
+  if (type === "button") {
+    var isOutline = variant === "outline" || variant === "ghost";
+    var btnFill = isOutline ? C_WHITE :
+                  variant === "secondary" ? { r: 0.93, g: 0.93, b: 0.96 } : style.fill;
+    makeRect(frame, x, y, w, h, btnFill, style.radius,
+      isOutline ? C_BLUE : undefined, isOutline ? 1.5 : undefined);
+    var btnTextColor = isOutline ? C_BLUE :
+                       variant === "secondary" ? { r: 0.25, g: 0.25, b: 0.3 } : C_WHITE;
+    makeText(frame, x, y, label, 13, "Medium", btnTextColor, w, h, "CENTER", "CENTER");
+    return h;
+  }
+
+  if (type === "input" || type === "search" || type === "dropdown") {
+    makeRect(frame, x, y, w, h, style.fill, style.radius, { r: 0.82, g: 0.82, b: 0.82 });
+    var textX = x + 12;
+    if (type === "search") {
+      makeText(frame, x + 12, y + Math.floor((h - 12) / 2), "○", 11, "Regular", C_MUTED);
+      textX = x + 28;
+    }
+    makeText(frame, textX, y + Math.floor((h - 14) / 2), label, 12, "Regular", C_GRAY_TXT);
+    if (type === "dropdown") {
+      makeText(frame, x + w - 20, y + Math.floor((h - 12) / 2), "▾", 11, "Regular", C_MUTED);
+    }
+    return h;
+  }
+
+  if (type === "image") {
+    makeRect(frame, x, y, w, h, style.fill, style.radius);
+    makeText(frame, x, y, label || "이미지", 11, "Regular", C_MUTED, w, h, "CENTER", "CENTER");
+    return h;
+  }
+
+  if (type === "tabs") {
+    var tabNames = label.split(",").map(function (s: string) { return s.trim(); });
+    makeRect(frame, x, y + h - 1, w, 1, { r: 0.88, g: 0.88, b: 0.88 });
+    var tabW = Math.floor(w / tabNames.length);
+    for (var ti = 0; ti < tabNames.length; ti++) {
+      var isActive = ti === 0;
+      makeText(frame, x + ti * tabW, y, tabNames[ti], 13, isActive ? "Medium" : "Regular",
+        isActive ? C_BLUE : C_MUTED, tabW, h, "CENTER", "CENTER");
+      if (isActive) makeRect(frame, x + ti * tabW, y + h - 2, tabW, 2, C_BLUE);
+    }
+    return h;
+  }
+
+  if (type === "checkbox" || type === "radio") {
+    var ctrlY = y + Math.floor((h - 16) / 2);
+    if (type === "checkbox") {
+      makeRect(frame, x, ctrlY, 16, 16, C_WHITE, 3, { r: 0.6, g: 0.6, b: 0.65 }, 1.5);
+    } else {
+      var circle = figma.createEllipse();
+      circle.resize(16, 16);
+      circle.fills = [{ type: "SOLID", color: C_WHITE }];
+      circle.strokeWeight = 1.5;
+      circle.strokes = [{ type: "SOLID", color: { r: 0.6, g: 0.6, b: 0.65 } }];
+      frame.appendChild(circle);
+      circle.x = x;
+      circle.y = ctrlY;
+    }
+    makeText(frame, x + 24, y + Math.floor((h - 14) / 2), label, 12, "Regular", { r: 0.2, g: 0.2, b: 0.25 });
+    return h;
+  }
+
+  if (type === "toggle") {
+    var isOn = variant === "primary";
+    makeRect(frame, x, y + Math.floor((h - 20) / 2), 36, 20,
+      isOn ? C_BLUE : { r: 0.75, g: 0.75, b: 0.78 }, 10);
+    var thumb = figma.createEllipse();
+    thumb.resize(16, 16);
+    thumb.fills = [{ type: "SOLID", color: C_WHITE }];
+    frame.appendChild(thumb);
+    thumb.x = isOn ? x + 18 : x + 2;
+    thumb.y = y + Math.floor((h - 16) / 2);
+    makeText(frame, x + 44, y + Math.floor((h - 14) / 2), label, 12, "Regular", { r: 0.2, g: 0.2, b: 0.25 });
+    return h;
+  }
+
+  if (type === "badge") {
+    var badgeW = Math.max(label.length * 7 + 16, 40);
+    var isBadgeOutline = variant === "outline";
+    var badgeFill = isBadgeOutline ? C_WHITE :
+                    variant === "secondary" ? { r: 0.85, g: 0.85, b: 0.88 } : C_BLUE;
+    makeRect(frame, x, y, badgeW, h, badgeFill, style.radius,
+      isBadgeOutline ? { r: 0.6, g: 0.6, b: 0.65 } : undefined);
+    makeText(frame, x, y, label, 10, "Medium",
+      variant === "primary" ? C_WHITE : { r: 0.3, g: 0.3, b: 0.35 },
+      badgeW, h, "CENTER", "CENTER");
+    return h;
+  }
+
+  if (type === "progress") {
+    makeText(frame, x, y, label, 11, "Regular", { r: 0.35, g: 0.35, b: 0.4 });
+    makeRect(frame, x, y + 16, w, 6, { r: 0.9, g: 0.9, b: 0.92 }, 3);
+    makeRect(frame, x, y + 16, Math.floor(w / 2), 6, C_BLUE, 3);
+    return h;
+  }
+
+  if (type === "table") {
+    var colHeaders = label.split(",").map(function (s: string) { return s.trim(); });
+    var colCount = Math.max(colHeaders.length, 2);
+    var colW = Math.floor(w / colCount);
+    var rowH = 30;
+    makeRect(frame, x, y, w, rowH, { r: 0.93, g: 0.93, b: 0.96 }, style.radius);
+    for (var ci = 0; ci < colCount; ci++) {
+      makeText(frame, x + ci * colW + 8, y + 8,
+        colHeaders[ci] || ("컬럼" + (ci + 1)), 11, "Medium", { r: 0.25, g: 0.25, b: 0.3 });
+    }
+    for (var ri = 1; ri <= 3; ri++) {
+      makeRect(frame, x, y + ri * rowH, w, 1, { r: 0.9, g: 0.9, b: 0.92 });
+      for (var rci = 0; rci < colCount; rci++) {
+        makeRect(frame, x + rci * colW + 8, y + ri * rowH + 11,
+          Math.floor(colW * 0.6), 8, { r: 0.88, g: 0.88, b: 0.9 }, 4);
+      }
+    }
+    return style.h;
+  }
+
+  if (type === "card") {
+    makeRect(frame, x, y, w, h, style.fill, style.radius, { r: 0.88, g: 0.88, b: 0.92 });
+    makeText(frame, x + 12, y + (sublabel ? 12 : Math.floor((h - 14) / 2)),
+      label, 12, "Medium", { r: 0.1, g: 0.1, b: 0.15 });
+    if (sublabel) makeText(frame, x + 12, y + 32, sublabel, 11, "Regular", C_MUTED);
+    makeText(frame, x + w - 20, y + Math.floor((h - 16) / 2), "›", 16, "Regular", C_CHEVRON);
+    return h;
+  }
+
+  if (type === "list") {
+    makeRect(frame, x, y, w, h, style.fill, style.radius, C_BORDER);
+    makeRect(frame, x + 8, y + 4, 3, h - 8, { r: 0.6, g: 0.72, b: 1 }, 2);
+    makeText(frame, x + 20, y + (sublabel ? 8 : Math.floor((h - 14) / 2)),
+      label, 12, "Medium", { r: 0.15, g: 0.15, b: 0.2 });
+    if (sublabel) makeText(frame, x + 20, y + 26, sublabel, 10, "Regular", C_MUTED);
+    makeText(frame, x + w - 18, y + Math.floor((h - 14) / 2), "›", 14, "Regular", C_CHEVRON);
+    return h;
+  }
+
+  if (type === "nav") {
+    makeRect(frame, x, y, w, h, style.fill, style.radius, C_BORDER);
+    makeText(frame, x + 12, y + Math.floor((h - 14) / 2), label, 12, "Medium", C_DARK);
+    return h;
+  }
+
+  makeText(frame, x, y + 4, label, 12, "Regular", C_DARK);
+  return h;
+}
 
 async function createWireframe(data: WireframeData) {
   var screens = data.screens;
@@ -374,22 +669,17 @@ async function createWireframe(data: WireframeData) {
 
   var isFigJam = figma.editorType === "figjam";
 
-  // 화면별 너비/높이 계산
+  // 화면별 너비/높이/행 그룹 계산 (행 그룹은 높이 계산과 렌더링에서 공유)
   var screenWidths: Record<string, number> = {};
   var screenHeights: Record<string, number> = {};
+  var screenRowsMap: Record<string, Array<{ items: WireframeElement[] }>> = {};
 
   for (var i = 0; i < screens.length; i++) {
     var s = screens[i];
-    var sw = SCREEN_WIDTHS[s.screenType || "desktop"] || SCREEN_WIDTHS.desktop;
-    screenWidths[s.id] = sw;
-
-    var h = 72;
-    for (var j = 0; j < s.elements.length; j++) {
-      var style = ELEMENT_STYLES[s.elements[j].type] || ELEMENT_STYLES.text;
-      h += style.h + ELEMENT_GAP;
-    }
-    h += SCREEN_PADDING * 2;
-    screenHeights[s.id] = Math.max(h, 300);
+    screenWidths[s.id] = SCREEN_WIDTHS[s.screenType || "desktop"] || SCREEN_WIDTHS.desktop;
+    var sRows = groupElementsIntoRows(s.elements);
+    screenRowsMap[s.id] = sRows;
+    screenHeights[s.id] = calculateScreenHeight(sRows);
   }
 
   // step 기반 좌→우 배치 (같은 step은 세로로 나열)
@@ -401,7 +691,6 @@ async function createWireframe(data: WireframeData) {
   }
 
   var sortedSteps = Object.keys(stepGroups).map(Number).sort(function (a, b) { return a - b; });
-
   var screenPositions = new Map<string, { x: number; y: number }>();
   var createdFrames = new Map<string, SceneNode>();
   var curX = 0;
@@ -409,21 +698,16 @@ async function createWireframe(data: WireframeData) {
   for (var stepIdx = 0; stepIdx < sortedSteps.length; stepIdx++) {
     var stepNum = sortedSteps[stepIdx];
     var group = stepGroups[stepNum];
-
-    // 이 step에서 가장 넓은 화면의 너비
     var maxW = 0;
     for (var gi = 0; gi < group.length; gi++) {
-      var w = screenWidths[group[gi].id] || 360;
-      if (w > maxW) maxW = w;
+      var gw = screenWidths[group[gi].id] || 360;
+      if (gw > maxW) maxW = gw;
     }
-
-    // 같은 step 내 화면들을 세로로 배치
-    var curY = 0;
+    var stepY = 0;
     for (var gj = 0; gj < group.length; gj++) {
-      screenPositions.set(group[gj].id, { x: curX, y: curY });
-      curY += screenHeights[group[gj].id] + SAME_STEP_Y_GAP;
+      screenPositions.set(group[gj].id, { x: curX, y: stepY });
+      stepY += screenHeights[group[gj].id] + SAME_STEP_Y_GAP;
     }
-
     curX += maxW + STEP_X_GAP;
   }
 
@@ -433,12 +717,11 @@ async function createWireframe(data: WireframeData) {
     var pos = screenPositions.get(screen.id);
     if (!pos) continue;
     var screenH = screenHeights[screen.id];
+    var screenW = screenWidths[screen.id] || 360;
 
     try {
-      // Figma Frame으로 화면 생성
       var frame = figma.createFrame();
       frame.name = screen.title;
-      var screenW = screenWidths[screen.id] || 360;
       frame.resize(screenW, screenH);
       frame.x = pos.x;
       frame.y = pos.y;
@@ -448,7 +731,7 @@ async function createWireframe(data: WireframeData) {
       frame.strokes = [{ type: "SOLID", color: { r: 0.85, g: 0.85, b: 0.85 } }];
       frame.clipsContent = true;
 
-      // step 번호 + 화면 이름 라벨 (프레임 위에)
+      // 프레임 위 라벨
       var stepLabel = screen.step ? "Step " + screen.step + " · " : "";
       var typeLabel = screen.screenType ? " [" + screen.screenType + "]" : "";
       var titleLabel = figma.createText();
@@ -459,170 +742,40 @@ async function createWireframe(data: WireframeData) {
       titleLabel.x = pos.x;
       titleLabel.y = pos.y - 24;
 
-      // 상태바 영역
-      var statusBar = figma.createRectangle();
-      statusBar.resize(screenW, 44);
-      statusBar.fills = [{ type: "SOLID", color: { r: 0.97, g: 0.97, b: 0.97 } }];
-      frame.appendChild(statusBar);
-      statusBar.x = 0;
-      statusBar.y = 0;
-
-      // 상태바 제목
-      var statusText = figma.createText();
-      statusText.characters = screen.title;
-      statusText.fontSize = 13;
-      statusText.fontName = { family: "Inter", style: "Medium" };
-      statusText.fills = [{ type: "SOLID", color: { r: 0.1, g: 0.1, b: 0.1 } }];
-      frame.appendChild(statusText);
-      statusText.x = SCREEN_PADDING;
-      statusText.y = 12;
+      // 상태바
+      makeRect(frame, 0, 0, screenW, 44, { r: 0.97, g: 0.97, b: 0.97 });
+      makeText(frame, SCREEN_PADDING, 15, screen.title, 13, "Medium", { r: 0.1, g: 0.1, b: 0.1 });
 
       var curY = 44 + SCREEN_PADDING;
+      var rows = screenRowsMap[screen.id];
 
-      // UI 요소 생성
-      for (var ei = 0; ei < screen.elements.length; ei++) {
-        var elem = screen.elements[ei];
-        var elemStyle = ELEMENT_STYLES[elem.type] || ELEMENT_STYLES.text;
-        var elemW = screenW - SCREEN_PADDING * 2;
+      for (var ri = 0; ri < rows.length; ri++) {
+        var row = rows[ri];
+        var items = row.items;
+        var maxElemH = 0;
 
-        if (elem.type === "divider") {
-          var divLine = figma.createRectangle();
-          divLine.resize(elemW, 1);
-          divLine.fills = [{ type: "SOLID", color: elemStyle.fill }];
-          frame.appendChild(divLine);
-          divLine.x = SCREEN_PADDING;
-          divLine.y = curY;
-          curY += ELEMENT_GAP;
-          continue;
-        }
-
-        if (elem.type === "header") {
-          var headerBg = figma.createRectangle();
-          headerBg.resize(screenW, elemStyle.h);
-          headerBg.fills = [{ type: "SOLID", color: elemStyle.fill }];
-          frame.appendChild(headerBg);
-          headerBg.x = 0;
-          headerBg.y = curY;
-
-          var headerText = figma.createText();
-          headerText.characters = elem.label;
-          headerText.fontSize = 14;
-          headerText.fontName = { family: "Inter", style: "Bold" };
-          headerText.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
-          frame.appendChild(headerText);
-          headerText.x = SCREEN_PADDING;
-          headerText.y = curY + 14;
-
-          curY += elemStyle.h + ELEMENT_GAP;
-          continue;
-        }
-
-        if (elem.type === "button") {
-          var isOutline = elem.variant === "outline" || elem.variant === "ghost";
-          var btnBg = figma.createRectangle();
-          btnBg.resize(elemW, elemStyle.h);
-          btnBg.cornerRadius = elemStyle.radius;
-          if (isOutline) {
-            btnBg.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
-            btnBg.strokeWeight = 1.5;
-            btnBg.strokes = [{ type: "SOLID", color: { r: 0.2, g: 0.4, b: 1 } }];
-          } else if (elem.variant === "secondary") {
-            btnBg.fills = [{ type: "SOLID", color: { r: 0.93, g: 0.93, b: 0.96 } }];
-          } else {
-            btnBg.fills = [{ type: "SOLID", color: elemStyle.fill }];
+        if (items.length === 1) {
+          var isFullBleed = items[0].type === "header";
+          var elemH = renderElement(
+            frame, items[0],
+            isFullBleed ? 0 : SCREEN_PADDING,
+            curY,
+            isFullBleed ? screenW : screenW - SCREEN_PADDING * 2
+          );
+          maxElemH = elemH;
+        } else {
+          var colCount = items.length;
+          var totalGap = COL_GAP * (colCount - 1);
+          var colW = Math.floor((screenW - SCREEN_PADDING * 2 - totalGap) / colCount);
+          var colX = SCREEN_PADDING;
+          for (var ci = 0; ci < items.length; ci++) {
+            var colElemH = renderElement(frame, items[ci], colX, curY, colW);
+            if (colElemH > maxElemH) maxElemH = colElemH;
+            colX += colW + COL_GAP;
           }
-          frame.appendChild(btnBg);
-          btnBg.x = SCREEN_PADDING;
-          btnBg.y = curY;
-
-          var btnText = figma.createText();
-          btnText.characters = elem.label;
-          btnText.fontSize = 13;
-          btnText.fontName = { family: "Inter", style: "Medium" };
-          if (isOutline) {
-            btnText.fills = [{ type: "SOLID", color: { r: 0.2, g: 0.4, b: 1 } }];
-          } else if (elem.variant === "secondary") {
-            btnText.fills = [{ type: "SOLID", color: { r: 0.2, g: 0.2, b: 0.2 } }];
-          } else {
-            btnText.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
-          }
-          frame.appendChild(btnText);
-          btnText.x = SCREEN_PADDING + 16;
-          btnText.y = curY + 13;
-
-          curY += elemStyle.h + ELEMENT_GAP;
-          continue;
         }
 
-        if (elem.type === "input") {
-          var inputBg = figma.createRectangle();
-          inputBg.resize(elemW, elemStyle.h);
-          inputBg.cornerRadius = elemStyle.radius;
-          inputBg.fills = [{ type: "SOLID", color: elemStyle.fill }];
-          inputBg.strokeWeight = 1;
-          inputBg.strokes = [{ type: "SOLID", color: { r: 0.82, g: 0.82, b: 0.82 } }];
-          frame.appendChild(inputBg);
-          inputBg.x = SCREEN_PADDING;
-          inputBg.y = curY;
-
-          var inputText = figma.createText();
-          inputText.characters = elem.label;
-          inputText.fontSize = 12;
-          inputText.fontName = { family: "Inter", style: "Regular" };
-          inputText.fills = [{ type: "SOLID", color: { r: 0.6, g: 0.6, b: 0.6 } }];
-          frame.appendChild(inputText);
-          inputText.x = SCREEN_PADDING + 12;
-          inputText.y = curY + 14;
-
-          curY += elemStyle.h + ELEMENT_GAP;
-          continue;
-        }
-
-        if (elem.type === "image") {
-          var imgBg = figma.createRectangle();
-          imgBg.resize(elemW, elemStyle.h);
-          imgBg.cornerRadius = elemStyle.radius;
-          imgBg.fills = [{ type: "SOLID", color: elemStyle.fill }];
-          frame.appendChild(imgBg);
-          imgBg.x = SCREEN_PADDING;
-          imgBg.y = curY;
-
-          var imgLabel = figma.createText();
-          imgLabel.characters = elem.label || "이미지";
-          imgLabel.fontSize = 11;
-          imgLabel.fontName = { family: "Inter", style: "Regular" };
-          imgLabel.fills = [{ type: "SOLID", color: { r: 0.5, g: 0.5, b: 0.55 } }];
-          frame.appendChild(imgLabel);
-          imgLabel.x = SCREEN_PADDING + 12;
-          imgLabel.y = curY + elemStyle.h / 2 - 6;
-
-          curY += elemStyle.h + ELEMENT_GAP;
-          continue;
-        }
-
-        // 기본: text, list, card, nav, icon 등
-        if (elem.type === "card" || elem.type === "list" || elem.type === "nav") {
-          var cardBg = figma.createRectangle();
-          cardBg.resize(elemW, elemStyle.h);
-          cardBg.cornerRadius = elemStyle.radius;
-          cardBg.fills = [{ type: "SOLID", color: elemStyle.fill }];
-          cardBg.strokeWeight = 1;
-          cardBg.strokes = [{ type: "SOLID", color: { r: 0.9, g: 0.9, b: 0.92 } }];
-          frame.appendChild(cardBg);
-          cardBg.x = SCREEN_PADDING;
-          cardBg.y = curY;
-        }
-
-        var textNode = figma.createText();
-        textNode.characters = elem.label;
-        textNode.fontSize = elem.type === "text" || elem.type === "icon" ? 12 : 11;
-        textNode.fontName = { family: "Inter", style: elem.type === "nav" ? "Medium" : "Regular" };
-        textNode.fills = [{ type: "SOLID", color: { r: 0.25, g: 0.25, b: 0.25 } }];
-        frame.appendChild(textNode);
-        textNode.x = SCREEN_PADDING + (elem.type === "text" || elem.type === "icon" ? 0 : 12);
-        textNode.y = curY + (elem.type === "text" || elem.type === "icon" ? 4 : Math.floor(elemStyle.h / 2) - 6);
-
-        curY += elemStyle.h + ELEMENT_GAP;
+        curY += maxElemH + ELEMENT_GAP;
       }
 
       createdFrames.set(screen.id, frame);
@@ -640,14 +793,12 @@ async function createWireframe(data: WireframeData) {
 
     try {
       if (isFigJam) {
-        // FigJam에서는 커넥터 사용
         var connector = figma.createConnector();
         connector.connectorStart = { endpointNodeId: fromFrame.id, magnet: "RIGHT" as ConnectorMagnet };
         connector.connectorEnd = { endpointNodeId: toFrame.id, magnet: "LEFT" as ConnectorMagnet };
         connector.connectorLineType = "CURVE";
         if (flow.label) connector.text.characters = flow.label;
       } else {
-        // Figma에서는 화살표 선 + 라벨 텍스트
         var fromPos2 = screenPositions.get(flow.from);
         var toPos2 = screenPositions.get(flow.to);
         if (!fromPos2 || !toPos2) continue;
@@ -658,7 +809,6 @@ async function createWireframe(data: WireframeData) {
         var toX = toPos2.x;
         var toY = toPos2.y + (screenHeights[flow.to] || 300) / 2;
 
-        // 화살표 선
         var line = figma.createLine();
         var dx = toX - fromX;
         var dy = toY - fromY;
@@ -670,7 +820,6 @@ async function createWireframe(data: WireframeData) {
         line.strokes = [{ type: "SOLID", color: { r: 0.6, g: 0.6, b: 0.7 } }];
         line.strokeWeight = 1.5;
 
-        // 흐름 라벨
         if (flow.label) {
           var flowLabel = figma.createText();
           flowLabel.characters = flow.label;

@@ -6,6 +6,7 @@ import {
   FileText,
   GitBranch,
   Smartphone,
+  FileEdit,
   Search,
   MoreHorizontal,
   Pencil,
@@ -141,6 +142,11 @@ export default function HistoryPage() {
       value: "wireframes",
       icon: <Smartphone className="mr-1 h-3 w-3" />,
     },
+    {
+      label: "기획서 개선",
+      value: "spec-improve",
+      icon: <FileEdit className="mr-1 h-3 w-3" />,
+    },
   ];
 
   return (
@@ -148,7 +154,7 @@ export default function HistoryPage() {
       <div>
         <h2 className="text-2xl font-bold tracking-tight">생성 이력</h2>
         <p className="text-muted-foreground">
-          모든 TC 생성, 다이어그램, 와이어프레임 이력을 확인합니다.
+          모든 TC 생성, 다이어그램, 와이어프레임, 기획서 개선 이력을 확인합니다.
         </p>
       </div>
 
@@ -205,6 +211,8 @@ export default function HistoryPage() {
                     <FileText className="h-5 w-5 text-blue-600" />
                   ) : job.type === "wireframes" ? (
                     <Smartphone className="h-5 w-5 text-pink-600" />
+                  ) : job.type === "spec-improve" ? (
+                    <FileEdit className="h-5 w-5 text-emerald-600" />
                   ) : (
                     <GitBranch className="h-5 w-5 text-purple-600" />
                   )}

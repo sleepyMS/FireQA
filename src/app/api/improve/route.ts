@@ -1,0 +1,73 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { createGenerationJob, completeJob, failJob } from "@/lib/api/create-generation-job";
+import { JobType } from "@/types/enums";
+import { Stage } from "@/types/sse";
+import { createSSEStream } from "@/lib/sse/create-sse-stream";
+import { streamOpenAIWithSchema } from "@/lib/sse/stream-openai";
+import {
+  SPEC_IMPROVE_SYSTEM_PROMPT,
+  buildSpecImproveUserPrompt,
+} from "@/lib/openai/prompts/spec-improve-system";
+import { specImproveJsonSchema } from "@/lib/openai/schemas/spec-improve";
+import type { SpecImproveResult } from "@/types/spec-improve";
+import { estimateTokens } from "@/lib/text/split-document";
+
+// Vercel 서버리스 타임아웃 확장 (5분)
+export const maxDuration = 300;
+
+export async function POST(request: NextRequest) {
+  const formData = await request.formData();
+  const file = formData.get("file") as File;
+  const projectName = formData.get("projectName") as string;
+
+  if (!file || !projectName) {
+    return NextResponse.json(
+      { error: "파일과 프로젝트 이름이 필요합니다." },
+      { status: 400 }
+    );
+  }
+
+  const user = await getCurrentUser(request);
+  if (!user) {
+    return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
+  }
+
+  return createSSEStream(async (writer) => {
+    writer.send({ type: "stage", stage: Stage.PARSING, message: "문서를 파싱하고 있습니다...", progress: 10 });
+
+    const { jobId, parsedText } = await createGenerationJob(file, projectName, JobType.SPEC_IMPROVE, {
+      userId: user.userId,
+      organizationId: user.organizationId,
+    });
+    writer.send({ type: "job_created", jobId });
+
+    try {
+      let input = parsedText;
+      if (estimateTokens(parsedText) > 100000) {
+        input = parsedText.slice(0, 60000);
+      }
+
+      writer.send({ type: "stage", stage: Stage.GENERATING, message: "AI가 기획서를 생성하고 있습니다...", progress: 30 });
+
+      const { result, tokenUsage } = await streamOpenAIWithSchema<SpecImproveResult>({
+        systemPrompt: SPEC_IMPROVE_SYSTEM_PROMPT,
+        userPrompt: buildSpecImproveUserPrompt(input),
+        jsonSchema: specImproveJsonSchema,
+        writer,
+        signal: request.signal,
+      });
+
+      writer.send({ type: "stage", stage: Stage.SAVING, message: "결과를 저장하고 있습니다...", progress: 95 });
+      await completeJob(jobId, result, tokenUsage);
+
+      writer.send({ type: "complete", data: result, tokenUsage });
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : "기획서 개선에 실패했습니다.";
+      try { await failJob(jobId, err); } catch { /* DB 에러 무시 */ }
+      writer.send({ type: "error", message: errMsg });
+    }
+
+    writer.close();
+  }, request.signal);
+}

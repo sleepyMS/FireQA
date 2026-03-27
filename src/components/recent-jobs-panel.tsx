@@ -6,6 +6,7 @@ import {
   FileText,
   GitBranch,
   Smartphone,
+  FileEdit,
   Clock,
   ChevronRight,
   FolderOpen,
@@ -37,6 +38,10 @@ const TYPE_CONFIG: Record<string, { icon: React.ReactNode; bg: string }> = {
   wireframes: {
     icon: <Smartphone className="h-4 w-4 text-pink-600" />,
     bg: "bg-pink-50",
+  },
+  "spec-improve": {
+    icon: <FileEdit className="h-4 w-4 text-emerald-600" />,
+    bg: "bg-emerald-50",
   },
 };
 

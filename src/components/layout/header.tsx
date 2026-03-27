@@ -9,6 +9,7 @@ const pageTitles: Record<string, string> = {
   "/generate": "TC 생성",
   "/diagrams": "다이어그램",
   "/wireframes": "와이어프레임",
+  "/improve": "기획서 개선",
   "/history": "이력",
   "/templates": "템플릿",
   "/guide": "사용법",

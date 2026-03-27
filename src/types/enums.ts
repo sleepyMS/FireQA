@@ -2,6 +2,7 @@ export const JobType = {
   TEST_CASES: "test-cases",
   DIAGRAMS: "diagrams",
   WIREFRAMES: "wireframes",
+  SPEC_IMPROVE: "spec-improve",
 } as const;
 
 export type JobType = (typeof JobType)[keyof typeof JobType];
@@ -29,12 +30,14 @@ export const JOB_TYPE_LABEL: Record<string, string> = {
   [JobType.TEST_CASES]: "TC 생성",
   [JobType.DIAGRAMS]: "다이어그램",
   [JobType.WIREFRAMES]: "와이어프레임",
+  [JobType.SPEC_IMPROVE]: "기획서 개선",
 };
 
 export const JOB_TYPE_PATH: Record<string, string> = {
   [JobType.TEST_CASES]: "/generate",
   [JobType.DIAGRAMS]: "/diagrams",
   [JobType.WIREFRAMES]: "/wireframes",
+  [JobType.SPEC_IMPROVE]: "/improve",
 };
 
 export const UserRole = {
