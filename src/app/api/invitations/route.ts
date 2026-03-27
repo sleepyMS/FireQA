@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
   const rawToken = randomBytes(32).toString("hex");
   const tokenHash = createHash("sha256").update(rawToken).digest("hex");
 
-  await prisma.invitation.create({
+  const invitation = await prisma.invitation.create({
     data: {
       organizationId: user.organizationId,
       email: email ?? null,
@@ -94,5 +94,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     inviteUrl: `${baseUrl}/invite?token=${rawToken}`,
     token: rawToken,
+    id: invitation.id,
+    expiresAt: invitation.expiresAt,
   });
 }
