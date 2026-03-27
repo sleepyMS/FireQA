@@ -30,9 +30,21 @@ export async function GET(request: NextRequest) {
   }
 
   if (deviceAuth.status === DeviceAuthStatus.APPROVED && deviceAuth.token) {
-    const token = deviceAuth.token;
-    await prisma.deviceAuth.delete({ where: { id: deviceAuth.id } });
-    return NextResponse.json({ status: DeviceAuthStatus.APPROVED, token });
+    const [, user] = await Promise.all([
+      prisma.deviceAuth.delete({ where: { id: deviceAuth.id } }),
+      deviceAuth.userId
+        ? prisma.user.findUnique({
+            where: { id: deviceAuth.userId },
+            select: { email: true, name: true },
+          })
+        : Promise.resolve(null),
+    ]);
+    return NextResponse.json({
+      status: DeviceAuthStatus.APPROVED,
+      token: deviceAuth.token,
+      email: user?.email ?? null,
+      name: user?.name ?? null,
+    });
   }
 
   return NextResponse.json(

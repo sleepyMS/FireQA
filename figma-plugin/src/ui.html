@@ -250,21 +250,24 @@
     // ─── 초기화 ───
     async function init() {
       authToken = await getStorage('fireqa_token');
-      if (authToken) {
-        // 토큰이 유효한지 확인
-        try {
-          var res = await authFetch(SERVER_URL + '/api/jobs?type=diagrams');
-          if (res.ok) {
-            var email = await getStorage('fireqa_email');
-            showMainSection(email);
-            return;
-          }
-        } catch(e) {}
-        // 토큰 무효 → 인증 섹션 표시
-        authToken = null;
-        clearStorage('fireqa_token');
+      if (!authToken) {
+        showAuthSection();
+        return;
       }
-      showAuthSection();
+      try {
+        var res = await authFetch(SERVER_URL + '/api/jobs?type=diagrams');
+        if (res.ok) {
+          var email = await getStorage('fireqa_email');
+          showMainSection(email);
+          return;
+        }
+        // 서버 오류(5xx 등) - 토큰은 유지하되 인증 화면 표시
+        showAuthSection();
+      } catch(e) {
+        // 401: authFetch가 이미 토큰 삭제 + showAuthSection 호출
+        // 네트워크 오류: 토큰 유지, 인증 화면 표시
+        if (authToken) showAuthSection();
+      }
     }
 
     function showAuthSection() {
@@ -329,9 +332,10 @@
                 if (pollData.token) {
                   authToken = pollData.token;
                   setStorage('fireqa_token', authToken);
-                  setStorage('fireqa_email', 'Connected');
+                  var displayName = pollData.name || pollData.email || 'Connected';
+                  setStorage('fireqa_email', displayName);
                   authStatus.innerHTML = '';
-                  showMainSection('Connected');
+                  showMainSection(displayName);
                   return;
                 }
               }

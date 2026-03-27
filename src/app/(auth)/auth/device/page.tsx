@@ -1,14 +1,17 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 function DeviceAuthContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const code = searchParams.get("code");
 
   const [status, setStatus] = useState<"loading" | "confirm" | "success" | "error">("loading");
   const [error, setError] = useState("");
+  const [currentUser, setCurrentUser] = useState<string | null>(null);
 
   useEffect(() => {
     if (!code) {
@@ -17,25 +20,39 @@ function DeviceAuthContent() {
       return;
     }
 
-    // Device code가 유효한지 확인
-    fetch(`/api/auth/device?code=${code}`)
-      .then((res) => {
-        if (res.ok || res.status === 202) {
-          setStatus("confirm");
-        } else {
+    const supabase = createSupabaseBrowserClient();
+    supabase.auth.getUser().then(({ data }) => {
+      if (!data.user) {
+        router.replace(
+          `/login?redirect=${encodeURIComponent(`/auth/device?code=${code}`)}`
+        );
+        return;
+      }
+
+      const displayName =
+        (data.user.user_metadata?.full_name as string | undefined) ||
+        data.user.email ||
+        null;
+      setCurrentUser(displayName);
+
+      fetch(`/api/auth/device?code=${code}`)
+        .then((res) => {
+          if (res.ok || res.status === 202) {
+            setStatus("confirm");
+          } else {
+            setStatus("error");
+            setError("유효하지 않거나 만료된 인증 코드입니다.");
+          }
+        })
+        .catch(() => {
           setStatus("error");
-          setError("유효하지 않거나 만료된 인증 코드입니다.");
-        }
-      })
-      .catch(() => {
-        setStatus("error");
-        setError("서버에 연결할 수 없습니다.");
-      });
-  }, [code]);
+          setError("서버에 연결할 수 없습니다.");
+        });
+    });
+  }, [code, router]);
 
   async function handleApprove() {
     setStatus("loading");
-
     const res = await fetch("/api/auth/device", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -67,6 +84,11 @@ function DeviceAuthContent() {
           <p className="text-sm text-gray-700">
             Figma 플러그인에서 FireQA 계정 연결을 요청했습니다.
           </p>
+          {currentUser && (
+            <p className="text-xs text-gray-500">
+              <span className="font-medium text-gray-700">{currentUser}</span> 계정으로 연결합니다
+            </p>
+          )}
           <div className="rounded-lg bg-blue-50 p-4">
             <p className="text-xs text-gray-500">인증 코드</p>
             <p className="font-mono text-lg font-bold tracking-widest">{code?.slice(0, 8)}...</p>
