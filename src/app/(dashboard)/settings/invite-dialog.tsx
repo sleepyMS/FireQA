@@ -14,26 +14,34 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogClose,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+  SheetClose,
+} from "@/components/ui/sheet";
 
-interface InviteDialogProps {
+export interface CreatedInvitation {
+  id: string;
+  email: string | null;
+  role: string;
+  expiresAt: string;
+  token: string;
+}
+
+interface InviteSheetProps {
   open: boolean;
   onClose: () => void;
-  onCreated: () => void;
+  onCreated: (inv: CreatedInvitation) => void;
 }
 
 export default function InviteDialog({
   open,
   onClose,
   onCreated,
-}: InviteDialogProps) {
+}: InviteSheetProps) {
   const [role, setRole] = useState("member");
   const [email, setEmail] = useState("");
   const [expiresInHours, setExpiresInHours] = useState("72");
@@ -56,23 +64,34 @@ export default function InviteDialog({
 
   async function handleCreate() {
     setCreating(true);
-    const res = await fetch("/api/invitations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        role,
-        email: email.trim() || undefined,
-        expiresInHours: Number(expiresInHours),
-      }),
-    });
-    const data = await res.json();
-    setCreating(false);
-    if (res.ok) {
-      setInviteUrl(data.inviteUrl);
-      onCreated();
-      toast.success("초대 링크가 생성되었습니다.");
-    } else {
-      toast.error(data.error || "초대 생성에 실패했습니다.");
+    try {
+      const res = await fetch("/api/invitations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          role,
+          email: email.trim() || undefined,
+          expiresInHours: Number(expiresInHours),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setInviteUrl(data.inviteUrl);
+        onCreated({
+          id: data.id,
+          email: email.trim() || null,
+          role,
+          expiresAt: data.expiresAt,
+          token: data.token,
+        });
+        toast.success("초대 링크가 생성되었습니다.");
+      } else {
+        toast.error(data.error || "초대 생성에 실패했습니다.");
+      }
+    } catch {
+      toast.error("네트워크 오류가 발생했습니다.");
+    } finally {
+      setCreating(false);
     }
   }
 
@@ -83,39 +102,61 @@ export default function InviteDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>초대 링크 생성</DialogTitle>
-          <DialogDescription>
+    <Sheet open={open} onOpenChange={(o) => !o && handleClose()}>
+      <SheetContent side="right" className="flex flex-col">
+        <SheetHeader>
+          <SheetTitle>초대 링크 생성</SheetTitle>
+          <SheetDescription>
             새 멤버를 초대할 링크를 생성합니다.
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
 
-        {inviteUrl ? (
-          <div className="space-y-3">
-            <Label>초대 링크</Label>
-            <div className="flex gap-2">
-              <Input value={inviteUrl} readOnly />
-              <Button variant="outline" size="icon" onClick={handleCopy}>
-                {copied ? (
-                  <Check className="h-4 w-4" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
+        <div className="flex-1 overflow-y-auto px-4">
+          {inviteUrl ? (
+            <div className="space-y-4 pt-2">
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                <p className="mb-2 text-xs font-semibold text-emerald-700">
+                  초대 링크가 생성되었습니다
+                </p>
+                <div className="flex gap-2">
+                  <Input
+                    value={inviteUrl}
+                    readOnly
+                    className="font-mono text-xs"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={handleCopy}
+                    className="shrink-0"
+                  >
+                    {copied ? (
+                      <Check className="h-4 w-4 text-emerald-600" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                시트를 닫아도 목록에서 다시 복사할 수 있습니다.
+              </p>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={reset}
+              >
+                새 링크 생성
               </Button>
             </div>
-            {copied && <p className="text-xs text-green-600">복사됨!</p>}
-            <DialogFooter>
-              <Button onClick={handleClose}>닫기</Button>
-            </DialogFooter>
-          </div>
-        ) : (
-          <>
-            <div className="space-y-4">
+          ) : (
+            <div className="space-y-4 pt-2">
               <div className="space-y-2">
                 <Label>역할</Label>
-                <Select value={role} onValueChange={(v) => v && setRole(v)}>
+                <Select
+                  value={role}
+                  onValueChange={(v) => v && setRole(v)}
+                >
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
@@ -151,17 +192,31 @@ export default function InviteDialog({
                 </Select>
               </div>
             </div>
-            <DialogFooter>
-              <DialogClose render={<Button variant="outline" />}>
-                취소
-              </DialogClose>
-              <Button onClick={handleCreate} disabled={creating}>
-                {creating ? "생성 중..." : "생성"}
-              </Button>
-            </DialogFooter>
-          </>
+          )}
+        </div>
+
+        {!inviteUrl && (
+          <SheetFooter className="px-4">
+            <SheetClose render={<Button variant="outline" className="flex-1" />}>
+              취소
+            </SheetClose>
+            <Button
+              onClick={handleCreate}
+              disabled={creating}
+              className="flex-1"
+            >
+              {creating ? "생성 중..." : "링크 생성"}
+            </Button>
+          </SheetFooter>
         )}
-      </DialogContent>
-    </Dialog>
+        {inviteUrl && (
+          <SheetFooter className="px-4">
+            <Button onClick={handleClose} className="w-full">
+              닫기
+            </Button>
+          </SheetFooter>
+        )}
+      </SheetContent>
+    </Sheet>
   );
 }
