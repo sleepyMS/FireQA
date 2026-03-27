@@ -106,16 +106,24 @@ function DeviceAuthContent() {
       )}
 
       {status === "success" && (
-        <div className="space-y-2">
-          <div className="text-4xl">&#x2705;</div>
-          <p className="font-medium text-green-700">연결 완료!</p>
-          <p className="text-sm text-gray-500">Figma 플러그인으로 돌아가세요. 이 페이지를 닫아도 됩니다.</p>
+        <div className="flex flex-col items-center gap-3 py-4">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+            <svg className="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <p className="text-base font-semibold text-gray-900">연결 완료!</p>
+          <p className="text-sm text-gray-500">Figma 플러그인으로 돌아가세요.<br />이 페이지를 닫아도 됩니다.</p>
         </div>
       )}
 
       {status === "error" && (
-        <div className="space-y-2">
-          <div className="text-4xl">&#x274C;</div>
+        <div className="flex flex-col items-center gap-3 py-4">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
+            <svg className="h-8 w-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </div>
           <p className="text-sm text-red-600">{error}</p>
         </div>
       )}
