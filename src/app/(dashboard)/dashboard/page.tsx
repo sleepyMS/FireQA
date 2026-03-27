@@ -6,12 +6,19 @@ import { STATUS_CONFIG, JOB_TYPE_LABEL, JobType, JobStatus } from "@/types/enums
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth/get-current-user";
 
 export default async function DashboardPage() {
+  const user = await getCurrentUser();
+  const orgFilter = user ? { organizationId: user.organizationId } : undefined;
+
   const [projectCount, jobCount, recentJobs] = await Promise.all([
-    prisma.project.count(),
-    prisma.generationJob.count({ where: { status: JobStatus.COMPLETED } }),
+    prisma.project.count({ where: orgFilter }),
+    prisma.generationJob.count({
+      where: { status: JobStatus.COMPLETED, project: orgFilter },
+    }),
     prisma.generationJob.findMany({
+      where: { project: orgFilter },
       take: 5,
       orderBy: { createdAt: "desc" },
       include: { project: true, upload: true },
