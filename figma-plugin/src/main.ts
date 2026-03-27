@@ -334,6 +334,7 @@ interface WireframeFlow {
   to: string;
   label: string;
   action: string;
+  fromElement?: string | null;
 }
 
 interface WireframeData {
@@ -352,6 +353,8 @@ var ELEMENT_GAP = 10;
 var COL_GAP = 8;
 var STEP_X_GAP = 200;
 var SAME_STEP_Y_GAP = 80;
+var MAX_STEPS_PER_ROW = 5;
+var ROW_GAP = 150;
 
 var ELEMENT_STYLES: Record<string, { h: number; fill: { r: number; g: number; b: number }; radius: number }> = {
   header:   { h: 48,  fill: { r: 0.15, g: 0.15, b: 0.15 }, radius: 0 },
@@ -691,24 +694,49 @@ async function createWireframe(data: WireframeData) {
   }
 
   var sortedSteps = Object.keys(stepGroups).map(Number).sort(function (a, b) { return a - b; });
+
+  // AI가 모든 화면에 동일한 step을 할당한 경우 index 순으로 분배
+  if (sortedSteps.length === 1) {
+    var flatScreens = stepGroups[sortedSteps[0]];
+    stepGroups = {};
+    for (var fi = 0; fi < flatScreens.length; fi++) {
+      stepGroups[fi + 1] = [flatScreens[fi]];
+    }
+    sortedSteps = Object.keys(stepGroups).map(Number).sort(function (a, b) { return a - b; });
+  }
+
   var screenPositions = new Map<string, { x: number; y: number }>();
   var createdFrames = new Map<string, SceneNode>();
-  var curX = 0;
+  // 화면 내 요소 레이블 → 프레임 기준 중앙 Y (flow 화살표 출발점에 사용)
+  var elementYMap: Record<string, Record<string, number>> = {};
 
-  for (var stepIdx = 0; stepIdx < sortedSteps.length; stepIdx++) {
-    var stepNum = sortedSteps[stepIdx];
-    var group = stepGroups[stepNum];
-    var maxW = 0;
-    for (var gi = 0; gi < group.length; gi++) {
-      var gw = screenWidths[group[gi].id] || 360;
-      if (gw > maxW) maxW = gw;
+  // MAX_STEPS_PER_ROW 단위로 줄 바꿈
+  var rowBaseY = 0;
+  for (var rowStart = 0; rowStart < sortedSteps.length; rowStart += MAX_STEPS_PER_ROW) {
+    var rowSteps = sortedSteps.slice(rowStart, rowStart + MAX_STEPS_PER_ROW);
+    var curX = 0;
+    var rowMaxH = 0;
+
+    for (var stepIdx = 0; stepIdx < rowSteps.length; stepIdx++) {
+      var stepNum = rowSteps[stepIdx];
+      var group = stepGroups[stepNum];
+      var maxW = 0;
+      for (var gi = 0; gi < group.length; gi++) {
+        var gw = screenWidths[group[gi].id] || 360;
+        if (gw > maxW) maxW = gw;
+      }
+      var stepY = rowBaseY;
+      var colH = 0;
+      for (var gj = 0; gj < group.length; gj++) {
+        screenPositions.set(group[gj].id, { x: curX, y: stepY });
+        colH += screenHeights[group[gj].id] + (gj < group.length - 1 ? SAME_STEP_Y_GAP : 0);
+        stepY += screenHeights[group[gj].id] + SAME_STEP_Y_GAP;
+      }
+      if (colH > rowMaxH) rowMaxH = colH;
+      curX += maxW + STEP_X_GAP;
     }
-    var stepY = 0;
-    for (var gj = 0; gj < group.length; gj++) {
-      screenPositions.set(group[gj].id, { x: curX, y: stepY });
-      stepY += screenHeights[group[gj].id] + SAME_STEP_Y_GAP;
-    }
-    curX += maxW + STEP_X_GAP;
+
+    rowBaseY += rowMaxH + ROW_GAP;
   }
 
   // 각 화면 생성
@@ -748,6 +776,7 @@ async function createWireframe(data: WireframeData) {
 
       var curY = 44 + SCREEN_PADDING;
       var rows = screenRowsMap[screen.id];
+      elementYMap[screen.id] = {};
 
       for (var ri = 0; ri < rows.length; ri++) {
         var row = rows[ri];
@@ -763,6 +792,7 @@ async function createWireframe(data: WireframeData) {
             isFullBleed ? screenW : screenW - SCREEN_PADDING * 2
           );
           maxElemH = elemH;
+          elementYMap[screen.id][items[0].label] = curY + elemH / 2;
         } else {
           var colCount = items.length;
           var totalGap = COL_GAP * (colCount - 1);
@@ -771,6 +801,7 @@ async function createWireframe(data: WireframeData) {
           for (var ci = 0; ci < items.length; ci++) {
             var colElemH = renderElement(frame, items[ci], colX, curY, colW);
             if (colElemH > maxElemH) maxElemH = colElemH;
+            elementYMap[screen.id][items[ci].label] = curY + colElemH / 2;
             colX += colW + COL_GAP;
           }
         }
@@ -805,7 +836,11 @@ async function createWireframe(data: WireframeData) {
 
         var fromScreenW = screenWidths[flow.from] || 360;
         var fromX = fromPos2.x + fromScreenW;
-        var fromY = fromPos2.y + (screenHeights[flow.from] || 300) / 2;
+        var elemMap = elementYMap[flow.from];
+        var elemCenterY = (flow.fromElement && elemMap && elemMap[flow.fromElement] !== undefined)
+          ? elemMap[flow.fromElement]
+          : (screenHeights[flow.from] || 300) / 2;
+        var fromY = fromPos2.y + elemCenterY;
         var toX = toPos2.x;
         var toY = toPos2.y + (screenHeights[flow.to] || 300) / 2;
 

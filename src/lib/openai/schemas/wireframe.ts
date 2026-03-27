@@ -80,8 +80,14 @@ export const wireframeJsonSchema = {
             to: { type: "string" as const },
             label: { type: "string" as const },
             action: { type: "string" as const },
+            fromElement: {
+              anyOf: [
+                { type: "string" as const },
+                { type: "null" as const },
+              ],
+            },
           },
-          required: ["from", "to", "label", "action"],
+          required: ["from", "to", "label", "action", "fromElement"],
           additionalProperties: false,
         },
       },
