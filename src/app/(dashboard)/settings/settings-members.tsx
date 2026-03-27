@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { MoreHorizontal, Copy, Check, UserPlus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,9 +24,9 @@ import {
 } from "@/components/ui/dialog";
 import { ROLE_LABEL, UserRole } from "@/types/enums";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { getAvatarColor } from "@/lib/avatar-colors";
 import InviteDialog, { type CreatedInvitation } from "./invite-dialog";
 
-// ─── 타입 ──────────────────────────────────────────────
 interface Member {
   id: string;
   name: string;
@@ -43,20 +43,6 @@ interface Invitation {
   token?: string; // 생성 직후에만 존재, 새로고침 시 사라짐
 }
 
-// ─── 아바타 색상 ────────────────────────────────────────
-const AVATAR_COLORS = [
-  "bg-indigo-500",
-  "bg-emerald-500",
-  "bg-amber-500",
-  "bg-rose-500",
-  "bg-sky-500",
-] as const;
-
-function getAvatarColor(name: string): string {
-  return AVATAR_COLORS[(name.charCodeAt(0) || 0) % AVATAR_COLORS.length];
-}
-
-// ─── 역할 뱃지 ──────────────────────────────────────────
 function RoleBadge({ role }: { role: string }) {
   const label = ROLE_LABEL[role] ?? role;
   if (role === UserRole.OWNER)
@@ -74,7 +60,6 @@ function RoleBadge({ role }: { role: string }) {
   return <Badge variant="secondary">{label}</Badge>;
 }
 
-// ─── 메인 컴포넌트 ──────────────────────────────────────
 export default function SettingsMembers() {
   const [members, setMembers] = useState<Member[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
@@ -96,8 +81,14 @@ export default function SettingsMembers() {
   // 초대 취소 진행 중인 id
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
-  // 초대 링크 복사 상태
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
@@ -245,8 +236,9 @@ export default function SettingsMembers() {
     const url = `${baseUrl}/invite?token=${inv.token}`;
     try {
       await navigator.clipboard.writeText(url);
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
       setCopiedId(inv.id);
-      setTimeout(() => setCopiedId(null), 2000);
+      copyTimeoutRef.current = setTimeout(() => setCopiedId(null), 2000);
     } catch {
       toast.error("클립보드 복사에 실패했습니다.");
     }
@@ -267,7 +259,6 @@ export default function SettingsMembers() {
 
   return (
     <div className="space-y-6">
-      {/* 헤더 */}
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">
           멤버{" "}
@@ -281,7 +272,6 @@ export default function SettingsMembers() {
         </Button>
       </div>
 
-      {/* 멤버 리스트 */}
       <Card>
         <div className="divide-y">
           {members.map((m) => {
@@ -292,13 +282,11 @@ export default function SettingsMembers() {
                 key={m.id}
                 className="flex items-center gap-3 px-4 py-3"
               >
-                {/* 아바타 */}
                 <div
                   className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${getAvatarColor(m.name)}`}
                 >
                   {m.name[0]?.toUpperCase() ?? "?"}
                 </div>
-                {/* 이름/이메일 */}
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">
                     {m.name}
@@ -312,9 +300,7 @@ export default function SettingsMembers() {
                     {m.email}
                   </p>
                 </div>
-                {/* 역할 뱃지 */}
                 <RoleBadge role={m.role} />
-                {/* ⋯ 드롭다운 */}
                 {canManage ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger
@@ -361,7 +347,6 @@ export default function SettingsMembers() {
         </div>
       </Card>
 
-      {/* 대기 중인 초대 — 항상 표시 */}
       <div>
         <h3 className="mb-3 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
           대기 중인 초대
@@ -390,7 +375,6 @@ export default function SettingsMembers() {
                     </p>
                   </div>
                   <RoleBadge role={inv.role} />
-                  {/* 복사 버튼 — token 있을 때만 활성 */}
                   <Button
                     variant="ghost"
                     size="icon-sm"
@@ -420,7 +404,6 @@ export default function SettingsMembers() {
         </Card>
       </div>
 
-      {/* 역할 변경 확인 Dialog */}
       <Dialog
         open={!!roleChangeTarget}
         onOpenChange={(open) => !open && setRoleChangeTarget(null)}
@@ -443,7 +426,6 @@ export default function SettingsMembers() {
         </DialogContent>
       </Dialog>
 
-      {/* 멤버 제거 확인 Dialog */}
       <Dialog
         open={!!removeTarget}
         onOpenChange={(open) => !open && setRemoveTarget(null)}
@@ -468,7 +450,6 @@ export default function SettingsMembers() {
         </DialogContent>
       </Dialog>
 
-      {/* 초대 Sheet */}
       <InviteDialog
         open={inviteOpen}
         onClose={() => setInviteOpen(false)}

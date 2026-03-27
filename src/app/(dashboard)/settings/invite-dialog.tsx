@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -44,15 +44,22 @@ export default function InviteDialog({
 }: InviteSheetProps) {
   const [role, setRole] = useState("member");
   const [email, setEmail] = useState("");
-  const [expiresInHours, setExpiresInHours] = useState("72");
+  const [expiresInHours, setExpiresInHours] = useState(72);
   const [creating, setCreating] = useState(false);
   const [inviteUrl, setInviteUrl] = useState("");
   const [copied, setCopied] = useState(false);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    };
+  }, []);
 
   function reset() {
     setRole("member");
     setEmail("");
-    setExpiresInHours("72");
+    setExpiresInHours(72);
     setInviteUrl("");
     setCopied(false);
   }
@@ -71,7 +78,7 @@ export default function InviteDialog({
         body: JSON.stringify({
           role,
           email: email.trim() || undefined,
-          expiresInHours: Number(expiresInHours),
+          expiresInHours,
         }),
       });
       const data = await res.json();
@@ -98,8 +105,9 @@ export default function InviteDialog({
   async function handleCopy() {
     try {
       await navigator.clipboard.writeText(inviteUrl);
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
     } catch {
       toast.error("클립보드 복사에 실패했습니다.");
     }
@@ -182,8 +190,8 @@ export default function InviteDialog({
               <div className="space-y-2">
                 <Label>만료</Label>
                 <Select
-                  value={expiresInHours}
-                  onValueChange={(v) => v && setExpiresInHours(v)}
+                  value={String(expiresInHours)}
+                  onValueChange={(v) => v && setExpiresInHours(Number(v))}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue />

@@ -18,6 +18,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { PLAN_LABEL } from "@/types/enums";
+import { getAvatarColor } from "@/lib/avatar-colors";
 
 interface OrgInfo {
   id: string;
@@ -25,18 +26,6 @@ interface OrgInfo {
   slug: string;
   plan: string;
   memberCount: number;
-}
-
-const AVATAR_COLORS = [
-  "bg-indigo-500",
-  "bg-emerald-500",
-  "bg-amber-500",
-  "bg-rose-500",
-  "bg-sky-500",
-] as const;
-
-function getOrgAvatarColor(name: string): string {
-  return AVATAR_COLORS[(name.charCodeAt(0) || 0) % AVATAR_COLORS.length];
 }
 
 const SLUG_REGEX = /^[a-z0-9-]+$/;
@@ -52,8 +41,6 @@ export default function SettingsGeneral() {
   const [leaving, setLeaving] = useState(false);
 
   const isDirty = org !== null && (name !== org.name || slug !== org.slug);
-  // slug === "" was previously allowed here, but the server rejects empty strings with 400.
-  // The regex requires at least one character (+), so this correctly rejects empty slugs.
   const slugValid = SLUG_REGEX.test(slug);
 
   useEffect(() => {
@@ -71,8 +58,6 @@ export default function SettingsGeneral() {
   async function handleSave() {
     if (!isDirty || !slugValid) return;
     setSaving(true);
-    // try/catch ensures setSaving(false) runs even if the network request throws,
-    // preventing the button from getting stuck in a loading state.
     try {
       const res = await fetch("/api/organization", {
         method: "PATCH",
@@ -95,14 +80,11 @@ export default function SettingsGeneral() {
 
   async function handleLeave() {
     setLeaving(true);
-    // try/catch ensures setLeaving(false) and setLeaveOpen(false) run even on network errors,
-    // preventing the button from getting stuck in a loading state.
     try {
       const res = await fetch("/api/organization/leave", { method: "POST" });
       if (res.ok) {
         toast.success("조직에서 나갔습니다.");
         router.push("/dashboard");
-        router.refresh();
       } else {
         const data = await res.json();
         toast.error(data.error || "조직 탈퇴에 실패했습니다.");
@@ -128,7 +110,7 @@ export default function SettingsGeneral() {
     );
   }
 
-  const avatarColor = org ? getOrgAvatarColor(org.name) : "bg-indigo-500";
+  const avatarColor = org ? getAvatarColor(org.name) : "bg-indigo-500";
   const initial = (org?.name ?? "?")[0].toUpperCase();
 
   return (

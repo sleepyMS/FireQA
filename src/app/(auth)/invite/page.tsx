@@ -88,9 +88,6 @@ function InviteContent() {
         body: JSON.stringify({ token }),
       });
       if (res.ok) {
-        if (typeof window !== "undefined") {
-          sessionStorage.removeItem("pendingInviteToken");
-        }
         setStatus("accepted");
       } else {
         const data = await res.json();
@@ -107,7 +104,6 @@ function InviteContent() {
 
   const initial = info ? info.organizationName[0]?.toUpperCase() ?? "?" : "?";
 
-  // 조직 배너 (valid, login-needed 상태에서 공통 사용)
   const OrgBanner = info ? (
     <div className="bg-gradient-to-br from-indigo-500 to-violet-500 px-6 py-5 text-center text-white">
       <div
