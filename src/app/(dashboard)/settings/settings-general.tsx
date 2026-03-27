@@ -52,7 +52,9 @@ export default function SettingsGeneral() {
   const [leaving, setLeaving] = useState(false);
 
   const isDirty = org !== null && (name !== org.name || slug !== org.slug);
-  const slugValid = slug === "" || SLUG_REGEX.test(slug);
+  // slug === "" was previously allowed here, but the server rejects empty strings with 400.
+  // The regex requires at least one character (+), so this correctly rejects empty slugs.
+  const slugValid = SLUG_REGEX.test(slug);
 
   useEffect(() => {
     fetch("/api/organization")
@@ -69,34 +71,48 @@ export default function SettingsGeneral() {
   async function handleSave() {
     if (!isDirty || !slugValid) return;
     setSaving(true);
-    const res = await fetch("/api/organization", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, slug }),
-    });
-    const data = await res.json();
-    setSaving(false);
-    if (res.ok) {
-      setOrg((prev) => (prev ? { ...prev, ...data } : prev));
-      toast.success("조직 정보가 저장되었습니다.");
-    } else {
-      toast.error(data.error || "저장에 실패했습니다.");
+    // try/catch ensures setSaving(false) runs even if the network request throws,
+    // preventing the button from getting stuck in a loading state.
+    try {
+      const res = await fetch("/api/organization", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, slug }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setOrg((prev) => (prev ? { ...prev, ...data } : prev));
+        toast.success("조직 정보가 저장되었습니다.");
+      } else {
+        toast.error(data.error || "저장에 실패했습니다.");
+      }
+    } catch {
+      toast.error("네트워크 오류가 발생했습니다.");
+    } finally {
+      setSaving(false);
     }
   }
 
   async function handleLeave() {
     setLeaving(true);
-    const res = await fetch("/api/organization/leave", { method: "POST" });
-    setLeaving(false);
-    if (res.ok) {
-      toast.success("조직에서 나갔습니다.");
-      router.push("/dashboard");
-      router.refresh();
-    } else {
-      const data = await res.json();
-      toast.error(data.error || "조직 탈퇴에 실패했습니다.");
+    // try/catch ensures setLeaving(false) and setLeaveOpen(false) run even on network errors,
+    // preventing the button from getting stuck in a loading state.
+    try {
+      const res = await fetch("/api/organization/leave", { method: "POST" });
+      if (res.ok) {
+        toast.success("조직에서 나갔습니다.");
+        router.push("/dashboard");
+        router.refresh();
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "조직 탈퇴에 실패했습니다.");
+      }
+    } catch {
+      toast.error("네트워크 오류가 발생했습니다.");
+    } finally {
+      setLeaving(false);
+      setLeaveOpen(false);
     }
-    setLeaveOpen(false);
   }
 
   if (loading) {
