@@ -93,6 +93,9 @@ export default function SettingsMembers() {
   } | null>(null);
   const [roleChanging, setRoleChanging] = useState(false);
 
+  // 초대 취소 진행 중인 id
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+
   // 초대 링크 복사 상태
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -106,15 +109,24 @@ export default function SettingsMembers() {
 
   async function loadData() {
     setLoading(true);
-    const [membersRes, invitesRes] = await Promise.all([
-      fetch("/api/organization/members"),
-      fetch("/api/invitations"),
-    ]);
-    const membersData = await membersRes.json();
-    const invitesData = await invitesRes.json();
-    setMembers(membersData.members ?? []);
-    setInvitations(invitesData.invitations ?? []);
-    setLoading(false);
+    try {
+      const [membersRes, invitesRes] = await Promise.all([
+        fetch("/api/organization/members"),
+        fetch("/api/invitations"),
+      ]);
+      if (!membersRes.ok || !invitesRes.ok) {
+        toast.error("데이터를 불러오지 못했습니다.");
+        return;
+      }
+      const membersData = await membersRes.json();
+      const invitesData = await invitesRes.json();
+      setMembers(membersData.members ?? []);
+      setInvitations(invitesData.invitations ?? []);
+    } catch {
+      toast.error("네트워크 오류가 발생했습니다.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function refreshMembers() {
@@ -144,50 +156,67 @@ export default function SettingsMembers() {
   async function confirmRoleChange() {
     if (!roleChangeTarget) return;
     setRoleChanging(true);
-    const res = await fetch(
-      `/api/organization/members/${roleChangeTarget.member.id}`,
-      {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role: roleChangeTarget.newRole }),
+    try {
+      const res = await fetch(
+        `/api/organization/members/${roleChangeTarget.member.id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ role: roleChangeTarget.newRole }),
+        }
+      );
+      if (res.ok) {
+        toast.success("역할이 변경되었습니다.");
+        refreshMembers();
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "역할 변경에 실패했습니다.");
       }
-    );
-    setRoleChanging(false);
-    if (res.ok) {
-      toast.success("역할이 변경되었습니다.");
-      refreshMembers();
-    } else {
-      const data = await res.json();
-      toast.error(data.error || "역할 변경에 실패했습니다.");
+    } catch {
+      toast.error("네트워크 오류가 발생했습니다.");
+    } finally {
+      setRoleChanging(false);
+      setRoleChangeTarget(null);
     }
-    setRoleChangeTarget(null);
   }
 
   async function handleRemove() {
     if (!removeTarget) return;
     setRemoving(true);
-    const res = await fetch(`/api/organization/members/${removeTarget.id}`, {
-      method: "DELETE",
-    });
-    setRemoving(false);
-    if (res.ok) {
-      toast.success("멤버가 제거되었습니다.");
-      refreshMembers();
-    } else {
-      const data = await res.json();
-      toast.error(data.error || "멤버 제거에 실패했습니다.");
+    try {
+      const res = await fetch(`/api/organization/members/${removeTarget.id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        toast.success("멤버가 제거되었습니다.");
+        refreshMembers();
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "멤버 제거에 실패했습니다.");
+      }
+    } catch {
+      toast.error("네트워크 오류가 발생했습니다.");
+    } finally {
+      setRemoving(false);
+      setRemoveTarget(null);
     }
-    setRemoveTarget(null);
   }
 
   async function handleCancelInvite(id: string) {
-    const res = await fetch(`/api/invitations/${id}`, { method: "DELETE" });
-    if (res.ok) {
-      toast.success("초대가 취소되었습니다.");
-      refreshInvitations();
-    } else {
-      const data = await res.json();
-      toast.error(data.error || "초대 취소에 실패했습니다.");
+    setCancellingId(id);
+    try {
+      const res = await fetch(`/api/invitations/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success("초대가 취소되었습니다.");
+        refreshInvitations();
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "초대 취소에 실패했습니다.");
+      }
+    } catch {
+      toast.error("네트워크 오류가 발생했습니다.");
+    } finally {
+      setCancellingId(null);
     }
   }
 
@@ -370,8 +399,9 @@ export default function SettingsMembers() {
                     size="sm"
                     className="text-destructive hover:text-destructive"
                     onClick={() => handleCancelInvite(inv.id)}
+                    disabled={cancellingId === inv.id}
                   >
-                    취소
+                    {cancellingId === inv.id ? "취소 중..." : "취소"}
                   </Button>
                 </div>
               ))}
