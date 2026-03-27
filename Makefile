@@ -1,7 +1,7 @@
 .PHONY: dev stop
 
 dev:
-	tmux kill-server 2>/dev/null; bash scripts/dev.sh --new && tmux a
+	tmux kill-session -t fireqa 2>/dev/null; bash scripts/dev.sh --new && tmux a -t fireqa
 
 stop:
-	tmux kill-server 2>/dev/null
+	tmux kill-session -t fireqa 2>/dev/null

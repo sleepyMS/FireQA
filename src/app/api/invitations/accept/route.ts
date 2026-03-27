@@ -35,17 +35,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  await prisma.$transaction(async (tx) => {
-    // 현재 조직에 사용자 혼자만 남아있으면 조직 삭제
-    const memberCount = await tx.user.count({
-      where: { organizationId: user.organizationId },
-    });
-    if (memberCount === 1) {
-      await tx.organization.delete({
-        where: { id: user.organizationId },
-      });
-    }
+  const oldOrgId = user.organizationId;
 
+  await prisma.$transaction(async (tx) => {
+    const memberCount = await tx.user.count({
+      where: { organizationId: oldOrgId },
+    });
+
+    // 사용자를 새 조직으로 이동한 뒤 기존 조직 삭제 (cascade 순서 보장)
     await tx.user.update({
       where: { id: user.userId },
       data: {
@@ -53,6 +50,10 @@ export async function POST(request: NextRequest) {
         role: invitation.role,
       },
     });
+
+    if (memberCount === 1) {
+      await tx.organization.delete({ where: { id: oldOrgId } });
+    }
 
     await tx.invitation.update({
       where: { id: invitation.id },

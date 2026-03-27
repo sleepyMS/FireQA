@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
-import { requireRole, hasRole } from "@/lib/auth/require-role";
+import { requireRole } from "@/lib/auth/require-role";
 import { UserRole } from "@/types/enums";
 
 export async function GET(request: NextRequest) {

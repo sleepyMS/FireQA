@@ -115,7 +115,7 @@ export default function InviteDialog({
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>역할</Label>
-                <Select value={role} onValueChange={(v) => v && setRole(v)}>
+                <Select value={role} onValueChange={setRole}>
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
@@ -138,7 +138,7 @@ export default function InviteDialog({
                 <Label>만료</Label>
                 <Select
                   value={expiresInHours}
-                  onValueChange={(v) => v && setExpiresInHours(v)}
+                  onValueChange={setExpiresInHours}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue />

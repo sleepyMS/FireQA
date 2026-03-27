@@ -30,7 +30,7 @@ import {
   DialogTitle,
   DialogClose,
 } from "@/components/ui/dialog";
-import { ROLE_LABEL } from "@/types/enums";
+import { ROLE_LABEL, UserRole } from "@/types/enums";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import InviteDialog from "./invite-dialog";
 
@@ -51,13 +51,13 @@ interface Invitation {
 
 function RoleBadge({ role }: { role: string }) {
   const label = ROLE_LABEL[role] ?? role;
-  if (role === "owner")
+  if (role === UserRole.OWNER)
     return (
       <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
         {label}
       </Badge>
     );
-  if (role === "admin")
+  if (role === UserRole.ADMIN)
     return (
       <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
         {label}
@@ -96,6 +96,18 @@ export default function SettingsMembers() {
     setLoading(false);
   }
 
+  async function refreshMembers() {
+    const res = await fetch("/api/organization/members");
+    const data = await res.json();
+    setMembers(data.members ?? []);
+  }
+
+  async function refreshInvitations() {
+    const res = await fetch("/api/invitations");
+    const data = await res.json();
+    setInvitations(data.invitations ?? []);
+  }
+
   async function handleRoleChange(memberId: string, role: string) {
     const res = await fetch(`/api/organization/members/${memberId}`, {
       method: "PATCH",
@@ -104,7 +116,7 @@ export default function SettingsMembers() {
     });
     if (res.ok) {
       toast.success("역할이 변경되었습니다.");
-      loadData();
+      refreshMembers();
     } else {
       const data = await res.json();
       toast.error(data.error || "역할 변경에 실패했습니다.");
@@ -120,7 +132,7 @@ export default function SettingsMembers() {
     setRemoving(false);
     if (res.ok) {
       toast.success("멤버가 제거되었습니다.");
-      loadData();
+      refreshMembers();
     } else {
       const data = await res.json();
       toast.error(data.error || "멤버 제거에 실패했습니다.");
@@ -132,7 +144,7 @@ export default function SettingsMembers() {
     const res = await fetch(`/api/invitations/${id}`, { method: "DELETE" });
     if (res.ok) {
       toast.success("초대가 취소되었습니다.");
-      loadData();
+      refreshInvitations();
     } else {
       const data = await res.json();
       toast.error(data.error || "초대 취소에 실패했습니다.");
@@ -192,7 +204,7 @@ export default function SettingsMembers() {
                     ) : (
                       <Select
                         value={m.role}
-                        onValueChange={(val) => val && handleRoleChange(m.id, val)}
+                        onValueChange={(val) => handleRoleChange(m.id, val)}
                       >
                         <SelectTrigger className="w-28">
                           <SelectValue />
@@ -206,7 +218,7 @@ export default function SettingsMembers() {
                     )}
                   </TableCell>
                   <TableCell>
-                    {!isMe && m.role !== "owner" && (
+                    {!isMe && m.role !== UserRole.OWNER && (
                       <Button
                         variant="ghost"
                         size="icon-sm"
@@ -292,7 +304,7 @@ export default function SettingsMembers() {
       <InviteDialog
         open={inviteOpen}
         onClose={() => setInviteOpen(false)}
-        onCreated={() => loadData()}
+        onCreated={refreshInvitations}
       />
     </div>
   );
