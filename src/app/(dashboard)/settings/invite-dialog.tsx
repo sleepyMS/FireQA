@@ -96,9 +96,13 @@ export default function InviteDialog({
   }
 
   async function handleCopy() {
-    await navigator.clipboard.writeText(inviteUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("클립보드 복사에 실패했습니다.");
+    }
   }
 
   return (
