@@ -11,6 +11,7 @@ import {
   FileEdit,
   Clock,
   Settings,
+  Settings2,
   Flame,
   Menu,
   X,
@@ -29,6 +30,7 @@ const navItems = [
   { label: "이력", href: "/history", icon: Clock },
   { label: "템플릿", href: "/templates", icon: Settings },
   { label: "사용법", href: "/guide", icon: BookOpen },
+  { label: "설정", href: "/settings", icon: Settings2 },
 ];
 
 export function Sidebar() {

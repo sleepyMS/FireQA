@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function SignupForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [name, setName] = useState("");
   const [orgName, setOrgName] = useState("");
   const [email, setEmail] = useState("");
@@ -64,7 +65,8 @@ export default function SignupForm() {
       return;
     }
 
-    router.push("/dashboard");
+    const redirect = searchParams.get("redirect");
+    router.push(redirect || "/dashboard");
     router.refresh();
   }
 

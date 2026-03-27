@@ -13,6 +13,7 @@ const pageTitles: Record<string, string> = {
   "/history": "이력",
   "/templates": "템플릿",
   "/guide": "사용법",
+  "/settings": "설정",
 };
 
 export function Header() {

@@ -48,6 +48,26 @@ export const UserRole = {
 
 export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 
+export const InviteStatus = {
+  PENDING: "pending",
+  ACCEPTED: "accepted",
+  CANCELLED: "cancelled",
+} as const;
+
+export type InviteStatus = (typeof InviteStatus)[keyof typeof InviteStatus];
+
+export const ROLE_LABEL: Record<string, string> = {
+  [UserRole.OWNER]: "소유자",
+  [UserRole.ADMIN]: "관리자",
+  [UserRole.MEMBER]: "멤버",
+};
+
+export const PLAN_LABEL: Record<string, string> = {
+  free: "무료",
+  pro: "Pro",
+  enterprise: "Enterprise",
+};
+
 export const DeviceAuthStatus = {
   PENDING: "pending",
   APPROVED: "approved",

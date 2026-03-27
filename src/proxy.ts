@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updateSupabaseSession } from "@/lib/supabase/middleware";
 
-const PUBLIC_PATHS = ["/login", "/signup", "/auth/callback", "/auth/device"];
+const PUBLIC_PATHS = ["/login", "/signup", "/auth/callback", "/auth/device", "/invite"];
 
 // 환경변수는 런타임에 변경되지 않으므로 모듈 레벨에서 1회 파싱
 const allowedOrigins = (() => {

@@ -18,10 +18,11 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users      User[]
-  projects   Project[]
-  uploads    Upload[]
-  templates  QATemplate[]
+  users       User[]
+  projects    Project[]
+  uploads     Upload[]
+  templates   QATemplate[]
+  invitations Invitation[]
 }
 
 model User {
@@ -35,12 +36,34 @@ model User {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  apiTokens      ApiToken[]
-  jobs           GenerationJob[]
-  projects       Project[]      @relation("CreatedBy")
+  apiTokens            ApiToken[]
+  jobs                 GenerationJob[]
+  projects             Project[]      @relation("CreatedBy")
+  invitationsSent      Invitation[]   @relation("InvitedBy")
+  invitationsAccepted  Invitation[]   @relation("AcceptedInvite")
 
   @@index([supabaseId])
   @@index([organizationId])
+}
+
+model Invitation {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email          String?
+  role           String       @default("member") // "owner" | "admin" | "member"
+  tokenHash      String       @unique
+  status         String       @default("pending") // "pending" | "accepted" | "cancelled"
+  expiresAt      DateTime
+  invitedById    String
+  invitedBy      User         @relation("InvitedBy", fields: [invitedById], references: [id], onDelete: Cascade)
+  acceptedById   String?
+  acceptedBy     User?        @relation("AcceptedInvite", fields: [acceptedById], references: [id])
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId])
+  @@index([tokenHash])
 }
 
 model ApiToken {
