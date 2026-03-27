@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -17,6 +17,8 @@ import {
   BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import type { User } from "@supabase/supabase-js";
 
 const navItems = [
   { label: "대시보드", href: "/dashboard", icon: LayoutDashboard },
@@ -32,6 +34,12 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+    supabase.auth.getUser().then(({ data }) => setUser(data.user));
+  }, []);
 
   const navContent = (
     <>
@@ -73,7 +81,27 @@ export function Sidebar() {
       </nav>
 
       <div className="border-t p-4">
-        <p className="text-xs text-muted-foreground">FireQA v0.1.0</p>
+        {user && (
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">
+              {(user.user_metadata?.full_name as string | undefined)
+                ?.charAt(0)
+                ?.toUpperCase() ??
+                user.email?.charAt(0).toUpperCase() ??
+                "?"}
+            </div>
+            <div className="min-w-0">
+              {user.user_metadata?.full_name && (
+                <p className="truncate text-sm font-medium leading-tight">
+                  {user.user_metadata.full_name as string}
+                </p>
+              )}
+              <p className="truncate text-xs text-muted-foreground">
+                {user.email}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
