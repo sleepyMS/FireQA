@@ -204,7 +204,7 @@ export default function SettingsMembers() {
                     ) : (
                       <Select
                         value={m.role}
-                        onValueChange={(val) => handleRoleChange(m.id, val)}
+                        onValueChange={(val) => val && handleRoleChange(m.id, val)}
                       >
                         <SelectTrigger className="w-28">
                           <SelectValue />
