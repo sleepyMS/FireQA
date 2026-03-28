@@ -124,7 +124,6 @@ model Project {
   uploads        Upload[]
   jobs           GenerationJob[]
 
-  @@index([organizationId])
   @@index([organizationId, status]) // 조직별 활성/보관/삭제 프로젝트 필터링 성능 최적화
   @@index([deletedAt]) // 삭제된 프로젝트 조회 및 정리 작업 성능 최적화
 }
