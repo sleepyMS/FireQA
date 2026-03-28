@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
+import useSWR from "swr";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { JOB_TYPE_LABEL } from "@/types/enums";
+import { SWR_KEYS } from "@/lib/swr/keys";
 
 interface AnalyticsData {
   summary: {
@@ -76,16 +78,13 @@ function DailyChart({ daily }: { daily: { date: string; count: number }[] }) {
 }
 
 export default function AnalyticsPage() {
-  const [data, setData] = useState<AnalyticsData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data, isLoading: loading, error } = useSWR<AnalyticsData>(SWR_KEYS.analytics, {
+    dedupingInterval: 60_000,
+  });
 
   useEffect(() => {
-    fetch("/api/analytics")
-      .then((r) => r.json())
-      .then(setData)
-      .catch(() => toast.error("분석 데이터를 불러오지 못했습니다."))
-      .finally(() => setLoading(false));
-  }, []);
+    if (error) toast.error("분석 데이터를 불러오지 못했습니다.");
+  }, [error]);
 
   if (loading) {
     return (

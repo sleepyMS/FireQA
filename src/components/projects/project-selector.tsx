@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
+import useSWR from "swr";
+import { SWR_KEYS } from "@/lib/swr/keys";
 
 type Project = { id: string; name: string };
 
@@ -20,18 +22,11 @@ export function ProjectSelector({
   onChange,
   disabled,
 }: ProjectSelectorProps) {
-  const [projects, setProjects] = useState<Project[]>([]);
+  const { data } = useSWR<{ projects: Project[] }>(SWR_KEYS.projects("status=active&limit=50"));
+  const projects = data?.projects ?? [];
   const [inputValue, setInputValue] = useState(value?.name || "");
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  // 마운트 시 활성 프로젝트 목록 로드
-  useEffect(() => {
-    fetch("/api/projects?status=active&limit=50")
-      .then((r) => r.json())
-      .then((data) => setProjects(data.projects || []))
-      .catch(() => {});
-  }, []);
 
   // 외부 클릭 시 드롭다운 닫기
   useEffect(() => {

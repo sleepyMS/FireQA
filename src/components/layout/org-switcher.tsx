@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import useSWR from "swr";
+import { SWR_KEYS } from "@/lib/swr/keys";
 import { ChevronsUpDown, Check, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,21 +33,15 @@ interface Membership {
 }
 
 export function OrgSwitcher() {
-  const [memberships, setMemberships] = useState<Membership[]>([]);
-  const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
+  const { data } = useSWR<{ memberships: Membership[]; activeOrganizationId: string | null }>(
+    SWR_KEYS.memberships
+  );
+  const memberships = data?.memberships ?? [];
+  const activeOrgId = data?.activeOrganizationId ?? null;
+
   const [createOpen, setCreateOpen] = useState(false);
   const [newOrgName, setNewOrgName] = useState("");
   const [creating, setCreating] = useState(false);
-
-  useEffect(() => {
-    fetch("/api/user/memberships")
-      .then((r) => r.json())
-      .then((data) => {
-        setMemberships(data.memberships ?? []);
-        setActiveOrgId(data.activeOrganizationId ?? null);
-      })
-      .catch(() => {});
-  }, []);
 
   async function handleSwitch(organizationId: string) {
     if (organizationId === activeOrgId) return;

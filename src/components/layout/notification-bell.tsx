@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { Bell } from "lucide-react";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import useSWR, { useSWRConfig } from "swr";
+import { SWR_KEYS } from "@/lib/swr/keys";
 
 interface NotificationItem {
   id: string;
@@ -26,58 +28,44 @@ function relativeTime(iso: string): string {
 }
 
 export function NotificationBell() {
-  const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [loading, setLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  // 드롭다운이 열려있는 동안 폴링 카운트가 낙관적 업데이트를 덮어쓰는 race를 방지
   const isOpenRef = useRef(false);
+  const { mutate } = useSWRConfig();
 
-  async function fetchCount() {
-    if (isOpenRef.current) return;
-    try {
-      const res = await fetch("/api/notifications/count");
-      if (res.ok) {
-        const data = await res.json() as { count: number };
-        setUnreadCount((prev) => (prev === data.count ? prev : data.count));
-      }
-    } catch {
-      // 네트워크 오류 무시
-    }
-  }
+  const { data: countData } = useSWR<{ count: number }>(SWR_KEYS.notificationCount, {
+    refreshInterval: 30_000,
+    isPaused: () => isOpenRef.current,
+  });
+  const unreadCount = countData?.count ?? 0;
 
-  async function fetchNotifications() {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/notifications");
-      if (res.ok) {
-        const data = await res.json() as { notifications: NotificationItem[]; unreadCount: number };
-        setNotifications(data.notifications);
-        setUnreadCount(data.unreadCount);
-      }
-    } catch {
-      // 네트워크 오류 무시
-    } finally {
-      setLoading(false);
-    }
-  }
+  // 드롭다운이 열린 경우에만 알림 목록 fetch
+  const { data: notifData, isLoading: loading } = useSWR<{
+    notifications: NotificationItem[];
+    unreadCount: number;
+  }>(isOpen ? SWR_KEYS.notifications : null);
+  const notifications = notifData?.notifications ?? [];
 
   async function markAllRead() {
     try {
       await fetch("/api/notifications/read", { method: "PATCH" });
-      setUnreadCount(0);
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      mutate(SWR_KEYS.notificationCount, { count: 0 }, { revalidate: false });
+      mutate(
+        SWR_KEYS.notifications,
+        (prev: { notifications: NotificationItem[]; unreadCount: number } | undefined) =>
+          prev
+            ? { ...prev, unreadCount: 0, notifications: prev.notifications.map((n) => ({ ...n, isRead: true })) }
+            : prev,
+        { revalidate: false }
+      );
     } catch {
       // 네트워크 오류 무시
     }
   }
 
+  // Realtime 구독 — INSERT 시 SWR 재검증으로 즉시 배지 갱신
   useEffect(() => {
-    fetchCount();
-
     const supabase = createSupabaseBrowserClient();
-    // channel은 async getUser 이후에 할당되므로 ref로 cleanup에서 접근
     let channel: ReturnType<typeof supabase.channel> | null = null;
 
     supabase.auth.getUser().then(({ data }) => {
@@ -92,22 +80,15 @@ export function NotificationBell() {
           { event: "INSERT", schema: "public", table: "Notification" },
           (payload: { new: Record<string, unknown> }) => {
             if (payload.new?.userId !== userId) return;
-            setUnreadCount((prev) => prev + 1);
-            if (isOpenRef.current) fetchNotifications();
+            mutate(SWR_KEYS.notificationCount);
+            if (isOpenRef.current) mutate(SWR_KEYS.notifications);
           }
         )
         .subscribe();
     });
 
     return () => { if (channel) supabase.removeChannel(channel); };
-  }, []);
-
-  // 드롭다운 열릴 때 알림 목록 조회
-  useEffect(() => {
-    if (isOpen) {
-      fetchNotifications();
-    }
-  }, [isOpen]);
+  }, [mutate]);
 
   // 외부 클릭 시 닫기
   useEffect(() => {
@@ -179,11 +160,7 @@ export function NotificationBell() {
                   return (
                     <li key={n.id} className="border-b last:border-b-0 hover:bg-muted/60 transition-colors">
                       {n.linkUrl ? (
-                        <Link
-                          href={n.linkUrl}
-                          onClick={() => setIsOpen(false)}
-                          className="block"
-                        >
+                        <Link href={n.linkUrl} onClick={() => setIsOpen(false)} className="block">
                           {content}
                         </Link>
                       ) : (

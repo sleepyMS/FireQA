@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { FolderOpen, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import useSWR from "swr";
+import { SWR_KEYS } from "@/lib/swr/keys";
 
 interface Project {
   id: string;
@@ -30,16 +31,10 @@ function formatRelativeDate(dateStr: string): string {
 }
 
 export function RecentProjectsPanel() {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch("/api/projects?status=active&limit=5")
-      .then((res) => res.json())
-      .then((data) => setProjects(data.projects || []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+  const { data, isLoading: loading } = useSWR<{ projects: Project[] }>(
+    SWR_KEYS.projects("status=active&limit=5")
+  );
+  const projects = data?.projects ?? [];
 
   return (
     <Card>
