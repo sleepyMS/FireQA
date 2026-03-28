@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createNotification } from "@/lib/notifications/create-notification";
 import { NotificationType } from "@/types/enums";
+import { sendEmail } from "@/lib/email/brevo";
+import { commentReplyEmailHtml } from "@/lib/email/templates/comment-reply";
 
 const MAX_BODY_LENGTH = 10_000;
 
@@ -127,13 +129,41 @@ export async function POST(request: NextRequest) {
 
     // 답글이고 부모 작성자가 자기 자신이 아닌 경우 알림 발송 (fire-and-forget)
     if (parentId && parentComment && parentComment.authorId !== user.userId) {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+      const linkUrl = `${appUrl}/generate/${jobId}`;
+
       createNotification({
         userId: parentComment.authorId,
         organizationId: user.organizationId,
         type: NotificationType.COMMENT_REPLY,
         title: "새 답글이 달렸습니다",
-        linkUrl: `/generate/${jobId}`,
+        linkUrl,
       });
+
+      // Brevo 이메일 알림 — 부모 작성자 이메일 + 답글 작성자 이름 조회 후 발송
+      Promise.all([
+        prisma.user.findUnique({
+          where: { id: parentComment.authorId },
+          select: { email: true, name: true },
+        }),
+        prisma.user.findUnique({
+          where: { id: user.userId },
+          select: { name: true },
+        }),
+      ])
+        .then(([author, replier]) => {
+          if (!author) return;
+          return sendEmail({
+            to: { email: author.email, name: author.name ?? undefined },
+            subject: "[FireQA] 새 답글이 달렸습니다",
+            htmlContent: commentReplyEmailHtml({
+              replierName: replier?.name ?? user.email,
+              commentPreview: trimmed,
+              linkUrl,
+            }),
+          });
+        })
+        .catch((err) => console.error("답글 이메일 발송 오류:", err));
     }
 
     return NextResponse.json(

@@ -7,6 +7,8 @@ import { randomBytes, createHash } from "crypto";
 import { logActivity } from "@/lib/activity/log-activity";
 import { getOrgPlan } from "@/lib/billing/get-org-plan";
 import { getPlanLimits } from "@/lib/billing/plan-limits";
+import { sendEmail } from "@/lib/email/brevo";
+import { invitationEmailHtml } from "@/lib/email/templates/invitation";
 
 export async function GET(request: NextRequest) {
   const user = await getCurrentUser(request);
@@ -107,9 +109,27 @@ export async function POST(request: NextRequest) {
   logActivity({ organizationId: user.organizationId, actorId: user.userId, action: ActivityAction.MEMBER_INVITED, metadata: { email: email ?? null, role } });
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const inviteUrl = `${baseUrl}/invite?token=${rawToken}`;
+
+  // 이메일 지정 초대 시 Brevo로 초대 메일 발송 (fire-and-forget)
+  if (email) {
+    const org = await prisma.organization.findUnique({
+      where: { id: user.organizationId },
+      select: { name: true },
+    });
+    sendEmail({
+      to: { email },
+      subject: `[FireQA] ${org?.name ?? "팀"}에 초대되었습니다`,
+      htmlContent: invitationEmailHtml({
+        orgName: org?.name ?? "팀",
+        inviteUrl,
+        expiresAt: invitation.expiresAt,
+      }),
+    });
+  }
 
   return NextResponse.json({
-    inviteUrl: `${baseUrl}/invite?token=${rawToken}`,
+    inviteUrl,
     token: rawToken,
     id: invitation.id,
     expiresAt: invitation.expiresAt,
