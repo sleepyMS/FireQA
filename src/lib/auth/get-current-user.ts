@@ -9,28 +9,21 @@ export type AuthUser = {
   role: string;
 };
 
-/**
- * 현재 인증된 사용자 정보를 반환한다.
- * Bearer 토큰 → 미들웨어가 전달한 supabaseId 헤더 → Supabase 세션 순으로 확인.
- */
 export async function getCurrentUser(
   request?: Request
 ): Promise<AuthUser | null> {
   if (request) {
-    // 1) Bearer 토큰 (Figma 플러그인 등)
     const authHeader = request.headers.get("authorization");
     if (authHeader?.startsWith("Bearer ")) {
       return authenticateByToken(authHeader.slice(7));
     }
 
-    // 2) 미들웨어가 이미 검증한 supabaseId (getUser() 이중 호출 방지)
     const supabaseUserId = request.headers.get("x-supabase-user-id");
     if (supabaseUserId) {
       return findUserBySupabaseId(supabaseUserId);
     }
   }
 
-  // 3) 폴백: Supabase 세션 쿠키로 직접 확인
   return authenticateBySession();
 }
 
@@ -39,25 +32,33 @@ async function authenticateByToken(token: string): Promise<AuthUser | null> {
 
   const apiToken = await prisma.apiToken.findUnique({
     where: { tokenHash },
-    include: { user: true },
+    include: {
+      user: {
+        include: {
+          memberships: true,
+        },
+      },
+    },
   });
 
   if (!apiToken) return null;
   if (apiToken.expiresAt && apiToken.expiresAt < new Date()) return null;
 
-  // lastUsedAt 업데이트 (fire-and-forget)
   prisma.apiToken
     .update({ where: { id: apiToken.id }, data: { lastUsedAt: new Date() } })
     .catch(() => {});
 
-  return toAuthUser(apiToken.user);
+  return resolveAuthUser(apiToken.user);
 }
 
 async function findUserBySupabaseId(
   supabaseId: string
 ): Promise<AuthUser | null> {
-  const user = await prisma.user.findUnique({ where: { supabaseId } });
-  return user ? toAuthUser(user) : null;
+  const user = await prisma.user.findUnique({
+    where: { supabaseId },
+    include: { memberships: true },
+  });
+  return user ? resolveAuthUser(user) : null;
 }
 
 async function authenticateBySession(): Promise<AuthUser | null> {
@@ -74,16 +75,38 @@ async function authenticateBySession(): Promise<AuthUser | null> {
   }
 }
 
-function toAuthUser(user: {
+type UserWithMemberships = {
   id: string;
-  organizationId: string;
   email: string;
-  role: string;
-}): AuthUser {
+  activeOrganizationId: string | null;
+  memberships: { organizationId: string; role: string }[];
+};
+
+async function resolveAuthUser(
+  user: UserWithMemberships
+): Promise<AuthUser | null> {
+  if (user.memberships.length === 0) return null;
+
+  // activeOrganizationId에 해당하는 멤버십 찾기
+  let membership = user.memberships.find(
+    (m) => m.organizationId === user.activeOrganizationId
+  );
+
+  // 없으면 첫 번째 멤버십으로 폴백하고 DB 업데이트
+  if (!membership) {
+    membership = user.memberships[0];
+    prisma.user
+      .update({
+        where: { id: user.id },
+        data: { activeOrganizationId: membership.organizationId },
+      })
+      .catch(() => {});
+  }
+
   return {
     userId: user.id,
-    organizationId: user.organizationId,
+    organizationId: membership.organizationId,
+    role: membership.role,
     email: user.email,
-    role: user.role,
   };
 }
