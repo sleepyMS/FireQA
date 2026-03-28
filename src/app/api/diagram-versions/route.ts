@@ -20,6 +20,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const job = await prisma.generationJob.findFirst({
+      where: { id: jobId, project: { organizationId: user.organizationId } },
+    });
+    if (!job) {
+      return NextResponse.json({ error: "작업을 찾을 수 없습니다." }, { status: 404 });
+    }
+
     const versions = await prisma.diagramVersion.findMany({
       where: { jobId, diagramTitle: title },
       orderBy: { version: "asc" },
@@ -51,6 +58,13 @@ export async function POST(request: NextRequest) {
         { error: "필수 필드가 누락되었습니다." },
         { status: 400 }
       );
+    }
+
+    const jobCheck = await prisma.generationJob.findFirst({
+      where: { id: jobId, project: { organizationId: user.organizationId } },
+    });
+    if (!jobCheck) {
+      return NextResponse.json({ error: "작업을 찾을 수 없습니다." }, { status: 404 });
     }
 
     const latest = await prisma.diagramVersion.findFirst({
@@ -120,6 +134,13 @@ export async function PATCH(request: NextRequest) {
         { error: "필수 필드가 누락되었습니다." },
         { status: 400 }
       );
+    }
+
+    const jobCheck = await prisma.generationJob.findFirst({
+      where: { id: jobId, project: { organizationId: user.organizationId } },
+    });
+    if (!jobCheck) {
+      return NextResponse.json({ error: "작업을 찾을 수 없습니다." }, { status: 404 });
     }
 
     // 기존 확정 해제

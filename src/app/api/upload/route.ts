@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { parseDocument } from "@/lib/parsers";
+import { getCurrentUser } from "@/lib/auth/get-current-user";
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await getCurrentUser(request);
+    if (!user) {
+      return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
+    }
+
     const formData = await request.formData();
     const file = formData.get("file") as File;
 

@@ -81,12 +81,20 @@ export async function PATCH(request: NextRequest) {
 
     const job = await prisma.generationJob.findUnique({
       where: { id },
+      include: { project: true },
     });
 
     if (!job) {
       return NextResponse.json(
         { error: "해당 이력을 찾을 수 없습니다." },
         { status: 404 }
+      );
+    }
+
+    if (job.project.organizationId !== user.organizationId) {
+      return NextResponse.json(
+        { error: "해당 이력에 대한 권한이 없습니다." },
+        { status: 403 }
       );
     }
 

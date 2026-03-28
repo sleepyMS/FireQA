@@ -78,6 +78,12 @@ export async function DELETE(request: NextRequest) {
     }
 
     const { id } = await request.json();
+
+    const template = await prisma.qATemplate.findUnique({ where: { id } });
+    if (!template || template.organizationId !== user.organizationId) {
+      return NextResponse.json({ error: "템플릿을 찾을 수 없습니다." }, { status: 404 });
+    }
+
     await prisma.qATemplate.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (error) {

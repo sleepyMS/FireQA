@@ -58,11 +58,8 @@ export async function proxy(request: NextRequest) {
       return addCorsHeaders(NextResponse.next({ request }), request);
     }
 
-    // 세션 쿠키 요청: 세션 리프레시 + 인증된 supabaseId를 헤더로 전달
-    const { supabaseResponse, user } = await updateSupabaseSession(request);
-    if (user) {
-      supabaseResponse.headers.set("x-supabase-user-id", user.id);
-    }
+    // 세션 쿠키 요청: 세션 리프레시
+    const { supabaseResponse } = await updateSupabaseSession(request);
     return addCorsHeaders(supabaseResponse, request);
   }
 

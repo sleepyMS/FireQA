@@ -32,6 +32,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // 특정 이메일 대상 초대인 경우 수락자 이메일 일치 여부 검증
+  if (invitation.email && user.email !== invitation.email) {
+    return NextResponse.json(
+      { error: "이 초대는 다른 이메일 주소로 발송되었습니다." },
+      { status: 403 }
+    );
+  }
+
   const existingMembership = await prisma.organizationMembership.findUnique({
     where: {
       userId_organizationId: {

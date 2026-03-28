@@ -21,10 +21,10 @@ export async function GET(request: NextRequest) {
 
     const job = await prisma.generationJob.findUnique({
       where: { id: jobId },
-      include: { project: true },
+      include: { project: { select: { organizationId: true, name: true } } },
     });
 
-    if (!job || !job.result) {
+    if (!job || job.project.organizationId !== user.organizationId || !job.result) {
       return NextResponse.json(
         { error: "생성 결과를 찾을 수 없습니다." },
         { status: 404 }

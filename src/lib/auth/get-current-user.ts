@@ -17,11 +17,6 @@ export async function getCurrentUser(
     if (authHeader?.startsWith("Bearer ")) {
       return authenticateByToken(authHeader.slice(7));
     }
-
-    const supabaseUserId = request.headers.get("x-supabase-user-id");
-    if (supabaseUserId) {
-      return findUserBySupabaseId(supabaseUserId);
-    }
   }
 
   return authenticateBySession();
