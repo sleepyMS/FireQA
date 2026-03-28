@@ -1,19 +1,29 @@
 import { Zap, FolderOpen, Users, History, Activity } from "lucide-react";
 import { ActivityAction, JOB_TYPE_LABEL } from "@/types/enums";
+import type { ActivityLog } from "@/types/activity";
 
 interface ActivityItemProps {
-  log: {
-    id: string;
-    action: string;
-    actorId: string | null;
-    projectId: string | null;
-    jobId: string | null;
-    metadata: Record<string, unknown>;
-    createdAt: string;
-  };
+  log: ActivityLog;
 }
 
-// 상대 시간 헬퍼
+const ACTION_META: Array<{
+  prefix: string;
+  icon: React.ElementType;
+  iconClass: string;
+  bg: string;
+}> = [
+  { prefix: "generation.", icon: Zap, iconClass: "text-orange-500", bg: "bg-orange-100" },
+  { prefix: "project.", icon: FolderOpen, iconClass: "text-blue-500", bg: "bg-blue-100" },
+  { prefix: "member.", icon: Users, iconClass: "text-green-500", bg: "bg-green-100" },
+  { prefix: "version.", icon: History, iconClass: "text-purple-500", bg: "bg-purple-100" },
+];
+
+const DEFAULT_META = { icon: Activity, iconClass: "text-gray-400", bg: "bg-gray-100" };
+
+function getActionMeta(action: string) {
+  return ACTION_META.find((m) => action.startsWith(m.prefix)) ?? DEFAULT_META;
+}
+
 function relativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const minutes = Math.floor(diff / 60_000);
@@ -25,33 +35,6 @@ function relativeTime(iso: string): string {
   return `${days}일 전`;
 }
 
-// 액션별 아이콘 + 색상
-function ActionIcon({ action }: { action: string }) {
-  if (action.startsWith("generation.")) {
-    return <Zap className="h-4 w-4 text-orange-500" />;
-  }
-  if (action.startsWith("project.")) {
-    return <FolderOpen className="h-4 w-4 text-blue-500" />;
-  }
-  if (action.startsWith("member.")) {
-    return <Users className="h-4 w-4 text-green-500" />;
-  }
-  if (action.startsWith("version.")) {
-    return <History className="h-4 w-4 text-purple-500" />;
-  }
-  return <Activity className="h-4 w-4 text-gray-400" />;
-}
-
-// 아이콘 배경색
-function iconBgClass(action: string): string {
-  if (action.startsWith("generation.")) return "bg-orange-100";
-  if (action.startsWith("project.")) return "bg-blue-100";
-  if (action.startsWith("member.")) return "bg-green-100";
-  if (action.startsWith("version.")) return "bg-purple-100";
-  return "bg-gray-100";
-}
-
-// 액션 → 한글 설명
 function describeAction(action: string, metadata: Record<string, unknown>): string {
   const typeLabel =
     typeof metadata.type === "string"
@@ -91,19 +74,19 @@ function describeAction(action: string, metadata: Record<string, unknown>): stri
 }
 
 export function ActivityItem({ log }: ActivityItemProps) {
+  const { icon: Icon, iconClass, bg } = getActionMeta(log.action);
+
   return (
     <div className="relative flex items-start gap-4 pb-6 pl-8">
-      {/* 타임라인 세로선 */}
+      {/* 아이템 사이 타임라인 세로선: 마지막 아이템에서도 그려지지만 부모 overflow-hidden이 클리핑 */}
       <div className="absolute left-[15px] top-8 h-full w-[2px] -translate-x-1/2 bg-border" />
 
-      {/* 아이콘 */}
       <div
-        className={`absolute left-0 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${iconBgClass(log.action)}`}
+        className={`absolute left-0 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${bg}`}
       >
-        <ActionIcon action={log.action} />
+        <Icon className={`h-4 w-4 ${iconClass}`} />
       </div>
 
-      {/* 내용 */}
       <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
         <p className="text-sm text-foreground">
           {describeAction(log.action, log.metadata)}

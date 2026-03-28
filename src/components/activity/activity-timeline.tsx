@@ -3,24 +3,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { ActivityItem } from "./activity-item";
 import { Button } from "@/components/ui/button";
-
-interface ActivityLog {
-  id: string;
-  action: string;
-  actorId: string | null;
-  projectId: string | null;
-  jobId: string | null;
-  metadata: Record<string, unknown>;
-  createdAt: string;
-}
+import type { ActivityLog } from "@/types/activity";
 
 interface ActivityTimelineProps {
-  // projectId가 제공되면 해당 프로젝트로 필터링 의도이나,
-  // 현재 API가 프로젝트 필터를 지원하지 않으므로 전체 목록을 가져온다.
+  // TODO: wire up when /api/activity supports ?projectId= filter
   projectId?: string;
 }
 
-// 로딩 스켈레톤 행
 function SkeletonRow() {
   return (
     <div className="relative flex items-start gap-4 pb-6 pl-8 animate-pulse">
@@ -39,29 +28,31 @@ export function ActivityTimeline({ projectId: _projectId }: ActivityTimelineProp
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  const fetchLogs = useCallback(async (cursor?: string) => {
+  const fetchLogs = useCallback(async (cursor?: string, signal?: AbortSignal) => {
     const url = cursor
       ? `/api/activity?limit=20&cursor=${encodeURIComponent(cursor)}`
       : "/api/activity?limit=20";
 
-    const res = await fetch(url);
+    const res = await fetch(url, { signal });
     if (!res.ok) throw new Error("활동 로그 조회 실패");
     return res.json() as Promise<{ logs: ActivityLog[]; nextCursor: string | null }>;
   }, []);
 
-  // 초기 로드
   useEffect(() => {
+    const controller = new AbortController();
     setLoading(true);
-    fetchLogs()
+    fetchLogs(undefined, controller.signal)
       .then(({ logs: items, nextCursor: cursor }) => {
         setLogs(items);
         setNextCursor(cursor);
       })
-      .catch(console.error)
+      .catch((err) => {
+        if (err.name !== "AbortError") console.error(err);
+      })
       .finally(() => setLoading(false));
+    return () => controller.abort();
   }, [fetchLogs]);
 
-  // 더 보기
   const handleLoadMore = async () => {
     if (!nextCursor) return;
     setLoadingMore(true);
