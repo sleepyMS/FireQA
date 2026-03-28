@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { Suspense } from "react";
 import SettingsGeneral from "./settings-general";
 import SettingsMembers from "./settings-members";
 import SettingsBilling from "./settings-billing";
 import SettingsWebhooks from "./settings-webhooks";
+import { SettingsTabs } from "./settings-tabs";
 
 export default async function SettingsPage({
   searchParams,
@@ -17,13 +17,6 @@ export default async function SettingsPage({
     : tab === "webhooks" ? "webhooks"
     : "general";
 
-  const tabs = [
-    { key: "general", label: "일반", href: "/settings" },
-    { key: "members", label: "멤버", href: "/settings?tab=members" },
-    { key: "billing", label: "결제", href: "/settings?tab=billing" },
-    { key: "webhooks", label: "웹훅", href: "/settings?tab=webhooks" },
-  ];
-
   return (
     <div className="space-y-6">
       <div>
@@ -31,21 +24,7 @@ export default async function SettingsPage({
         <p className="text-muted-foreground">조직 설정을 관리합니다.</p>
       </div>
 
-      <div className="flex gap-1 border-b">
-        {tabs.map(({ key, label, href }) => (
-          <Link
-            key={key}
-            href={href}
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              activeTab === key
-                ? "border-primary text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {label}
-          </Link>
-        ))}
-      </div>
+      <SettingsTabs activeTab={activeTab} />
 
       <Suspense
         fallback={

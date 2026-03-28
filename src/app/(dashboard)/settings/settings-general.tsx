@@ -17,6 +17,8 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { getAvatarColor } from "@/lib/avatar-colors";
+import { useLocale } from "@/lib/i18n/locale-provider";
+import type { Locale } from "@/lib/i18n/messages";
 
 interface OrgInfo {
   id: string;
@@ -38,6 +40,7 @@ export default function SettingsGeneral() {
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [leaving, setLeaving] = useState(false);
 
+  const { t, locale, setLocale } = useLocale();
   const isDirty = org !== null && (name !== org.name || slug !== org.slug);
   const slugValid = SLUG_REGEX.test(slug);
 
@@ -167,6 +170,29 @@ export default function SettingsGeneral() {
             >
               {saving ? "저장 중..." : "저장"}
             </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="flex items-center justify-between py-4">
+          <div>
+            <p className="text-sm font-semibold">{t.settings.locale.label}</p>
+          </div>
+          <div className="flex gap-1 rounded-md border p-0.5">
+            {(["ko", "en"] as Locale[]).map((l) => (
+              <button
+                key={l}
+                onClick={() => setLocale(l)}
+                className={`rounded px-3 py-1 text-xs font-medium transition-colors ${
+                  locale === l
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {t.settings.locale[l]}
+              </button>
+            ))}
           </div>
         </CardContent>
       </Card>

@@ -5,22 +5,30 @@ import { LogOut, Search } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { SearchDialog } from "@/components/layout/search-dialog";
+import { useLocale } from "@/lib/i18n/locale-provider";
+import type { Messages } from "@/lib/i18n/messages";
 
-const pageTitles: Record<string, string> = {
-  "/dashboard": "대시보드",
-  "/generate": "TC 생성",
-  "/diagrams": "다이어그램",
-  "/wireframes": "와이어프레임",
-  "/improve": "기획서 개선",
-  "/history": "이력",
-  "/templates": "템플릿",
-  "/guide": "사용법",
-  "/settings": "설정",
-};
+function buildPageTitles(nav: Messages["nav"]): Record<string, string> {
+  return {
+    "/dashboard": nav.dashboard,
+    "/generate": nav.generate,
+    "/diagrams": nav.diagrams,
+    "/wireframes": nav.wireframes,
+    "/improve": nav.improve,
+    "/history": nav.history,
+    "/activity": nav.activity,
+    "/analytics": nav.analytics,
+    "/templates": nav.templates,
+    "/guide": nav.guide,
+    "/settings": nav.settings,
+  };
+}
 
 export function Header() {
   const pathname = usePathname();
   const router = useRouter();
+  const { t } = useLocale();
+  const pageTitles = buildPageTitles(t.nav);
 
   const title =
     pageTitles[pathname] ??
@@ -46,7 +54,7 @@ export function Header() {
             className="hidden items-center gap-2 rounded-md border px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors sm:flex"
           >
             <Search className="h-3.5 w-3.5" />
-            <span>검색</span>
+            <span>{t.common.search}</span>
             <kbd className="ml-1 rounded border px-1 py-0.5 text-[10px]">⌘K</kbd>
           </button>
           <NotificationBell />
@@ -55,7 +63,7 @@ export function Header() {
             className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
           >
             <LogOut className="h-4 w-4" />
-            로그아웃
+            {t.common.logout}
           </button>
         </div>
       </header>

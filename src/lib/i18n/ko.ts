@@ -1,0 +1,49 @@
+import type { Messages } from "./messages";
+
+export const ko: Messages = {
+  nav: {
+    dashboard: "대시보드",
+    projects: "프로젝트",
+    generate: "TC 생성",
+    diagrams: "다이어그램",
+    wireframes: "와이어프레임",
+    improve: "기획서 개선",
+    history: "이력",
+    activity: "활동 로그",
+    analytics: "분석",
+    templates: "템플릿",
+    guide: "사용법",
+    settings: "설정",
+  },
+  common: {
+    save: "저장",
+    saving: "저장 중...",
+    cancel: "취소",
+    delete: "삭제",
+    edit: "편집",
+    loading: "로딩 중...",
+    logout: "로그아웃",
+    search: "검색",
+    close: "닫기",
+    confirm: "확인",
+    upgrade: "업그레이드",
+    create: "생성",
+    add: "추가",
+    noData: "데이터 없음",
+  },
+  settings: {
+    title: "설정",
+    description: "조직 설정을 관리합니다.",
+    tabs: {
+      general: "일반",
+      members: "멤버",
+      billing: "결제",
+      webhooks: "웹훅",
+    },
+    locale: {
+      label: "언어",
+      ko: "한국어",
+      en: "English",
+    },
+  },
+};

@@ -24,26 +24,32 @@ import { cn } from "@/lib/utils";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import { OrgSwitcher } from "@/components/layout/org-switcher";
+import { useLocale } from "@/lib/i18n/locale-provider";
+import type { Messages } from "@/lib/i18n/messages";
 
-const navItems = [
-  { label: "대시보드", href: "/dashboard", icon: LayoutDashboard },
-  { label: "프로젝트", href: "/projects", icon: FolderOpen },
-  { label: "TC 생성", href: "/generate", icon: FileText },
-  { label: "다이어그램", href: "/diagrams", icon: GitBranch },
-  { label: "와이어프레임", href: "/wireframes", icon: Smartphone },
-  { label: "기획서 개선", href: "/improve", icon: FileEdit },
-  { label: "이력", href: "/history", icon: Clock },
-  { label: "활동 로그", href: "/activity", icon: Activity },
-  { label: "분석", href: "/analytics", icon: BarChart2 },
-  { label: "템플릿", href: "/templates", icon: Settings },
-  { label: "사용법", href: "/guide", icon: BookOpen },
-  { label: "설정", href: "/settings", icon: Settings2 },
-];
+function buildNavItems(nav: Messages["nav"]) {
+  return [
+    { label: nav.dashboard, href: "/dashboard", icon: LayoutDashboard },
+    { label: nav.projects, href: "/projects", icon: FolderOpen },
+    { label: nav.generate, href: "/generate", icon: FileText },
+    { label: nav.diagrams, href: "/diagrams", icon: GitBranch },
+    { label: nav.wireframes, href: "/wireframes", icon: Smartphone },
+    { label: nav.improve, href: "/improve", icon: FileEdit },
+    { label: nav.history, href: "/history", icon: Clock },
+    { label: nav.activity, href: "/activity", icon: Activity },
+    { label: nav.analytics, href: "/analytics", icon: BarChart2 },
+    { label: nav.templates, href: "/templates", icon: Settings },
+    { label: nav.guide, href: "/guide", icon: BookOpen },
+    { label: nav.settings, href: "/settings", icon: Settings2 },
+  ];
+}
 
 export function Sidebar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const { t } = useLocale();
+  const navItems = buildNavItems(t.nav);
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
