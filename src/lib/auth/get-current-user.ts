@@ -6,6 +6,7 @@ export type AuthUser = {
   userId: string;
   organizationId: string;
   email: string;
+  name: string | null;
   role: string;
 };
 
@@ -104,6 +105,7 @@ async function authenticateBySession(): Promise<AuthUser | null> {
 type UserWithMemberships = {
   id: string;
   email: string;
+  name: string | null;
   activeOrganizationId: string | null;
   memberships: { organizationId: string; role: string }[];
 };
@@ -133,5 +135,6 @@ async function resolveAuthUser(
     organizationId: membership.organizationId,
     role: membership.role,
     email: user.email,
+    name: user.name,
   };
 }

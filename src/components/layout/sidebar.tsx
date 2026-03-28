@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -21,11 +21,10 @@ import {
   BarChart2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import type { User } from "@supabase/supabase-js";
 import { OrgSwitcher } from "@/components/layout/org-switcher";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import type { Messages } from "@/lib/i18n/messages";
+import { useUser } from "@/lib/auth/user-provider";
 
 function buildNavItems(nav: Messages["nav"]) {
   return [
@@ -47,14 +46,9 @@ function buildNavItems(nav: Messages["nav"]) {
 export function Sidebar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
+  const authUser = useUser();
   const { t } = useLocale();
   const navItems = buildNavItems(t.nav);
-
-  useEffect(() => {
-    const supabase = createSupabaseBrowserClient();
-    supabase.auth.getUser().then(({ data }) => setUser(data.user));
-  }, []);
 
   const navContent = (
     <>
@@ -100,24 +94,16 @@ export function Sidebar() {
       </nav>
 
       <div className="border-t p-4">
-        {user && (
+        {authUser && (
           <div className="flex items-center gap-3 min-w-0">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">
-              {(user.user_metadata?.full_name as string | undefined)
-                ?.charAt(0)
-                ?.toUpperCase() ??
-                user.email?.charAt(0).toUpperCase() ??
-                "?"}
+              {authUser.name?.charAt(0).toUpperCase() ?? authUser.email.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
-              {user.user_metadata?.full_name && (
-                <p className="truncate text-sm font-medium leading-tight">
-                  {user.user_metadata.full_name as string}
-                </p>
+              {authUser.name && (
+                <p className="truncate text-sm font-medium leading-tight">{authUser.name}</p>
               )}
-              <p className="truncate text-xs text-muted-foreground">
-                {user.email}
-              </p>
+              <p className="truncate text-xs text-muted-foreground">{authUser.email}</p>
             </div>
           </div>
         )}

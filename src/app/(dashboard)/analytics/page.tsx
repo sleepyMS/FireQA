@@ -1,25 +1,8 @@
-"use client";
-
-import { useEffect } from "react";
-import useSWR from "swr";
-import { toast } from "sonner";
+import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { getAnalyticsData, type AnalyticsData } from "@/lib/analytics/get-analytics-data";
 import { Card, CardContent } from "@/components/ui/card";
 import { JOB_TYPE_LABEL } from "@/types/enums";
-import { SWR_KEYS } from "@/lib/swr/keys";
-
-interface AnalyticsData {
-  summary: {
-    totalJobs: number;
-    completedJobs: number;
-    failedJobs: number;
-    totalTokens: number;
-    thisMonthJobs: number;
-  };
-  byType: { type: string; count: number }[];
-  daily: { date: string; count: number }[];
-  topProjects: { id: string; name: string; count: number }[];
-  topMembers: { userId: string; name: string | null; email: string; count: number }[];
-}
 
 function StatCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
@@ -46,9 +29,8 @@ function HBar({ label, count, max }: { label: string; count: number; max: number
   );
 }
 
-function DailyChart({ daily }: { daily: { date: string; count: number }[] }) {
+function DailyChart({ daily }: { daily: AnalyticsData["daily"] }) {
   const max = Math.max(...daily.map((d) => d.count), 1);
-  // 7일 간격 레이블만 표시
   const labelIndices = new Set([0, 6, 13, 20, 27, 29]);
 
   return (
@@ -66,7 +48,6 @@ function DailyChart({ daily }: { daily: { date: string; count: number }[] }) {
                 {d.date.slice(5)}
               </span>
             )}
-            {/* 툴팁 */}
             <div className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-foreground px-1.5 py-0.5 text-[10px] text-background opacity-0 group-hover:opacity-100">
               {d.date}: {d.count}
             </div>
@@ -77,26 +58,13 @@ function DailyChart({ daily }: { daily: { date: string; count: number }[] }) {
   );
 }
 
-export default function AnalyticsPage() {
-  const { data, isLoading: loading, error } = useSWR<AnalyticsData>(SWR_KEYS.analytics, {
-    dedupingInterval: 60_000,
-  });
+export default async function AnalyticsPage() {
+  const user = await getCurrentUser();
+  if (!user) redirect("/onboarding");
 
-  useEffect(() => {
-    if (error) toast.error("분석 데이터를 불러오지 못했습니다.");
-  }, [error]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20 text-muted-foreground">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
-  }
-
-  if (!data) return null;
-
+  const data = await getAnalyticsData(user.organizationId);
   const { summary, byType, daily, topProjects, topMembers } = data;
+
   const successRate =
     summary.completedJobs + summary.failedJobs > 0
       ? Math.round((summary.completedJobs / (summary.completedJobs + summary.failedJobs)) * 100)
@@ -113,7 +81,6 @@ export default function AnalyticsPage() {
         <p className="text-muted-foreground">최근 30일 기준</p>
       </div>
 
-      {/* 요약 카드 */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <StatCard label="이번 달 생성" value={summary.thisMonthJobs} />
         <StatCard label="30일 총 생성" value={summary.totalJobs} />
@@ -122,7 +89,6 @@ export default function AnalyticsPage() {
         <StatCard label="총 토큰" value={summary.totalTokens.toLocaleString()} />
       </div>
 
-      {/* 일별 추이 */}
       <Card>
         <CardContent className="pt-4">
           <p className="mb-3 text-sm font-semibold">일별 생성 수 (최근 30일)</p>
@@ -131,7 +97,6 @@ export default function AnalyticsPage() {
       </Card>
 
       <div className="grid gap-4 md:grid-cols-3">
-        {/* 타입별 */}
         <Card>
           <CardContent className="space-y-3 pt-4">
             <p className="text-sm font-semibold">타입별 생성</p>
@@ -139,18 +104,12 @@ export default function AnalyticsPage() {
               <p className="text-xs text-muted-foreground">데이터 없음</p>
             ) : (
               byType.map((t) => (
-                <HBar
-                  key={t.type}
-                  label={JOB_TYPE_LABEL[t.type] ?? t.type}
-                  count={t.count}
-                  max={maxByType}
-                />
+                <HBar key={t.type} label={JOB_TYPE_LABEL[t.type] ?? t.type} count={t.count} max={maxByType} />
               ))
             )}
           </CardContent>
         </Card>
 
-        {/* 프로젝트별 */}
         <Card>
           <CardContent className="space-y-3 pt-4">
             <p className="text-sm font-semibold">프로젝트별 생성 (상위 5)</p>
@@ -164,7 +123,6 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        {/* 멤버별 */}
         <Card>
           <CardContent className="space-y-3 pt-4">
             <p className="text-sm font-semibold">멤버별 생성 (상위 5)</p>
@@ -172,12 +130,7 @@ export default function AnalyticsPage() {
               <p className="text-xs text-muted-foreground">데이터 없음</p>
             ) : (
               topMembers.map((m) => (
-                <HBar
-                  key={m.userId}
-                  label={m.name ?? m.email}
-                  count={m.count}
-                  max={maxMember}
-                />
+                <HBar key={m.userId} label={m.name ?? m.email} count={m.count} max={maxMember} />
               ))
             )}
           </CardContent>
