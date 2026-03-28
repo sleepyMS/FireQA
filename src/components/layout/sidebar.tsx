@@ -17,6 +17,7 @@ import {
   Menu,
   X,
   BookOpen,
+  Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -31,6 +32,7 @@ const navItems = [
   { label: "와이어프레임", href: "/wireframes", icon: Smartphone },
   { label: "기획서 개선", href: "/improve", icon: FileEdit },
   { label: "이력", href: "/history", icon: Clock },
+  { label: "활동 로그", href: "/activity", icon: Activity },
   { label: "템플릿", href: "/templates", icon: Settings },
   { label: "사용법", href: "/guide", icon: BookOpen },
   { label: "설정", href: "/settings", icon: Settings2 },
