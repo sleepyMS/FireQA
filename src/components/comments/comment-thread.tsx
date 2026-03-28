@@ -71,28 +71,6 @@ export function CommentThread({
     onRefresh();
   }
 
-  async function makeReplyHandlers(replyId: string) {
-    return {
-      onResolve: async () => {
-        // replies don't have resolve, but still provide no-op
-      },
-      onDelete: async () => {
-        const res = await fetch(`/api/comments/${replyId}`, { method: "DELETE" });
-        if (!res.ok) throw new Error("delete reply failed");
-        onRefresh();
-      },
-      onEdit: async (newBody: string) => {
-        const res = await fetch(`/api/comments/${replyId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ body: newBody }),
-        });
-        if (!res.ok) throw new Error("edit reply failed");
-        onRefresh();
-      },
-    };
-  }
-
   return (
     <div className="space-y-3">
       <CommentItem

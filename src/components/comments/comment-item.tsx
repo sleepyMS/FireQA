@@ -72,7 +72,6 @@ export function CommentItem({
 
   return (
     <div className="space-y-1">
-      {/* Header */}
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <span className="font-medium text-foreground">
           사용자 {comment.authorId.slice(0, 8)}
@@ -91,7 +90,6 @@ export function CommentItem({
         )}
       </div>
 
-      {/* Body */}
       {isDeleted ? (
         <p className="text-sm text-muted-foreground italic">
           삭제된 코멘트입니다.
@@ -107,7 +105,6 @@ export function CommentItem({
         <p className="text-sm whitespace-pre-wrap break-words">{comment.body}</p>
       )}
 
-      {/* Actions */}
       {!isDeleted && !isEditing && (
         <div className="flex items-center gap-1 pt-0.5">
           {!isReply && (

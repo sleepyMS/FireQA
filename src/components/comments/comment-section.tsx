@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CommentWithReplies } from "@/types/comment";
 import { CommentForm } from "./comment-form";
 import { CommentThread } from "./comment-thread";
@@ -12,11 +12,15 @@ interface CommentSectionProps {
 
 export function CommentSection({ jobId, currentUserId }: CommentSectionProps) {
   const [comments, setComments] = useState<CommentWithReplies[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const controllerRef = useRef<AbortController | null>(null);
 
-  const fetchComments = useCallback(() => {
+  const fetchComments = useCallback((isInitial = false) => {
+    controllerRef.current?.abort();
     const controller = new AbortController();
-    setIsLoading(true);
+    controllerRef.current = controller;
+
+    if (isInitial) setInitialLoading(true);
 
     fetch(`/api/comments?jobId=${encodeURIComponent(jobId)}`, {
       signal: controller.signal,
@@ -34,15 +38,13 @@ export function CommentSection({ jobId, currentUserId }: CommentSectionProps) {
         }
       })
       .finally(() => {
-        setIsLoading(false);
+        if (isInitial) setInitialLoading(false);
       });
-
-    return controller;
   }, [jobId]);
 
   useEffect(() => {
-    const controller = fetchComments();
-    return () => controller.abort();
+    fetchComments(true);
+    return () => controllerRef.current?.abort();
   }, [fetchComments]);
 
   async function handleNewComment(body: string) {
@@ -55,23 +57,17 @@ export function CommentSection({ jobId, currentUserId }: CommentSectionProps) {
     fetchComments();
   }
 
-  function handleRefresh() {
-    fetchComments();
-  }
-
   return (
     <div className="space-y-6">
       <h3 className="text-lg font-semibold">코멘트</h3>
 
-      {/* New comment form */}
       <CommentForm
         placeholder="새 코멘트를 입력하세요..."
         onSubmit={handleNewComment}
         submitLabel="코멘트 등록"
       />
 
-      {/* Comment list */}
-      {isLoading ? (
+      {initialLoading ? (
         <p className="text-sm text-muted-foreground">코멘트를 불러오는 중...</p>
       ) : comments.length === 0 ? (
         <p className="text-sm text-muted-foreground">
@@ -84,7 +80,7 @@ export function CommentSection({ jobId, currentUserId }: CommentSectionProps) {
               key={comment.id}
               comment={comment}
               currentUserId={currentUserId}
-              onRefresh={handleRefresh}
+              onRefresh={() => fetchComments()}
               jobId={jobId}
             />
           ))}
