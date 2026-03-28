@@ -13,6 +13,7 @@ interface ResultVersionInfo {
   changeSummary: string | null;
   instruction: string | null;
   isActive: boolean;
+  resultJson: string;
   createdAt: string;
   createdBy: { name: string | null; email: string } | null;
 }
@@ -66,12 +67,7 @@ export function VersionBar({ jobId, onVersionChange }: VersionBarProps) {
       if (!r.ok) throw new Error();
       // onVersionChange 콜백이 없으면 페이지 리로드로 서버 컴포넌트 재렌더링
       if (onVersionChange) {
-        const vData = await fetch(
-          `/api/versions?jobId=${encodeURIComponent(jobId)}`
-        ).then((res) => res.json());
-        const fullVersion = (
-          vData.versions as (ResultVersionInfo & { resultJson?: string })[]
-        )?.find((v) => v.id === version.id);
+        const fullVersion = versions.find((v) => v.id === version.id);
         if (fullVersion?.resultJson) {
           onVersionChange(fullVersion.resultJson, version.id);
           return;
@@ -114,7 +110,6 @@ export function VersionBar({ jobId, onVersionChange }: VersionBarProps) {
           <ChevronLeft className="h-4 w-4" />
         </Button>
 
-        {/* 버전 도트 */}
         <div className="flex items-center gap-1 px-1">
           {versions.map((v, i) => (
             <button

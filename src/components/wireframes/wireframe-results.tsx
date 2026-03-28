@@ -8,6 +8,7 @@ import {
   Bell,
   ArrowRight,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   Card,
   CardContent,
@@ -63,23 +64,20 @@ export function WireframeResults({
   const [screens, setScreens] = useState<Screen[]>(initialScreens);
 
   const handleTypeChange = async (screenId: string, newType: string) => {
-    // 즉시 UI 반영
-    setScreens((prev) =>
-      prev.map((s) =>
-        s.id === screenId ? { ...s, screenType: newType } : s
-      )
-    );
+    const prev = screens;
+    setScreens((s) => s.map((sc) => (sc.id === screenId ? { ...sc, screenType: newType } : sc)));
 
-    // DB 저장
-    await fetch("/api/wireframes/update", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        jobId,
-        screenId,
-        screenType: newType,
-      }),
-    });
+    try {
+      const r = await fetch("/api/wireframes/update", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId, screenId, screenType: newType }),
+      });
+      if (!r.ok) throw new Error();
+    } catch {
+      setScreens(prev);
+      toast.error("화면 타입 변경에 실패했습니다.");
+    }
   };
 
   return (
@@ -173,8 +171,8 @@ export function WireframeResults({
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {flows.map((flow, i) => (
-              <div key={i} className="flex items-center gap-2 text-sm">
+            {flows.map((flow) => (
+              <div key={`${flow.from}-${flow.to}-${flow.label}`} className="flex items-center gap-2 text-sm">
                 <Badge variant="secondary">{flow.from}</Badge>
                 <ArrowRight className="h-3 w-3 text-muted-foreground" />
                 <Badge variant="secondary">{flow.to}</Badge>

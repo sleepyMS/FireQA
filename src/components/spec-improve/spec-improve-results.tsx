@@ -21,14 +21,12 @@ export function SpecImproveResults({ jobId, markdown, summary, originalFileName 
   const [copied, setCopied] = useState(false);
   const [showComparison, setShowComparison] = useState(false);
 
-  // 복사 기능
   async function handleCopy() {
     await navigator.clipboard.writeText(markdown);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
 
-  // .md 다운로드 기능
   function handleDownload() {
     const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);
