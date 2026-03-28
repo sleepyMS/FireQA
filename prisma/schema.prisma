@@ -244,6 +244,21 @@ model Comment {
   @@index([parentId])
 }
 
+model Notification {
+  id             String    @id @default(cuid())
+  userId         String    // plain string, no FK
+  organizationId String    // plain string, no FK
+  type           String    // "comment.reply" | "generation.completed" | "member.invited"
+  title          String
+  linkUrl        String?
+  metadata       String    @default("{}") // JSON
+  isRead         Boolean   @default(false)
+  readAt         DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([userId, isRead, createdAt(sort: Desc)])
+}
+
 model QATemplate {
   id             String       @id @default(cuid())
   name           String

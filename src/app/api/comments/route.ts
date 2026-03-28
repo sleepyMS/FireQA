@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { createNotification } from "@/lib/notifications/create-notification";
 
 const MAX_BODY_LENGTH = 10_000;
 
@@ -99,13 +100,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "작업을 찾을 수 없습니다." }, { status: 404 });
     }
 
+    // parentComment은 답글 알림 트리거를 위해 블록 밖에서도 참조
+    let parentComment: { authorId: string; jobId: string | null; parentId: string | null } | null = null;
     if (parentId) {
-      const parent = await prisma.comment.findUnique({ where: { id: parentId } });
-      if (!parent || parent.jobId !== jobId) {
+      parentComment = await prisma.comment.findUnique({ where: { id: parentId } });
+      if (!parentComment || parentComment.jobId !== jobId) {
         return NextResponse.json({ error: "부모 코멘트를 찾을 수 없습니다." }, { status: 404 });
       }
       // 2단계 이상 중첩 불가 — 부모 자체가 답글이면 거부
-      if (parent.parentId !== null) {
+      if (parentComment.parentId !== null) {
         return NextResponse.json({ error: "답글에는 답글을 달 수 없습니다." }, { status: 400 });
       }
     }
@@ -120,6 +123,17 @@ export async function POST(request: NextRequest) {
         parentId: parentId ?? null,
       },
     });
+
+    // 답글이고 부모 작성자가 자기 자신이 아닌 경우 알림 발송 (fire-and-forget)
+    if (parentId && parentComment && parentComment.authorId !== user.userId) {
+      createNotification({
+        userId: parentComment.authorId,
+        organizationId: user.organizationId,
+        type: "comment.reply",
+        title: "새 답글이 달렸습니다",
+        linkUrl: jobId ? `/generate/${jobId}` : undefined,
+      });
+    }
 
     return NextResponse.json(
       {
