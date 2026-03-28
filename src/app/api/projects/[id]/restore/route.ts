@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { requireRole } from "@/lib/auth/require-role";
+import { UserRole } from "@/types/enums";
+import { getOrgProject } from "@/lib/projects/get-org-project";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -12,10 +15,14 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
     }
 
+    // 복구는 admin 이상 권한 필요
+    const roleErr = requireRole(user.role, UserRole.ADMIN);
+    if (roleErr) return NextResponse.json({ error: roleErr.error }, { status: roleErr.status });
+
     const { id } = await params;
 
-    const project = await prisma.project.findUnique({ where: { id } });
-    if (!project || project.organizationId !== user.organizationId) {
+    const project = await getOrgProject(id, user.organizationId);
+    if (!project) {
       return NextResponse.json({ error: "프로젝트를 찾을 수 없습니다." }, { status: 404 });
     }
 

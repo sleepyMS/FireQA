@@ -1,17 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { requireRole } from "@/lib/auth/require-role";
+import { UserRole } from "@/types/enums";
+import { getOrgProject } from "@/lib/projects/get-org-project";
 
 type RouteContext = { params: Promise<{ id: string }> };
-
-// 조직 소속 프로젝트를 조회하는 공통 헬퍼 (없거나 다른 조직이면 null)
-async function getOrgProject(projectId: string, organizationId: string) {
-  const project = await prisma.project.findUnique({
-    where: { id: projectId },
-  });
-  if (!project || project.organizationId !== organizationId) return null;
-  return project;
-}
 
 // GET /api/projects/[id] — 프로젝트 상세
 export async function GET(request: NextRequest, { params }: RouteContext) {
@@ -77,6 +71,11 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: "프로젝트를 찾을 수 없습니다." }, { status: 404 });
     }
 
+    // 삭제된 프로젝트는 수정 불가
+    if (project.status === "deleted") {
+      return NextResponse.json({ error: "삭제된 프로젝트는 수정할 수 없습니다." }, { status: 400 });
+    }
+
     const body = await request.json();
     const { name, description } = body as { name?: string; description?: string };
 
@@ -113,13 +112,17 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   }
 }
 
-// DELETE /api/projects/[id] — 소프트 삭제
+// DELETE /api/projects/[id] — 소프트 삭제 (admin 이상만 가능)
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
   try {
     const user = await getCurrentUser(request);
     if (!user) {
       return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
     }
+
+    // 삭제는 admin 이상 권한 필요
+    const roleErr = requireRole(user.role, UserRole.ADMIN);
+    if (roleErr) return NextResponse.json({ error: roleErr.error }, { status: roleErr.status });
 
     const { id } = await params;
 

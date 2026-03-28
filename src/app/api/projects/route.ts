@@ -11,20 +11,31 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = request.nextUrl;
-    const statusParam = searchParams.get("status") || "active";
+
+    // status 허용값 검증
+    const VALID_STATUSES = ["active", "archived", "deleted"] as const;
+    const statusParam = (searchParams.get("status") || "active") as string;
+    if (!VALID_STATUSES.includes(statusParam as typeof VALID_STATUSES[number])) {
+      return NextResponse.json({ error: "올바르지 않은 status 값입니다." }, { status: 400 });
+    }
+
     const search = searchParams.get("search") || "";
     const limitParam = parseInt(searchParams.get("limit") || "20", 10);
     const limit = isNaN(limitParam) || limitParam < 1 ? 20 : Math.min(limitParam, 100);
     const cursor = searchParams.get("cursor") || "";
 
-    // 커서 파싱: "ISO날짜_cuid" 형식
+    // 커서 파싱: "ISO날짜_cuid" 형식 (잘못된 형식은 400 반환)
     let cursorDate: Date | undefined;
     let cursorId: string | undefined;
     if (cursor) {
       const underscoreIdx = cursor.indexOf("_");
-      if (underscoreIdx !== -1) {
-        cursorDate = new Date(cursor.slice(0, underscoreIdx));
-        cursorId = cursor.slice(underscoreIdx + 1);
+      if (underscoreIdx === -1) {
+        return NextResponse.json({ error: "잘못된 cursor 형식입니다." }, { status: 400 });
+      }
+      cursorDate = new Date(cursor.slice(0, underscoreIdx));
+      cursorId = cursor.slice(underscoreIdx + 1);
+      if (isNaN(cursorDate.getTime()) || !cursorId) {
+        return NextResponse.json({ error: "잘못된 cursor 형식입니다." }, { status: 400 });
       }
     }
 
