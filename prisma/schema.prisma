@@ -223,9 +223,9 @@ model ActivityLog {
 
 model Comment {
   id             String    @id @default(cuid())
-  organizationId String
-  authorId       String
-  jobId          String?
+  organizationId String    // plain string, no FK — comments survive org deletion as audit trail
+  authorId       String    // plain string, no FK — comments survive user deletion (shows as "삭제된 사용자")
+  jobId          String?   // plain string, no FK — comments survive job deletion
   targetItemId   String?   // TC ID, diagram title, screen ID, etc. (logical ref, no FK)
   parentId       String?
   parent         Comment?  @relation("CommentThread", fields: [parentId], references: [id], onDelete: Cascade)
