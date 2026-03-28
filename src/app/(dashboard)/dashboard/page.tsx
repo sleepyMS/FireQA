@@ -22,7 +22,14 @@ export default async function DashboardPage() {
       where: { project: orgFilter },
       take: 5,
       orderBy: { createdAt: "desc" },
-      include: { project: true, upload: true },
+      select: {
+        id: true,
+        type: true,
+        status: true,
+        createdAt: true,
+        project: { select: { name: true } },
+        upload: { select: { fileName: true } },
+      },
     }),
   ]);
 

@@ -21,7 +21,16 @@ export async function GET(request: NextRequest) {
 
     const versions = await prisma.resultVersion.findMany({
       where: { jobId },
-      include: { createdBy: { select: { id: true, name: true, email: true } } },
+      select: {
+        id: true,
+        version: true,
+        changeType: true,
+        changeSummary: true,
+        instruction: true,
+        isActive: true,
+        createdAt: true,
+        createdBy: { select: { id: true, name: true, email: true } },
+      },
       orderBy: { version: "asc" },
     });
 
@@ -50,17 +59,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "필수 항목이 누락되었습니다." }, { status: 400 });
     }
 
-    // Verify job belongs to user's org
-    const job = await prisma.generationJob.findFirst({
-      where: { id: jobId, project: { organizationId: user.organizationId } },
-    });
+    // job 소속 검증 + 최신 버전 번호 조회를 병렬로
+    const [job, latest] = await Promise.all([
+      prisma.generationJob.findFirst({
+        where: { id: jobId, project: { organizationId: user.organizationId } },
+      }),
+      prisma.resultVersion.findFirst({
+        where: { jobId },
+        orderBy: { version: "desc" },
+        select: { version: true },
+      }),
+    ]);
     if (!job) return NextResponse.json({ error: "찾을 수 없습니다." }, { status: 404 });
-
-    // Get next version number
-    const latest = await prisma.resultVersion.findFirst({
-      where: { jobId },
-      orderBy: { version: "desc" },
-    });
     const nextVersion = (latest?.version ?? 0) + 1;
 
     // Deactivate all current versions, create new active one

@@ -60,17 +60,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const jobCheck = await prisma.generationJob.findFirst({
-      where: { id: jobId, project: { organizationId: user.organizationId } },
-    });
+    // 소속 검증 + 최신 버전 번호 조회를 병렬로
+    const [jobCheck, latest] = await Promise.all([
+      prisma.generationJob.findFirst({
+        where: { id: jobId, project: { organizationId: user.organizationId } },
+        select: { id: true, result: true },
+      }),
+      prisma.diagramVersion.findFirst({
+        where: { jobId, diagramTitle },
+        orderBy: { version: "desc" },
+        select: { version: true },
+      }),
+    ]);
     if (!jobCheck) {
       return NextResponse.json({ error: "작업을 찾을 수 없습니다." }, { status: 404 });
     }
-
-    const latest = await prisma.diagramVersion.findFirst({
-      where: { jobId, diagramTitle },
-      orderBy: { version: "desc" },
-    });
     const nextVersion = (latest?.version || 0) + 1;
 
     const version = await prisma.diagramVersion.create({
@@ -85,8 +89,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // GenerationJob의 result도 최신 코드로 업데이트
-    const newResultJson = await updateJobResult(jobId, diagramTitle, mermaidCode, nodes, edges);
+    // GenerationJob의 result도 최신 코드로 업데이트 (이미 fetch한 job 재사용)
+    const newResultJson = await updateJobResult(jobCheck, diagramTitle, mermaidCode, nodes, edges);
 
     // ResultVersion도 함께 생성 (다이어그램 편집 이력 추적)
     if (newResultJson) {
@@ -155,16 +159,10 @@ export async function PATCH(request: NextRequest) {
       data: { isConfirmed: true },
     });
 
-    // 저장된 nodes/edges로 즉시 result 업데이트
+    // 저장된 nodes/edges로 즉시 result 업데이트 (이미 fetch한 job 재사용)
     const nodes = JSON.parse(confirmed.nodesJson || "[]");
     const edges = JSON.parse(confirmed.edgesJson || "[]");
-    await updateJobResult(
-      jobId,
-      diagramTitle,
-      confirmed.mermaidCode,
-      nodes,
-      edges
-    );
+    await updateJobResult(jobCheck, diagramTitle, confirmed.mermaidCode, nodes, edges);
 
     return NextResponse.json({ confirmed });
   } catch (error) {
@@ -176,17 +174,16 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
-// updateJobResult는 job result를 업데이트하고, 변경된 result JSON 문자열을 반환한다.
+// job result를 업데이트하고, 변경된 result JSON 문자열을 반환한다.
 // 변경 대상 다이어그램을 찾지 못하면 null을 반환한다.
 async function updateJobResult(
-  jobId: string,
+  job: { id: string; result: string | null },
   diagramTitle: string,
   mermaidCode: string,
   nodes?: unknown[],
   edges?: unknown[]
 ): Promise<string | null> {
-  const job = await prisma.generationJob.findUnique({ where: { id: jobId } });
-  if (!job || !job.result) return null;
+  if (!job.result) return null;
 
   const result = JSON.parse(job.result);
   const diagram = result.diagrams?.find(
@@ -198,7 +195,7 @@ async function updateJobResult(
     if (edges && edges.length > 0) diagram.edges = edges;
     const newResultJson = JSON.stringify(result);
     await prisma.generationJob.update({
-      where: { id: jobId },
+      where: { id: job.id },
       data: { result: newResultJson },
     });
     return newResultJson;

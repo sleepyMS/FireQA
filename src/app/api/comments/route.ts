@@ -94,19 +94,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "내용이 너무 깁니다. (최대 10,000자)" }, { status: 400 });
     }
 
-    const job = await prisma.generationJob.findUnique({
-      where: { id: jobId },
-      select: { id: true, project: { select: { organizationId: true } } },
-    });
+    // job 소속 검증 + 부모 코멘트 조회를 병렬로
+    const [job, parentComment] = await Promise.all([
+      prisma.generationJob.findUnique({
+        where: { id: jobId },
+        select: { id: true, project: { select: { organizationId: true } } },
+      }),
+      parentId
+        ? prisma.comment.findUnique({
+            where: { id: parentId },
+            select: { authorId: true, jobId: true, parentId: true },
+          })
+        : Promise.resolve(null),
+    ]);
 
     if (!job || job.project.organizationId !== user.organizationId) {
       return NextResponse.json({ error: "작업을 찾을 수 없습니다." }, { status: 404 });
     }
 
-    // parentComment은 답글 알림 트리거를 위해 블록 밖에서도 참조
-    let parentComment: { authorId: string; jobId: string | null; parentId: string | null } | null = null;
     if (parentId) {
-      parentComment = await prisma.comment.findUnique({ where: { id: parentId } });
       if (!parentComment || parentComment.jobId !== jobId) {
         return NextResponse.json({ error: "부모 코멘트를 찾을 수 없습니다." }, { status: 404 });
       }

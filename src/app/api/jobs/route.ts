@@ -16,6 +16,18 @@ export async function GET(request: NextRequest) {
     // projectId 필터 추가: 프로젝트 상세 페이지에서 해당 프로젝트의 Job만 조회
     const projectId = request.nextUrl.searchParams.get("projectId");
 
+    const jobSelect = {
+      id: true,
+      type: true,
+      status: true,
+      tokenUsage: true,
+      createdAt: true,
+      projectId: true,
+      error: true,
+      project: { select: { id: true, name: true } },
+      upload: { select: { fileName: true } },
+    } as const;
+
     if (all) {
       // 이력 페이지용: 모든 상태의 Job 목록
       const jobs = await prisma.generationJob.findMany({
@@ -25,7 +37,7 @@ export async function GET(request: NextRequest) {
           ...(type ? { type } : {}),
         },
         orderBy: { createdAt: "desc" },
-        include: { project: true, upload: true },
+        select: jobSelect,
         take: 50,
       });
 
@@ -41,7 +53,7 @@ export async function GET(request: NextRequest) {
       },
       orderBy: { createdAt: "desc" },
       take: 20,
-      include: { project: true, upload: true },
+      select: jobSelect,
     });
 
     return NextResponse.json({
