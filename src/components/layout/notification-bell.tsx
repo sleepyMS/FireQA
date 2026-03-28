@@ -39,7 +39,7 @@ export function NotificationBell() {
       const res = await fetch("/api/notifications/count");
       if (res.ok) {
         const data = await res.json() as { count: number };
-        setUnreadCount(data.count);
+        setUnreadCount((prev) => (prev === data.count ? prev : data.count));
       }
     } catch {
       // 네트워크 오류 무시

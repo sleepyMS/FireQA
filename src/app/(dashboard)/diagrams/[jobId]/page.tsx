@@ -7,6 +7,7 @@ import { JobStatusDisplay } from "@/components/job-status-display";
 import { JobStatus } from "@/types/enums";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { CommentSection } from "@/components/comments/comment-section";
+import { ExportButton } from "@/components/ui/export-button";
 
 export default async function DiagramResultPage({
   params,
@@ -50,16 +51,8 @@ export default async function DiagramResultPage({
       {job.status === JobStatus.COMPLETED && result && (
         <>
           <div className="flex flex-wrap gap-2">
-            <a href={`/api/export/mermaid?jobId=${job.id}`} download>
-              <span className="inline-flex items-center rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground">
-                Mermaid 다운로드
-              </span>
-            </a>
-            <a href={`/api/export/json?jobId=${job.id}`} download>
-              <span className="inline-flex items-center rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground">
-                JSON 내보내기
-              </span>
-            </a>
+            <ExportButton href={`/api/export/mermaid?jobId=${job.id}`} label="Mermaid 다운로드" />
+            <ExportButton href={`/api/export/json?jobId=${job.id}`} label="JSON 내보내기" />
           </div>
           <DiagramResults jobId={job.id} diagrams={result.diagrams} />
         </>

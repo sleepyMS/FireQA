@@ -77,6 +77,12 @@ export const DeviceAuthStatus = {
 export type DeviceAuthStatus =
   (typeof DeviceAuthStatus)[keyof typeof DeviceAuthStatus];
 
+export const NotificationType = {
+  COMMENT_REPLY: "comment.reply",
+} as const;
+
+export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];
+
 export const ActivityAction = {
   GENERATION_COMPLETED: "generation.completed",
   GENERATION_FAILED: "generation.failed",

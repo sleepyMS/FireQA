@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { JobType } from "@/types/enums";
+import { sanitizeFilename } from "@/lib/utils/sanitize-filename";
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,7 +28,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (job.type !== "spec-improve") {
+    if (job.type !== JobType.SPEC_IMPROVE) {
       return NextResponse.json(
         { error: "기획서 개선 작업이 아닙니다." },
         { status: 400 }
@@ -46,11 +48,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "마크다운 데이터가 올바르지 않습니다." }, { status: 500 });
     }
 
-    const safeProjectName = job.project.name
-      .replace(/[^\w\s-]/g, "")
-      .trim()
-      .replace(/\s+/g, "-")
-      .slice(0, 50) || "project";
+    const safeProjectName = sanitizeFilename(job.project.name);
 
     return new NextResponse(parsed.markdown, {
       headers: {

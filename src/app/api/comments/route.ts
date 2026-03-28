@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createNotification } from "@/lib/notifications/create-notification";
+import { NotificationType } from "@/types/enums";
 
 const MAX_BODY_LENGTH = 10_000;
 
@@ -129,7 +130,7 @@ export async function POST(request: NextRequest) {
       createNotification({
         userId: parentComment.authorId,
         organizationId: user.organizationId,
-        type: "comment.reply",
+        type: NotificationType.COMMENT_REPLY,
         title: "새 답글이 달렸습니다",
         linkUrl: `/generate/${jobId}`,
       });

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { JobType } from "@/types/enums";
+import { sanitizeFilename } from "@/lib/utils/sanitize-filename";
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,7 +28,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (job.type !== "diagrams") {
+    if (job.type !== JobType.DIAGRAMS) {
       return NextResponse.json(
         { error: "다이어그램 작업이 아닙니다." },
         { status: 400 }
@@ -50,11 +52,7 @@ export async function GET(request: NextRequest) {
       .map((d) => `%% ${d.title}\n${d.mermaidCode}`)
       .join("\n\n");
 
-    const safeProjectName = job.project.name
-      .replace(/[^\w\s-]/g, "")
-      .trim()
-      .replace(/\s+/g, "-")
-      .slice(0, 50) || "project";
+    const safeProjectName = sanitizeFilename(job.project.name);
 
     return new NextResponse(mmdContent, {
       headers: {
