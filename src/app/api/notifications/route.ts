@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
 
     const where = {
       userId: user.userId,
+      organizationId: user.organizationId,
       ...(includeRead ? {} : { isRead: false }),
     };
 
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
         take: 20,
       }),
       prisma.notification.count({
-        where: { userId: user.userId, isRead: false },
+        where: { userId: user.userId, organizationId: user.organizationId, isRead: false },
       }),
     ]);
 

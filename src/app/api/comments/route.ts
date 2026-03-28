@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
         organizationId: user.organizationId,
         type: "comment.reply",
         title: "새 답글이 달렸습니다",
-        linkUrl: jobId ? `/generate/${jobId}` : undefined,
+        linkUrl: `/generate/${jobId}`,
       });
     }
 

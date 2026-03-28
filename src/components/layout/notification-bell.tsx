@@ -30,8 +30,11 @@ export function NotificationBell() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  // 드롭다운이 열려있는 동안 폴링 카운트가 낙관적 업데이트를 덮어쓰는 race를 방지
+  const isOpenRef = useRef(false);
 
   async function fetchCount() {
+    if (isOpenRef.current) return;
     try {
       const res = await fetch("/api/notifications/count");
       if (res.ok) {
@@ -87,6 +90,7 @@ export function NotificationBell() {
   useEffect(() => {
     function handleMouseDown(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        isOpenRef.current = false;
         setIsOpen(false);
       }
     }
@@ -97,7 +101,7 @@ export function NotificationBell() {
   return (
     <div ref={containerRef} className="relative">
       <button
-        onClick={() => setIsOpen((prev) => !prev)}
+        onClick={() => setIsOpen((prev) => { isOpenRef.current = !prev; return !prev; })}
         className="relative flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
         aria-label="알림"
       >

@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     }
 
     const count = await prisma.notification.count({
-      where: { userId: user.userId, isRead: false },
+      where: { userId: user.userId, organizationId: user.organizationId, isRead: false },
     });
 
     return NextResponse.json({ count });

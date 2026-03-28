@@ -10,7 +10,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     await prisma.notification.updateMany({
-      where: { userId: user.userId, isRead: false },
+      where: { userId: user.userId, organizationId: user.organizationId, isRead: false },
       data: { isRead: true, readAt: new Date() },
     });
 
