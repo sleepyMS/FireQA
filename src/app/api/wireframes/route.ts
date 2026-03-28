@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createGenerationJob, completeJob, failJob } from "@/lib/api/create-generation-job";
+import { checkRateLimit } from "@/lib/rate-limit/check-rate-limit";
 import { logActivity } from "@/lib/activity/log-activity";
 import { JobType, ActivityAction } from "@/types/enums";
 import { Stage } from "@/types/sse";
@@ -36,6 +37,14 @@ export async function POST(request: NextRequest) {
   const user = await getCurrentUser(request);
   if (!user) {
     return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
+  }
+
+  const { limited, resetAt } = await checkRateLimit(user.organizationId);
+  if (limited) {
+    return NextResponse.json(
+      { error: `시간당 생성 한도를 초과했습니다. ${resetAt.toISOString()} 이후 다시 시도하세요.` },
+      { status: 429, headers: { "X-RateLimit-Remaining": "0", "X-RateLimit-Reset": resetAt.toISOString() } }
+    );
   }
 
   return createSSEStream(async (writer) => {
