@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   FileText,
@@ -15,6 +14,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { STATUS_CONFIG, JOB_TYPE_PATH } from "@/types/enums";
+import useSWR from "swr";
+import { SWR_KEYS } from "@/lib/swr/keys";
+import { relativeTime } from "@/lib/date/relative-time";
 
 interface Job {
   id: string;
@@ -45,44 +47,30 @@ const TYPE_CONFIG: Record<string, { icon: React.ReactNode; bg: string }> = {
   },
 };
 
-function formatRelativeTime(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return "방금 전";
-  if (minutes < 60) return `${minutes}분 전`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}시간 전`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}일 전`;
-  return new Date(dateStr).toLocaleDateString("ko-KR", {
-    month: "short",
-    day: "numeric",
-  });
-}
-
 interface RecentJobsPanelProps {
   type: string;
   title?: string;
   limit?: number;
+  // 서버에서 미리 조회한 데이터를 전달하면 초기 fetch를 스킵한다 (SWR fallbackData)
+  initialJobs?: Job[];
 }
 
 export function RecentJobsPanel({
   type,
   title = "최근 생성 이력",
   limit = 10,
+  initialJobs,
 }: RecentJobsPanelProps) {
   const router = useRouter();
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const params = new URLSearchParams({ all: "1", type });
-    fetch(`/api/jobs?${params}`)
-      .then((res) => res.json())
-      .then((data) => setJobs((data.jobs || []).slice(0, limit)))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [type, limit]);
+  const swrKey = SWR_KEYS.jobs(new URLSearchParams({ all: "1", type }).toString());
+  const { data, isLoading: loading } = useSWR<{ jobs: Job[] }>(
+    swrKey,
+    {
+      ...(initialJobs ? { fallbackData: { jobs: initialJobs } } : {}),
+    },
+  );
+  const jobs = (data?.jobs ?? []).slice(0, limit);
 
   const handleNavigate = (job: Job) => {
     const basePath = JOB_TYPE_PATH[job.type] || "/generate";
@@ -139,7 +127,7 @@ export function RecentJobsPanel({
                   <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
                     <span className="truncate">{job.upload.fileName}</span>
                     <span className="shrink-0">·</span>
-                    <span className="shrink-0">{formatRelativeTime(job.createdAt)}</span>
+                    <span className="shrink-0">{relativeTime(job.createdAt)}</span>
                   </div>
                 </div>
                 <Badge

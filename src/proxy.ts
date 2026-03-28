@@ -3,6 +3,10 @@ import { updateSupabaseSession } from "@/lib/supabase/middleware";
 
 const PUBLIC_PATHS = ["/login", "/signup", "/auth/callback", "/auth/device", "/invite"];
 
+// 정적 자산은 Supabase 인증이 불필요 — getUser() 호출 50-150ms 오버헤드 제거
+const STATIC_ASSET_RE =
+  /^\/_next\/(?:static|image)|^\/favicon\.ico$|\.(?:svg|png|jpe?g|gif|webp|ico|css|js|woff2?|ttf|eot)$/;
+
 // 환경변수는 런타임에 변경되지 않으므로 모듈 레벨에서 1회 파싱
 const allowedOrigins = (() => {
   const origins =
@@ -43,6 +47,11 @@ function addCorsHeaders(
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // ─── 정적 자산 → Supabase 인증 건너뛰기 ───
+  if (STATIC_ASSET_RE.test(pathname)) {
+    return NextResponse.next({ request });
+  }
 
   // ─── API 라우트 ───
   if (pathname.startsWith("/api/")) {
