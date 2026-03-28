@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   FileText,
@@ -56,17 +56,64 @@ const filterLinks: { label: string; value: string; icon?: React.ReactNode }[] = 
   { label: "기획서 개선", value: "spec-improve", icon: <FileEdit className="mr-1 h-3 w-3" /> },
 ];
 
-export function HistoryClient({ initialJobs, type }: { initialJobs: Job[]; type: string }) {
+export function HistoryClient({
+  initialJobs,
+  initialHasMore,
+  type,
+}: {
+  initialJobs: Job[];
+  initialHasMore: boolean;
+  type: string;
+}) {
   const router = useRouter();
 
   const params = new URLSearchParams({ all: "1" });
   if (type) params.set("type", type);
   const swrKey = SWR_KEYS.jobs(params.toString());
 
-  const { data, mutate } = useSWR<{ jobs: Job[] }>(swrKey, {
-    fallbackData: { jobs: initialJobs },
+  const { data, mutate } = useSWR<{ jobs: Job[]; hasMore: boolean }>(swrKey, {
+    fallbackData: { jobs: initialJobs, hasMore: initialHasMore },
   });
-  const jobs = data?.jobs ?? initialJobs;
+
+  const [extraJobs, setExtraJobs] = useState<Job[]>([]);
+  const [hasMoreExtra, setHasMoreExtra] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  // type 변경 시 로드된 추가 페이지 초기화
+  const prevTypeRef = useRef(type);
+  useEffect(() => {
+    if (prevTypeRef.current !== type) {
+      setExtraJobs([]);
+      setHasMoreExtra(false);
+      prevTypeRef.current = type;
+    }
+  }, [type]);
+
+  const jobs = [...(data?.jobs ?? initialJobs), ...extraJobs];
+  const showLoadMore = extraJobs.length === 0 ? (data?.hasMore ?? initialHasMore) : hasMoreExtra;
+
+  async function loadMore() {
+    const cursor = jobs[jobs.length - 1]?.id;
+    if (!cursor) return;
+    setLoadingMore(true);
+    try {
+      const moreParams = new URLSearchParams({ all: "1" });
+      if (type) moreParams.set("type", type);
+      moreParams.set("cursor", cursor);
+      const res = await fetch(`/api/jobs?${moreParams}`);
+      const moreData = await res.json() as { jobs: Job[]; hasMore: boolean };
+      setExtraJobs((prev) => [...prev, ...moreData.jobs]);
+      setHasMoreExtra(moreData.hasMore);
+    } finally {
+      setLoadingMore(false);
+    }
+  }
+
+  function refresh() {
+    setExtraJobs([]);
+    setHasMoreExtra(false);
+    mutate();
+  }
 
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [editName, setEditName] = useState("");
@@ -98,7 +145,7 @@ export function HistoryClient({ initialJobs, type }: { initialJobs: Job[]; type:
     setSaving(false);
     setEditOpen(false);
     setEditingJob(null);
-    mutate();
+    refresh();
   };
 
   const openDelete = (job: Job) => {
@@ -117,7 +164,7 @@ export function HistoryClient({ initialJobs, type }: { initialJobs: Job[]; type:
     setDeleting(false);
     setDeleteOpen(false);
     setDeletingJob(null);
-    mutate();
+    refresh();
   };
 
   return (
@@ -155,6 +202,7 @@ export function HistoryClient({ initialJobs, type }: { initialJobs: Job[]; type:
           </CardContent>
         </Card>
       ) : (
+        <>
         <div className="space-y-3">
           {jobs.map((job) => (
             <Card key={job.id} className="transition-shadow hover:shadow-md">
@@ -212,6 +260,14 @@ export function HistoryClient({ initialJobs, type }: { initialJobs: Job[]; type:
             </Card>
           ))}
         </div>
+        {showLoadMore && (
+          <div className="flex justify-center pt-2">
+            <Button variant="outline" onClick={loadMore} disabled={loadingMore}>
+              {loadingMore ? "불러오는 중..." : "더 보기"}
+            </Button>
+          </div>
+        )}
+        </>
       )}
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>

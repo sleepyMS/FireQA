@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { parseDocument } from "@/lib/parsers";
 import type { JobType } from "@/types/enums";
 import { JobStatus } from "@/types/enums";
+import { incrementRateCount } from "@/lib/rate-limit/check-rate-limit";
 
 interface CreateJobResult {
   jobId: string;
@@ -63,6 +64,8 @@ export async function createGenerationJob(
       status: JobStatus.PROCESSING,
     },
   });
+
+  incrementRateCount(auth.organizationId);
 
   return {
     jobId: job.id,

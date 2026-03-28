@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
 
     const type = request.nextUrl.searchParams.get("type");
     const all = request.nextUrl.searchParams.get("all");
+    const cursor = request.nextUrl.searchParams.get("cursor");
     // projectId 필터 추가: 프로젝트 상세 페이지에서 해당 프로젝트의 Job만 조회
     const projectId = request.nextUrl.searchParams.get("projectId");
 
@@ -29,19 +30,21 @@ export async function GET(request: NextRequest) {
     } as const;
 
     if (all) {
-      // 이력 페이지용: 모든 상태의 Job 목록
+      // 이력 페이지용: 모든 상태의 Job 목록 (커서 페이지네이션)
       const jobs = await prisma.generationJob.findMany({
         where: {
           project: { organizationId: user.organizationId },
           ...(projectId ? { projectId } : {}),
           ...(type ? { type } : {}),
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         select: jobSelect,
-        take: 50,
+        take: 51,
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
       });
 
-      return NextResponse.json({ jobs });
+      const hasMore = jobs.length === 51;
+      return NextResponse.json({ jobs: jobs.slice(0, 50), hasMore });
     }
 
     // FigJam 플러그인용: 완료된 Job만

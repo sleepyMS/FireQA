@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/billing/stripe";
 import { prisma } from "@/lib/db";
+import { invalidateOrgPlanCache } from "@/lib/billing/get-org-plan";
 import type Stripe from "stripe";
 
 // Stripe 웹훅은 raw body가 필요하므로 Next.js 파싱 비활성화
@@ -41,6 +42,7 @@ async function handleSubscriptionUpsert(subscription: Stripe.Subscription) {
     where: { id: organizationId },
     data: { plan },
   });
+  invalidateOrgPlanCache(organizationId);
 }
 
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
@@ -56,6 +58,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     where: { id: organizationId },
     data: { plan: "free" },
   });
+  invalidateOrgPlanCache(organizationId);
 }
 
 export async function POST(request: NextRequest) {

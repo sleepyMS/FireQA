@@ -30,12 +30,13 @@ export default async function HistoryPage({
       project: { organizationId: user.organizationId },
       ...(type ? { type } : {}),
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     select: jobSelect,
-    take: 50,
+    take: 51,
   });
 
-  const initialJobs: Job[] = jobs.map((j) => ({
+  const hasMore = jobs.length === 51;
+  const initialJobs: Job[] = jobs.slice(0, 50).map((j) => ({
     id: j.id,
     type: j.type,
     status: j.status,
@@ -45,5 +46,5 @@ export default async function HistoryPage({
     upload: j.upload,
   }));
 
-  return <HistoryClient initialJobs={initialJobs} type={type} />;
+  return <HistoryClient initialJobs={initialJobs} initialHasMore={hasMore} type={type} />;
 }
