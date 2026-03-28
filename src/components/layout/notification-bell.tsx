@@ -17,7 +17,7 @@ interface NotificationItem {
   createdAt: string;
 }
 
-export function NotificationBell() {
+export function NotificationBell({ initialCount }: { initialCount?: number }) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const isOpenRef = useRef(false);
@@ -26,6 +26,7 @@ export function NotificationBell() {
   const { data: countData } = useSWR<{ count: number }>(SWR_KEYS.notificationCount, {
     refreshInterval: 30_000,
     isPaused: () => isOpenRef.current,
+    ...(initialCount !== undefined ? { fallbackData: { count: initialCount } } : {}),
   });
   const unreadCount = countData?.count ?? 0;
 

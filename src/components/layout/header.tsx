@@ -24,7 +24,7 @@ function buildPageTitles(nav: Messages["nav"]): Record<string, string> {
   };
 }
 
-export function Header() {
+export function Header({ initialNotificationCount }: { initialNotificationCount?: number }) {
   const pathname = usePathname();
   const router = useRouter();
   const { t } = useLocale();
@@ -57,7 +57,7 @@ export function Header() {
             <span>{t.common.search}</span>
             <kbd className="ml-1 rounded border px-1 py-0.5 text-[10px]">⌘K</kbd>
           </button>
-          <NotificationBell />
+          <NotificationBell initialCount={initialNotificationCount} />
           <button
             onClick={handleLogout}
             className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"

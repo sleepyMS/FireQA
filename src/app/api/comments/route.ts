@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
         replies: {
           where: { deletedAt: null },
           orderBy: { createdAt: "asc" },
+          take: 100,
         },
       },
     });

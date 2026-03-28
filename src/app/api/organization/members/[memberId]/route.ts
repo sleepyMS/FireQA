@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
-import { requireRole } from "@/lib/auth/require-role";
+import { requireRole, hasRole } from "@/lib/auth/require-role";
 import { UserRole, ActivityAction } from "@/types/enums";
 import { logActivity } from "@/lib/activity/log-activity";
 
@@ -36,6 +36,11 @@ export async function PATCH(
       where: { userId_organizationId: { userId: memberId, organizationId: user.organizationId } },
     });
     if (!membership) return NextResponse.json({ error: "멤버를 찾을 수 없습니다." }, { status: 404 });
+
+    // 상위 역할을 가진 멤버는 수정할 수 없음
+    if (!hasRole(user.role, membership.role)) {
+      return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
+    }
 
     // 마지막 owner 보호
     if (membership.role === UserRole.OWNER && role !== UserRole.OWNER) {
@@ -82,8 +87,9 @@ export async function DELETE(
     });
     if (!membership) return NextResponse.json({ error: "멤버를 찾을 수 없습니다." }, { status: 404 });
 
-    if (membership.role === UserRole.OWNER && user.role !== UserRole.OWNER) {
-      return NextResponse.json({ error: "소유자를 제거하려면 소유자 권한이 필요합니다." }, { status: 403 });
+    // 상위 역할을 가진 멤버는 제거할 수 없음
+    if (!hasRole(user.role, membership.role)) {
+      return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
     }
 
     // 마지막 owner 보호: owner가 1명뿐이면 삭제 불가

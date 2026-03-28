@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     }
 
     const q = request.nextUrl.searchParams.get("q")?.trim() ?? "";
-    if (q.length < 1) {
+    if (q.length < 1 || q.length > 100) {
       return NextResponse.json({ projects: [], jobs: [], comments: [] });
     }
 
