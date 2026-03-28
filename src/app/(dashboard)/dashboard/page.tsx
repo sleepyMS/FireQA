@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { RecentProjectsPanel } from "@/components/projects/recent-projects-panel";
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
@@ -134,72 +135,78 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      {/* Recent Jobs */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>최근 생성 이력</CardTitle>
-          <Link href="/history">
-            <Button variant="ghost" size="sm">
-              <Clock className="mr-2 h-4 w-4" />
-              전체 보기
-            </Button>
-          </Link>
-        </CardHeader>
-        <CardContent>
-          {recentJobs.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Plus className="mb-4 h-12 w-12 text-muted-foreground/50" />
-              <p className="text-sm text-muted-foreground">
-                아직 생성 이력이 없습니다.
-              </p>
-              <p className="text-sm text-muted-foreground">
-                TC 생성 또는 다이어그램 생성을 시작해보세요.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {recentJobs.map((job) => (
-                <div
-                  key={job.id}
-                  className="flex items-center justify-between rounded-lg border p-3"
-                >
-                  <div className="flex items-center gap-3">
-                    {job.type === JobType.TEST_CASES ? (
-                      <FileText className="h-4 w-4 text-blue-600" />
-                    ) : job.type === JobType.WIREFRAMES ? (
-                      <Smartphone className="h-4 w-4 text-pink-600" />
-                    ) : job.type === JobType.SPEC_IMPROVE ? (
-                      <FileEdit className="h-4 w-4 text-emerald-600" />
-                    ) : (
-                      <GitBranch className="h-4 w-4 text-purple-600" />
-                    )}
-                    <div>
-                      <p className="text-sm font-medium">
-                        {job.project.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {job.upload.fileName} &middot;{" "}
-                        {JOB_TYPE_LABEL[job.type] || job.type}
-                      </p>
-                    </div>
-                  </div>
-                  <span
-                    className={`text-xs font-medium ${
-                      job.status === JobStatus.COMPLETED
-                        ? "text-green-600"
-                        : job.status === JobStatus.FAILED
-                          ? "text-red-600"
-                          : "text-yellow-600"
-                    }`}
+      {/* Recent sections: 최근 프로젝트 + 최근 생성 이력 */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* 최근 프로젝트 — 클라이언트 컴포넌트 (GET /api/projects?status=active&limit=5) */}
+        <RecentProjectsPanel />
+
+        {/* Recent Jobs */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>최근 생성 이력</CardTitle>
+            <Link href="/history">
+              <Button variant="ghost" size="sm">
+                <Clock className="mr-2 h-4 w-4" />
+                전체 보기
+              </Button>
+            </Link>
+          </CardHeader>
+          <CardContent>
+            {recentJobs.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <Plus className="mb-4 h-12 w-12 text-muted-foreground/50" />
+                <p className="text-sm text-muted-foreground">
+                  아직 생성 이력이 없습니다.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  TC 생성 또는 다이어그램 생성을 시작해보세요.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recentJobs.map((job) => (
+                  <div
+                    key={job.id}
+                    className="flex items-center justify-between rounded-lg border p-3"
                   >
-                    {STATUS_CONFIG[job.status]?.label || job.status}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                    <div className="flex items-center gap-3">
+                      {job.type === JobType.TEST_CASES ? (
+                        <FileText className="h-4 w-4 text-blue-600" />
+                      ) : job.type === JobType.WIREFRAMES ? (
+                        <Smartphone className="h-4 w-4 text-pink-600" />
+                      ) : job.type === JobType.SPEC_IMPROVE ? (
+                        <FileEdit className="h-4 w-4 text-emerald-600" />
+                      ) : (
+                        <GitBranch className="h-4 w-4 text-purple-600" />
+                      )}
+                      <div>
+                        <p className="text-sm font-medium">
+                          {job.project.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {job.upload.fileName} &middot;{" "}
+                          {JOB_TYPE_LABEL[job.type] || job.type}
+                        </p>
+                      </div>
+                    </div>
+                    <span
+                      className={`text-xs font-medium ${
+                        job.status === JobStatus.COMPLETED
+                          ? "text-green-600"
+                          : job.status === JobStatus.FAILED
+                            ? "text-red-600"
+                            : "text-yellow-600"
+                      }`}
+                    >
+                      {STATUS_CONFIG[job.status]?.label || job.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

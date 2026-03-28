@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
+  FolderOpen,
   FileText,
   GitBranch,
   Smartphone,
@@ -24,6 +25,7 @@ import { OrgSwitcher } from "@/components/layout/org-switcher";
 
 const navItems = [
   { label: "대시보드", href: "/dashboard", icon: LayoutDashboard },
+  { label: "프로젝트", href: "/projects", icon: FolderOpen },
   { label: "TC 생성", href: "/generate", icon: FileText },
   { label: "다이어그램", href: "/diagrams", icon: GitBranch },
   { label: "와이어프레임", href: "/wireframes", icon: Smartphone },

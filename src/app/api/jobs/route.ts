@@ -105,7 +105,8 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
-// DELETE /api/jobs - Job 삭제 (관련 Project, Upload도 함께 삭제)
+// DELETE /api/jobs - Job 삭제 (연결된 Upload만 cascade 삭제; Project는 유지)
+// 프로젝트는 first-class entity이므로 마지막 Job을 삭제해도 프로젝트는 삭제하지 않는다.
 export async function DELETE(request: NextRequest) {
   try {
     const user = await getCurrentUser(request);
@@ -124,7 +125,7 @@ export async function DELETE(request: NextRequest) {
 
     const job = await prisma.generationJob.findUnique({
       where: { id },
-      include: { project: { include: { jobs: true } } },
+      include: { project: true },
     });
 
     if (!job) {
@@ -142,13 +143,8 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // 프로젝트에 이 Job만 있으면 프로젝트 자체를 삭제 (cascade로 Upload, Job 삭제)
-    if (job.project.jobs.length === 1) {
-      await prisma.project.delete({ where: { id: job.projectId } });
-    } else {
-      // 다른 Job이 있으면 이 Job만 삭제
-      await prisma.generationJob.delete({ where: { id } });
-    }
+    // Job만 삭제 (Upload는 onDelete: Cascade로 함께 삭제됨)
+    await prisma.generationJob.delete({ where: { id } });
 
     return NextResponse.json({ success: true });
   } catch (error) {
