@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import useSWR from "swr";
 import { SWR_KEYS } from "@/lib/swr/keys";
+import { relativeTime } from "@/lib/date/relative-time";
 
 interface Project {
   id: string;
@@ -13,21 +14,6 @@ interface Project {
   createdAt: string;
   updatedAt: string;
   _count: { jobs: number };
-}
-
-function formatRelativeDate(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return "방금 전";
-  if (minutes < 60) return `${minutes}분 전`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}시간 전`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}일 전`;
-  return new Date(dateStr).toLocaleDateString("ko-KR", {
-    month: "short",
-    day: "numeric",
-  });
 }
 
 export function RecentProjectsPanel() {
@@ -54,7 +40,6 @@ export function RecentProjectsPanel() {
       </CardHeader>
       <CardContent>
         {loading ? (
-          // 로딩 스켈레톤
           <div className="space-y-2">
             {[...Array(3)].map((_, i) => (
               <div key={i} className="flex items-center gap-3 rounded-xl border p-3">
@@ -91,7 +76,7 @@ export function RecentProjectsPanel() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{project.name}</p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    생성 {project._count.jobs}건 &middot; {formatRelativeDate(project.updatedAt)}
+                    생성 {project._count.jobs}건 &middot; {relativeTime(project.updatedAt)}
                   </p>
                 </div>
                 <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/50" />

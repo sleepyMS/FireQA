@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/db";
 import { createHash } from "crypto";
+import { createTTLCache } from "@/lib/cache/ttl-cache";
 
 export type AuthUser = {
   userId: string;
@@ -10,23 +11,7 @@ export type AuthUser = {
   role: string;
 };
 
-// 60초 TTL 인메모리 캐시 — DB 조회 횟수 감소
-const userCache = new Map<string, { user: AuthUser | null; ts: number }>();
-const USER_CACHE_TTL = 60_000;
-
-function getCachedUser(supabaseId: string): AuthUser | null | undefined {
-  const entry = userCache.get(supabaseId);
-  if (!entry) return undefined;
-  if (Date.now() - entry.ts > USER_CACHE_TTL) {
-    userCache.delete(supabaseId);
-    return undefined;
-  }
-  return entry.user;
-}
-
-function setCachedUser(supabaseId: string, user: AuthUser | null) {
-  userCache.set(supabaseId, { user, ts: Date.now() });
-}
+const userCache = createTTLCache<AuthUser | null>(60_000);
 
 export function invalidateUserCache(supabaseId: string) {
   userCache.delete(supabaseId);
@@ -76,7 +61,7 @@ async function authenticateByToken(token: string): Promise<AuthUser | null> {
 async function findUserBySupabaseId(
   supabaseId: string
 ): Promise<AuthUser | null> {
-  const cached = getCachedUser(supabaseId);
+  const cached = userCache.get(supabaseId);
   if (cached !== undefined) return cached;
 
   const user = await prisma.user.findUnique({
@@ -84,7 +69,7 @@ async function findUserBySupabaseId(
     include: { memberships: { select: { organizationId: true, role: true } } },
   });
   const result = user ? await resolveAuthUser(user) : null;
-  setCachedUser(supabaseId, result);
+  userCache.set(supabaseId, result);
   return result;
 }
 
