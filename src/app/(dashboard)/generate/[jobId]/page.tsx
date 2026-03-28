@@ -44,11 +44,20 @@ export default async function GenerateResultPage({
       />
 
       {job.status === JobStatus.COMPLETED && result && (
-        <TestCaseResults
-          jobId={job.id}
-          projectName={job.project.name}
-          sheets={result.sheets}
-        />
+        <>
+          <div className="flex flex-wrap gap-2">
+            <a href={`/api/export/json?jobId=${job.id}`} download>
+              <span className="inline-flex items-center rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground">
+                JSON 내보내기
+              </span>
+            </a>
+          </div>
+          <TestCaseResults
+            jobId={job.id}
+            projectName={job.project.name}
+            sheets={result.sheets}
+          />
+        </>
       )}
 
       <div className="mt-8 border-t pt-6">

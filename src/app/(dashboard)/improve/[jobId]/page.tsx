@@ -44,12 +44,26 @@ export default async function SpecImproveResultPage({
       />
 
       {job.status === JobStatus.COMPLETED && result && (
-        <SpecImproveResults
-          jobId={job.id}
-          markdown={result.markdown}
-          summary={result.summary}
-          originalFileName={job.upload.fileName}
-        />
+        <>
+          <div className="flex flex-wrap gap-2">
+            <a href={`/api/export/markdown?jobId=${job.id}`} download>
+              <span className="inline-flex items-center rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground">
+                Markdown 다운로드
+              </span>
+            </a>
+            <a href={`/api/export/json?jobId=${job.id}`} download>
+              <span className="inline-flex items-center rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground">
+                JSON 내보내기
+              </span>
+            </a>
+          </div>
+          <SpecImproveResults
+            jobId={job.id}
+            markdown={result.markdown}
+            summary={result.summary}
+            originalFileName={job.upload.fileName}
+          />
+        </>
       )}
 
       <div className="mt-8 border-t pt-6">

@@ -44,7 +44,21 @@ export default async function DiagramResultPage({
       />
 
       {job.status === JobStatus.COMPLETED && result && (
-        <DiagramResults jobId={job.id} diagrams={result.diagrams} />
+        <>
+          <div className="flex flex-wrap gap-2">
+            <a href={`/api/export/mermaid?jobId=${job.id}`} download>
+              <span className="inline-flex items-center rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground">
+                Mermaid 다운로드
+              </span>
+            </a>
+            <a href={`/api/export/json?jobId=${job.id}`} download>
+              <span className="inline-flex items-center rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground">
+                JSON 내보내기
+              </span>
+            </a>
+          </div>
+          <DiagramResults jobId={job.id} diagrams={result.diagrams} />
+        </>
       )}
 
       <div className="mt-8 border-t pt-6">

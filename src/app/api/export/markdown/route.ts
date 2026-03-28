@@ -1,0 +1,59 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth/get-current-user";
+
+export async function GET(request: NextRequest) {
+  try {
+    const user = await getCurrentUser(request);
+    if (!user) {
+      return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
+    }
+
+    const jobId = request.nextUrl.searchParams.get("jobId");
+    if (!jobId) {
+      return NextResponse.json({ error: "jobId가 필요합니다." }, { status: 400 });
+    }
+
+    const job = await prisma.generationJob.findUnique({
+      where: { id: jobId },
+      include: { project: { select: { organizationId: true, name: true } } },
+    });
+
+    if (!job || job.project.organizationId !== user.organizationId) {
+      return NextResponse.json(
+        { error: "생성 결과를 찾을 수 없습니다." },
+        { status: 404 }
+      );
+    }
+
+    if (job.type !== "spec-improve") {
+      return NextResponse.json(
+        { error: "기획서 개선 작업이 아닙니다." },
+        { status: 400 }
+      );
+    }
+
+    if (!job.result) {
+      return NextResponse.json(
+        { error: "아직 완료되지 않은 작업입니다." },
+        { status: 400 }
+      );
+    }
+
+    const parsed = JSON.parse(job.result) as { markdown: string };
+    const projectName = job.project.name;
+
+    return new NextResponse(parsed.markdown, {
+      headers: {
+        "Content-Type": "text/markdown; charset=utf-8",
+        "Content-Disposition": `attachment; filename="${encodeURIComponent(projectName)}-improved.md"`,
+      },
+    });
+  } catch (error) {
+    console.error("Markdown 내보내기 오류:", error);
+    return NextResponse.json(
+      { error: "Markdown 내보내기에 실패했습니다." },
+      { status: 500 }
+    );
+  }
+}
