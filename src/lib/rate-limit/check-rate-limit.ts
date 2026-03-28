@@ -17,7 +17,7 @@ export async function checkRateLimit(
   });
 
   const remaining = Math.max(0, HOURLY_LIMIT - count);
-  const resetAt = new Date(windowStart.getTime() + 60 * 60 * 1000);
+  const resetAt = new Date(Date.now() + 60 * 60 * 1000);
 
   return { limited: count >= HOURLY_LIMIT, remaining, resetAt };
 }
