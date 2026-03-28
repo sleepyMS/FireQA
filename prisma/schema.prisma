@@ -221,6 +221,29 @@ model ActivityLog {
   @@index([actorId, createdAt(sort: Desc)])
 }
 
+model Comment {
+  id             String    @id @default(cuid())
+  organizationId String
+  authorId       String
+  jobId          String?
+  targetItemId   String?   // TC ID, diagram title, screen ID, etc. (logical ref, no FK)
+  parentId       String?
+  parent         Comment?  @relation("CommentThread", fields: [parentId], references: [id], onDelete: Cascade)
+  replies        Comment[] @relation("CommentThread")
+  body           String
+  isResolved     Boolean   @default(false)
+  resolvedById   String?
+  resolvedAt     DateTime?
+  editedAt       DateTime?
+  deletedAt      DateTime? // 소프트 삭제
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([jobId, createdAt(sort: Desc)])
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([parentId])
+}
+
 model QATemplate {
   id             String       @id @default(cuid())
   name           String
