@@ -6,7 +6,8 @@ import { UserRole } from "@/types/enums";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-// PATCH /api/comments/[id] — 코멘트 본문 수정 (작성자 본인만)
+const MAX_BODY_LENGTH = 10_000;
+
 export async function PATCH(request: NextRequest, { params }: RouteContext) {
   try {
     const user = await getCurrentUser(request);
@@ -17,31 +18,28 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     const { id } = await params;
 
     const comment = await prisma.comment.findUnique({ where: { id } });
-    if (!comment) {
+    if (!comment || comment.organizationId !== user.organizationId) {
       return NextResponse.json({ error: "코멘트를 찾을 수 없습니다." }, { status: 404 });
     }
-
-    // 작성자 본인만 수정 가능
     if (comment.authorId !== user.userId) {
       return NextResponse.json({ error: "코멘트를 수정할 권한이 없습니다." }, { status: 403 });
     }
-
-    // 삭제된 코멘트는 수정 불가
     if (comment.deletedAt !== null) {
       return NextResponse.json({ error: "삭제된 코멘트는 수정할 수 없습니다." }, { status: 400 });
     }
 
     const body = await request.json() as { body?: string };
-    if (!body.body || !body.body.trim()) {
+    const trimmed = body.body?.trim() ?? "";
+    if (!trimmed) {
       return NextResponse.json({ error: "내용(body)을 입력해주세요." }, { status: 400 });
+    }
+    if (trimmed.length > MAX_BODY_LENGTH) {
+      return NextResponse.json({ error: "내용이 너무 깁니다. (최대 10,000자)" }, { status: 400 });
     }
 
     const updated = await prisma.comment.update({
       where: { id },
-      data: {
-        body: body.body.trim(),
-        editedAt: new Date(),
-      },
+      data: { body: trimmed, editedAt: new Date() },
     });
 
     return NextResponse.json({
@@ -64,7 +62,6 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   }
 }
 
-// DELETE /api/comments/[id] — 소프트 삭제 (작성자 본인 또는 ADMIN 이상)
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
   try {
     const user = await getCurrentUser(request);
@@ -75,16 +72,15 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
     const { id } = await params;
 
     const comment = await prisma.comment.findUnique({ where: { id } });
-    if (!comment) {
+    if (!comment || comment.organizationId !== user.organizationId) {
       return NextResponse.json({ error: "코멘트를 찾을 수 없습니다." }, { status: 404 });
     }
 
-    // 작성자 본인이 아니면 ADMIN 이상 권한 필요
     const isAuthor = comment.authorId === user.userId;
     if (!isAuthor) {
       const roleErr = requireRole(user.role, UserRole.ADMIN);
       if (roleErr) {
-        return NextResponse.json({ error: "코멘트를 삭제할 권한이 없습니다." }, { status: 403 });
+        return NextResponse.json({ error: roleErr.error }, { status: roleErr.status });
       }
     }
 
