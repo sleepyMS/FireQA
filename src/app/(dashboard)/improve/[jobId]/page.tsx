@@ -5,6 +5,8 @@ import { prisma } from "@/lib/db";
 import { SpecImproveResults } from "@/components/spec-improve/spec-improve-results";
 import { JobStatusDisplay } from "@/components/job-status-display";
 import { JobStatus } from "@/types/enums";
+import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { CommentSection } from "@/components/comments/comment-section";
 
 export default async function SpecImproveResultPage({
   params,
@@ -12,10 +14,13 @@ export default async function SpecImproveResultPage({
   params: Promise<{ jobId: string }>;
 }) {
   const { jobId } = await params;
-  const job = await prisma.generationJob.findUnique({
-    where: { id: jobId },
-    include: { project: true, upload: true },
-  });
+  const [job, currentUser] = await Promise.all([
+    prisma.generationJob.findUnique({
+      where: { id: jobId },
+      include: { project: true, upload: true },
+    }),
+    getCurrentUser(),
+  ]);
 
   if (!job) notFound();
 
@@ -46,6 +51,13 @@ export default async function SpecImproveResultPage({
           originalFileName={job.upload.fileName}
         />
       )}
+
+      <div className="mt-8 border-t pt-6">
+        <CommentSection
+          jobId={job.id}
+          currentUserId={currentUser?.userId ?? null}
+        />
+      </div>
     </div>
   );
 }

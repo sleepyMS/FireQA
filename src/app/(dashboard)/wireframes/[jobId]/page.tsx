@@ -5,6 +5,8 @@ import { prisma } from "@/lib/db";
 import { JobStatusDisplay } from "@/components/job-status-display";
 import { WireframeResults } from "@/components/wireframes/wireframe-results";
 import { JobStatus } from "@/types/enums";
+import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { CommentSection } from "@/components/comments/comment-section";
 
 export default async function WireframeResultPage({
   params,
@@ -12,10 +14,13 @@ export default async function WireframeResultPage({
   params: Promise<{ jobId: string }>;
 }) {
   const { jobId } = await params;
-  const job = await prisma.generationJob.findUnique({
-    where: { id: jobId },
-    include: { project: true, upload: true },
-  });
+  const [job, currentUser] = await Promise.all([
+    prisma.generationJob.findUnique({
+      where: { id: jobId },
+      include: { project: true, upload: true },
+    }),
+    getCurrentUser(),
+  ]);
 
   if (!job) notFound();
 
@@ -45,6 +50,13 @@ export default async function WireframeResultPage({
           flows={result.flows || []}
         />
       )}
+
+      <div className="mt-8 border-t pt-6">
+        <CommentSection
+          jobId={job.id}
+          currentUserId={currentUser?.userId ?? null}
+        />
+      </div>
     </div>
   );
 }
