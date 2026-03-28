@@ -18,7 +18,7 @@ export async function PATCH(
     const { memberId } = await params;
     const { role } = await request.json() as { role: string };
 
-    if (!["owner", "admin", "member"].includes(role)) {
+    if (!Object.values(UserRole).includes(role as UserRole)) {
       return NextResponse.json({ error: "올바르지 않은 역할입니다." }, { status: 400 });
     }
 
@@ -82,6 +82,16 @@ export async function DELETE(
 
     if (membership.role === UserRole.OWNER && user.role !== UserRole.OWNER) {
       return NextResponse.json({ error: "소유자를 제거하려면 소유자 권한이 필요합니다." }, { status: 403 });
+    }
+
+    // 마지막 owner 보호: owner가 1명뿐이면 삭제 불가
+    if (membership.role === UserRole.OWNER) {
+      const ownerCount = await prisma.organizationMembership.count({
+        where: { organizationId: user.organizationId, role: UserRole.OWNER },
+      });
+      if (ownerCount <= 1) {
+        return NextResponse.json({ error: "마지막 소유자는 제거할 수 없습니다." }, { status: 400 });
+      }
     }
 
     await prisma.organizationMembership.delete({
