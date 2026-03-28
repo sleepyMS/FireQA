@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
       });
 
       writer.send({ type: "stage", stage: Stage.SAVING, message: "결과를 저장하고 있습니다...", progress: 95 });
-      await completeJob(jobId, result, tokenUsage);
+      await completeJob(jobId, result, tokenUsage, user.userId);
 
       writer.send({ type: "complete", data: result, tokenUsage });
     } catch (err) {

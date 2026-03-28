@@ -72,15 +72,30 @@ export async function createGenerationJob(
   };
 }
 
-export async function completeJob(jobId: string, result: unknown, tokenUsage: number) {
-  await prisma.generationJob.update({
-    where: { id: jobId },
-    data: {
-      status: JobStatus.COMPLETED,
-      result: JSON.stringify(result),
-      tokenUsage,
-    },
-  });
+export async function completeJob(
+  jobId: string,
+  result: unknown,
+  tokenUsage: number,
+  createdById?: string
+) {
+  const resultJson = JSON.stringify(result);
+
+  await prisma.$transaction([
+    prisma.generationJob.update({
+      where: { id: jobId },
+      data: { status: JobStatus.COMPLETED, result: resultJson, tokenUsage },
+    }),
+    prisma.resultVersion.create({
+      data: {
+        jobId,
+        version: 1,
+        resultJson,
+        changeType: "initial",
+        isActive: true,
+        createdById: createdById ?? null,
+      },
+    }),
+  ]);
 }
 
 export async function failJob(jobId: string, error: unknown) {

@@ -72,7 +72,28 @@ export async function POST(request: NextRequest) {
     });
 
     // GenerationJob의 result도 최신 코드로 업데이트
-    await updateJobResult(jobId, diagramTitle, mermaidCode, nodes, edges);
+    const newResultJson = await updateJobResult(jobId, diagramTitle, mermaidCode, nodes, edges);
+
+    // ResultVersion도 함께 생성 (다이어그램 편집 이력 추적)
+    if (newResultJson) {
+      const latestResultVersion = await prisma.resultVersion.findFirst({
+        where: { jobId },
+        orderBy: { version: "desc" },
+      });
+      const nextResultVersion = (latestResultVersion?.version ?? 0) + 1;
+      await prisma.resultVersion.updateMany({ where: { jobId, isActive: true }, data: { isActive: false } });
+      await prisma.resultVersion.create({
+        data: {
+          jobId,
+          version: nextResultVersion,
+          resultJson: newResultJson,
+          changeType: "manual-edit",
+          instruction: instruction || null,
+          isActive: true,
+          createdById: user.userId,
+        },
+      });
+    }
 
     return NextResponse.json({ version });
   } catch (error) {
@@ -134,15 +155,17 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
+// updateJobResult는 job result를 업데이트하고, 변경된 result JSON 문자열을 반환한다.
+// 변경 대상 다이어그램을 찾지 못하면 null을 반환한다.
 async function updateJobResult(
   jobId: string,
   diagramTitle: string,
   mermaidCode: string,
   nodes?: unknown[],
   edges?: unknown[]
-) {
+): Promise<string | null> {
   const job = await prisma.generationJob.findUnique({ where: { id: jobId } });
-  if (!job || !job.result) return;
+  if (!job || !job.result) return null;
 
   const result = JSON.parse(job.result);
   const diagram = result.diagrams?.find(
@@ -152,9 +175,12 @@ async function updateJobResult(
     diagram.mermaidCode = mermaidCode;
     if (nodes && nodes.length > 0) diagram.nodes = nodes;
     if (edges && edges.length > 0) diagram.edges = edges;
+    const newResultJson = JSON.stringify(result);
     await prisma.generationJob.update({
       where: { id: jobId },
-      data: { result: JSON.stringify(result) },
+      data: { result: newResultJson },
     });
+    return newResultJson;
   }
+  return null;
 }
