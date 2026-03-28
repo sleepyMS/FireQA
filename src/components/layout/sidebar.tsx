@@ -43,7 +43,12 @@ function buildNavItems(nav: Messages["nav"]) {
   ];
 }
 
-export function Sidebar() {
+interface SidebarProps {
+  initialMemberships: { organizationId: string; name: string; slug: string; role: string }[];
+  initialActiveOrgId: string | null;
+}
+
+export function Sidebar({ initialMemberships, initialActiveOrgId }: SidebarProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const authUser = useUser();
@@ -66,7 +71,7 @@ export function Sidebar() {
       </div>
 
       <div className="border-b px-2 py-2">
-        <OrgSwitcher />
+        <OrgSwitcher initialMemberships={initialMemberships} initialActiveOrgId={initialActiveOrgId} />
       </div>
 
       <nav className="flex-1 space-y-1 p-3">

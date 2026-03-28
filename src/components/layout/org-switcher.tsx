@@ -32,9 +32,17 @@ interface Membership {
   role: string;
 }
 
-export function OrgSwitcher() {
+interface OrgSwitcherProps {
+  initialMemberships: Membership[];
+  initialActiveOrgId: string | null;
+}
+
+export function OrgSwitcher({ initialMemberships, initialActiveOrgId }: OrgSwitcherProps) {
   const { data } = useSWR<{ memberships: Membership[]; activeOrganizationId: string | null }>(
-    SWR_KEYS.memberships
+    SWR_KEYS.memberships,
+    {
+      fallbackData: { memberships: initialMemberships, activeOrganizationId: initialActiveOrgId },
+    }
   );
   const memberships = data?.memberships ?? [];
   const activeOrgId = data?.activeOrganizationId ?? null;
