@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createGenerationJob, completeJob, failJob } from "@/lib/api/create-generation-job";
+import { logActivity } from "@/lib/activity/log-activity";
 import { JobType } from "@/types/enums";
 import { Stage } from "@/types/sse";
 import { createSSEStream } from "@/lib/sse/create-sse-stream";
@@ -65,11 +66,13 @@ export async function POST(request: NextRequest) {
 
       writer.send({ type: "stage", stage: Stage.SAVING, message: "결과를 저장하고 있습니다...", progress: 95 });
       await completeJob(jobId, result, tokenUsage, user.userId);
+      logActivity({ organizationId: user.organizationId, actorId: user.userId, action: "generation.completed", jobId, metadata: { type: "spec-improve" } });
 
       writer.send({ type: "complete", data: result, tokenUsage });
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : "기획서 개선에 실패했습니다.";
       try { await failJob(jobId, err); } catch { /* DB 에러 무시 */ }
+      logActivity({ organizationId: user.organizationId, actorId: user.userId, action: "generation.failed", jobId, metadata: { type: "spec-improve", error: errMsg } });
       writer.send({ type: "error", message: errMsg });
     }
 

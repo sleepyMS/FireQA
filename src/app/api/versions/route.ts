@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { logActivity } from "@/lib/activity/log-activity";
 
 // GET /api/versions?jobId=xxx — list versions for a job
 export async function GET(request: NextRequest) {
@@ -76,6 +77,8 @@ export async function POST(request: NextRequest) {
         createdById: user.userId,
       },
     });
+
+    logActivity({ organizationId: user.organizationId, actorId: user.userId, action: "version.created", jobId, metadata: { changeType, version: version.version } });
 
     return NextResponse.json({ version });
   } catch (error) {

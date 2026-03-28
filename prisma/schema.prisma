@@ -206,6 +206,21 @@ model ResultVersion {
   @@index([jobId, isActive])
 }
 
+model ActivityLog {
+  id             String   @id @default(cuid())
+  organizationId String
+  actorId        String?
+  action         String   // "{domain}.{verb}" e.g. "generation.completed"
+  projectId      String?
+  jobId          String?  // plain string, no FK — log survives job deletion
+  metadata       String   @default("{}") // JSON
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([projectId, createdAt(sort: Desc)])
+  @@index([actorId, createdAt(sort: Desc)])
+}
+
 model QATemplate {
   id             String       @id @default(cuid())
   name           String

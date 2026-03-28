@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { logActivity } from "@/lib/activity/log-activity";
 
 // GET /api/projects — 조직 프로젝트 목록 (커서 페이지네이션)
 export async function GET(request: NextRequest) {
@@ -113,6 +114,8 @@ export async function POST(request: NextRequest) {
         createdById: user.userId,
       },
     });
+
+    logActivity({ organizationId: user.organizationId, actorId: user.userId, action: "project.created", projectId: project.id, metadata: { name: project.name } });
 
     return NextResponse.json(
       {

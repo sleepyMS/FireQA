@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { requireRole } from "@/lib/auth/require-role";
 import { UserRole } from "@/types/enums";
 import { getOrgProject } from "@/lib/projects/get-org-project";
+import { logActivity } from "@/lib/activity/log-activity";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -99,6 +100,8 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
       data,
     });
 
+    logActivity({ organizationId: user.organizationId, actorId: user.userId, action: "project.updated", projectId: id });
+
     return NextResponse.json({
       id: updated.id,
       name: updated.name,
@@ -135,6 +138,7 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
       where: { id },
       data: { deletedAt: new Date(), status: "deleted" },
     });
+    logActivity({ organizationId: user.organizationId, actorId: user.userId, action: "project.deleted", projectId: id });
 
     return NextResponse.json({ success: true });
   } catch (error) {

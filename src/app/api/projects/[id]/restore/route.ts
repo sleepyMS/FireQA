@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { requireRole } from "@/lib/auth/require-role";
 import { UserRole } from "@/types/enums";
 import { getOrgProject } from "@/lib/projects/get-org-project";
+import { logActivity } from "@/lib/activity/log-activity";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -37,6 +38,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       where: { id },
       data: { deletedAt: null, status: "active" },
     });
+    logActivity({ organizationId: user.organizationId, actorId: user.userId, action: "project.restored", projectId: id });
 
     return NextResponse.json({ success: true });
   } catch (error) {

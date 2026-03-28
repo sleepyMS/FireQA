@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { requireRole } from "@/lib/auth/require-role";
 import { UserRole, InviteStatus } from "@/types/enums";
 import { randomBytes, createHash } from "crypto";
+import { logActivity } from "@/lib/activity/log-activity";
 
 export async function GET(request: NextRequest) {
   const user = await getCurrentUser(request);
@@ -88,6 +89,8 @@ export async function POST(request: NextRequest) {
       invitedById: user.userId,
     },
   });
+
+  logActivity({ organizationId: user.organizationId, actorId: user.userId, action: "member.invited", metadata: { email: email ?? null, role } });
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
 

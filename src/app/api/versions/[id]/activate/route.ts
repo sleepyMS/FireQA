@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { logActivity } from "@/lib/activity/log-activity";
 
 // PATCH /api/versions/[id]/activate — set a version as the active version
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -23,6 +24,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       prisma.resultVersion.update({ where: { id }, data: { isActive: true } }),
       prisma.generationJob.update({ where: { id: version.jobId }, data: { result: version.resultJson } }),
     ]);
+    logActivity({ organizationId: user.organizationId, actorId: user.userId, action: "version.activated", jobId: version.jobId, metadata: { versionId: id } });
 
     return NextResponse.json({ success: true });
   } catch (error) {
