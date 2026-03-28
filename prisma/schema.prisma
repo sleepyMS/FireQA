@@ -39,9 +39,11 @@ model User {
   memberships          OrganizationMembership[]
   apiTokens            ApiToken[]
   jobs                 GenerationJob[]
-  projects             Project[]      @relation("CreatedBy")
-  invitationsSent      Invitation[]   @relation("InvitedBy")
-  invitationsAccepted  Invitation[]   @relation("AcceptedInvite")
+  projects             Project[]         @relation("CreatedBy")
+  invitationsSent      Invitation[]      @relation("InvitedBy")
+  invitationsAccepted  Invitation[]      @relation("AcceptedInvite")
+  resultVersions       ResultVersion[]   @relation("ResultVersionCreator")
+  diagramVersions      DiagramVersion[]  @relation("DiagramVersionCreator")
 
   @@index([supabaseId])
 }
@@ -162,22 +164,46 @@ model GenerationJob {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  resultVersions  ResultVersion[]
+  diagramVersions DiagramVersion[]
+
   @@index([userId])
 }
 
 model DiagramVersion {
-  id             String   @id @default(cuid())
+  id             String        @id @default(cuid())
   jobId          String
+  job            GenerationJob @relation(fields: [jobId], references: [id], onDelete: Cascade) // 정식 FK 추가 (기존 jobId 컬럼에 제약 조건 연결)
   diagramTitle   String
   mermaidCode    String
-  nodesJson      String   @default("[]") // JSON: nodes 배열
-  edgesJson      String   @default("[]") // JSON: edges 배열
-  instruction    String?  // 이 버전을 만든 요구사항 (null이면 초기 생성)
-  version        Int      // 1, 2, 3...
-  isConfirmed    Boolean  @default(false) // 확정 여부
-  createdAt      DateTime @default(now())
+  nodesJson      String        @default("[]") // JSON: nodes 배열
+  edgesJson      String        @default("[]") // JSON: edges 배열
+  instruction    String?       // 이 버전을 만든 요구사항 (null이면 초기 생성)
+  version        Int           // 1, 2, 3...
+  isConfirmed    Boolean       @default(false) // 확정 여부
+  createdById    String?       // 버전을 생성한 사용자 (null이면 시스템 생성)
+  createdBy      User?         @relation("DiagramVersionCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt      DateTime      @default(now())
 
   @@index([jobId, diagramTitle])
+}
+
+model ResultVersion {
+  id            String        @id @default(cuid())
+  jobId         String
+  job           GenerationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  version       Int
+  resultJson    String        // GenerationJob.result 전체 스냅샷
+  changeType    String        // "initial" | "ai-improve" | "ai-fix" | "manual-edit" | "revert"
+  changeSummary String?
+  instruction   String?
+  isActive      Boolean       @default(false)
+  createdById   String?
+  createdBy     User?         @relation("ResultVersionCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt     DateTime      @default(now())
+
+  @@unique([jobId, version])
+  @@index([jobId, isActive])
 }
 
 model QATemplate {
