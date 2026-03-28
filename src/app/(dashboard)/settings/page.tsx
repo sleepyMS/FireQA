@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import SettingsGeneral from "./settings-general";
 import SettingsMembers from "./settings-members";
+import SettingsBilling from "./settings-billing";
 
 export default async function SettingsPage({
   searchParams,
@@ -9,7 +10,13 @@ export default async function SettingsPage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const { tab } = await searchParams;
-  const activeTab = tab === "members" ? "members" : "general";
+  const activeTab = tab === "members" ? "members" : tab === "billing" ? "billing" : "general";
+
+  const tabs = [
+    { key: "general", label: "일반", href: "/settings" },
+    { key: "members", label: "멤버", href: "/settings?tab=members" },
+    { key: "billing", label: "결제", href: "/settings?tab=billing" },
+  ];
 
   return (
     <div className="space-y-6">
@@ -19,26 +26,19 @@ export default async function SettingsPage({
       </div>
 
       <div className="flex gap-1 border-b">
-        <Link
-          href="/settings"
-          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-            activeTab === "general"
-              ? "border-primary text-foreground"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          일반
-        </Link>
-        <Link
-          href="/settings?tab=members"
-          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-            activeTab === "members"
-              ? "border-primary text-foreground"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          멤버
-        </Link>
+        {tabs.map(({ key, label, href }) => (
+          <Link
+            key={key}
+            href={href}
+            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              activeTab === key
+                ? "border-primary text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {label}
+          </Link>
+        ))}
       </div>
 
       <Suspense
@@ -48,7 +48,13 @@ export default async function SettingsPage({
           </div>
         }
       >
-        {activeTab === "general" ? <SettingsGeneral /> : <SettingsMembers />}
+        {activeTab === "general" ? (
+          <SettingsGeneral />
+        ) : activeTab === "members" ? (
+          <SettingsMembers />
+        ) : (
+          <SettingsBilling />
+        )}
       </Suspense>
     </div>
   );

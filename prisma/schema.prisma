@@ -18,12 +18,32 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  memberships OrganizationMembership[]
-  activeUsers User[]   @relation("ActiveOrg")
-  projects    Project[]
-  uploads     Upload[]
-  templates   QATemplate[]
-  invitations Invitation[]
+  memberships  OrganizationMembership[]
+  activeUsers  User[]         @relation("ActiveOrg")
+  projects     Project[]
+  uploads      Upload[]
+  templates    QATemplate[]
+  invitations  Invitation[]
+  subscription Subscription?
+}
+
+model Subscription {
+  id                   String       @id @default(cuid())
+  organizationId       String       @unique
+  organization         Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  stripeCustomerId     String?      @unique
+  stripeSubscriptionId String?      @unique
+  stripePriceId        String?
+  plan                 String       @default("free") // "free" | "pro" | "enterprise"
+  status               String       @default("active") // "active" | "canceled" | "past_due" | "trialing"
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean      @default(false)
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  @@index([stripeCustomerId])
+  @@index([stripeSubscriptionId])
 }
 
 model User {

@@ -7,7 +7,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -17,7 +16,6 @@ import {
   DialogTitle,
   DialogClose,
 } from "@/components/ui/dialog";
-import { PLAN_LABEL } from "@/types/enums";
 import { getAvatarColor } from "@/lib/avatar-colors";
 
 interface OrgInfo {
@@ -170,25 +168,6 @@ export default function SettingsGeneral() {
               {saving ? "저장 중..." : "저장"}
             </Button>
           </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="flex items-center justify-between py-4">
-          <div>
-            <p className="text-sm font-semibold">
-              {PLAN_LABEL[org?.plan ?? "free"] ?? org?.plan} 플랜
-              <Badge variant="secondary" className="ml-2 text-xs">
-                {org?.plan ?? "free"}
-              </Badge>
-            </p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              멤버 {org?.memberCount ?? 0}명
-            </p>
-          </div>
-          <Button variant="outline" size="sm" disabled>
-            준비 중
-          </Button>
         </CardContent>
       </Card>
 
