@@ -189,6 +189,9 @@ model GenerationJob {
   diagramVersions DiagramVersion[]
 
   @@index([userId])
+  @@index([projectId])
+  @@index([projectId, createdAt(sort: Desc)])
+  @@index([status])
 }
 
 model DiagramVersion {

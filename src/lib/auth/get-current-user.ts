@@ -9,6 +9,28 @@ export type AuthUser = {
   role: string;
 };
 
+// 60초 TTL 인메모리 캐시 — DB 조회 횟수 감소
+const userCache = new Map<string, { user: AuthUser | null; ts: number }>();
+const USER_CACHE_TTL = 60_000;
+
+function getCachedUser(supabaseId: string): AuthUser | null | undefined {
+  const entry = userCache.get(supabaseId);
+  if (!entry) return undefined;
+  if (Date.now() - entry.ts > USER_CACHE_TTL) {
+    userCache.delete(supabaseId);
+    return undefined;
+  }
+  return entry.user;
+}
+
+function setCachedUser(supabaseId: string, user: AuthUser | null) {
+  userCache.set(supabaseId, { user, ts: Date.now() });
+}
+
+export function invalidateUserCache(supabaseId: string) {
+  userCache.delete(supabaseId);
+}
+
 export async function getCurrentUser(
   request?: Request
 ): Promise<AuthUser | null> {
@@ -30,7 +52,7 @@ async function authenticateByToken(token: string): Promise<AuthUser | null> {
     include: {
       user: {
         include: {
-          memberships: true,
+          memberships: { select: { organizationId: true, role: true } },
         },
       },
     },
@@ -39,9 +61,13 @@ async function authenticateByToken(token: string): Promise<AuthUser | null> {
   if (!apiToken) return null;
   if (apiToken.expiresAt && apiToken.expiresAt < new Date()) return null;
 
-  prisma.apiToken
-    .update({ where: { id: apiToken.id }, data: { lastUsedAt: new Date() } })
-    .catch(() => {});
+  // 5분 이상 경과한 경우에만 lastUsedAt 갱신 (DB 쓰기 스로틀)
+  const lastUsed = apiToken.lastUsedAt;
+  if (!lastUsed || Date.now() - lastUsed.getTime() > 5 * 60_000) {
+    prisma.apiToken
+      .update({ where: { id: apiToken.id }, data: { lastUsedAt: new Date() } })
+      .catch(() => {});
+  }
 
   return resolveAuthUser(apiToken.user);
 }
@@ -49,11 +75,16 @@ async function authenticateByToken(token: string): Promise<AuthUser | null> {
 async function findUserBySupabaseId(
   supabaseId: string
 ): Promise<AuthUser | null> {
+  const cached = getCachedUser(supabaseId);
+  if (cached !== undefined) return cached;
+
   const user = await prisma.user.findUnique({
     where: { supabaseId },
-    include: { memberships: true },
+    include: { memberships: { select: { organizationId: true, role: true } } },
   });
-  return user ? resolveAuthUser(user) : null;
+  const result = user ? await resolveAuthUser(user) : null;
+  setCachedUser(supabaseId, result);
+  return result;
 }
 
 async function authenticateBySession(): Promise<AuthUser | null> {
