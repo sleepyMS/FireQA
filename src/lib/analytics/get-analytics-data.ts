@@ -24,7 +24,7 @@ export async function getAnalyticsData(organizationId: string): Promise<Analytic
     createdAt: { gte: thirtyDaysAgo },
   };
 
-  const [summary, thisMonth, byStatus, byType, dailyRaw, topProjects, memberJobCounts, memberships] =
+  const [summary, thisMonth, byStatus, byType, dailyJobDates, topProjects, memberJobCounts, memberships] =
     await Promise.all([
       prisma.generationJob.aggregate({ where: orgDateFilter, _count: true, _sum: { tokenUsage: true } }),
       prisma.generationJob.count({ where: { project: { organizationId }, createdAt: { gte: thisMonthStart } } }),
@@ -35,15 +35,11 @@ export async function getAnalyticsData(organizationId: string): Promise<Analytic
         _count: true,
         orderBy: { _count: { type: "desc" } },
       }),
-      prisma.$queryRaw<{ date: Date; count: number }[]>`
-        SELECT DATE("createdAt") as date, COUNT(*)::int as count
-        FROM "GenerationJob" gj
-        JOIN "Project" p ON gj."projectId" = p.id
-        WHERE p."organizationId" = ${organizationId}
-          AND gj."createdAt" >= ${thirtyDaysAgo}
-        GROUP BY DATE("createdAt")
-        ORDER BY date
-      `,
+      // $queryRaw 대신 Prisma 네이티브 API 사용 — pgbouncer(transaction pooling) 환경에서 raw SQL 불안정
+      prisma.generationJob.findMany({
+        where: orgDateFilter,
+        select: { createdAt: true },
+      }),
       prisma.project.findMany({
         where: { organizationId, status: "active" },
         select: { id: true, name: true, _count: { select: { jobs: true } } },
@@ -72,9 +68,9 @@ export async function getAnalyticsData(organizationId: string): Promise<Analytic
     const d = new Date(now.getTime() - (29 - i) * 24 * 60 * 60 * 1000);
     dailyMap.set(d.toISOString().slice(0, 10), 0);
   }
-  for (const row of dailyRaw) {
-    const key = new Date(row.date).toISOString().slice(0, 10);
-    if (dailyMap.has(key)) dailyMap.set(key, row.count);
+  for (const job of dailyJobDates) {
+    const key = job.createdAt.toISOString().slice(0, 10);
+    if (dailyMap.has(key)) dailyMap.set(key, (dailyMap.get(key) ?? 0) + 1);
   }
   const daily = Array.from(dailyMap.entries()).map(([date, count]) => ({ date, count }));
 
