@@ -16,9 +16,14 @@ interface Project {
   _count: { jobs: number };
 }
 
-export function RecentProjectsPanel() {
+interface RecentProjectsPanelProps {
+  initialProjects?: Project[];
+}
+
+export function RecentProjectsPanel({ initialProjects }: RecentProjectsPanelProps) {
   const { data, isLoading: loading } = useSWR<{ projects: Project[] }>(
-    SWR_KEYS.projects("status=active&limit=5")
+    SWR_KEYS.projects("status=active&limit=5"),
+    { ...(initialProjects ? { fallbackData: { projects: initialProjects } } : {}) }
   );
   const projects = data?.projects ?? [];
 

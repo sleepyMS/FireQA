@@ -13,7 +13,7 @@ export default async function DashboardPage() {
   const user = await getCurrentUser();
   const orgFilter = user ? { organizationId: user.organizationId } : undefined;
 
-  const [projectCount, jobCount, recentJobs] = await Promise.all([
+  const [projectCount, jobCount, recentJobs, recentProjects] = await Promise.all([
     prisma.project.count({ where: orgFilter }),
     prisma.generationJob.count({
       where: { status: JobStatus.COMPLETED, project: orgFilter },
@@ -29,6 +29,18 @@ export default async function DashboardPage() {
         createdAt: true,
         project: { select: { name: true } },
         upload: { select: { fileName: true } },
+      },
+    }),
+    prisma.project.findMany({
+      where: { ...orgFilter, status: "active", deletedAt: null },
+      take: 5,
+      orderBy: { updatedAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: { select: { jobs: true } },
       },
     }),
   ]);
@@ -144,8 +156,11 @@ export default async function DashboardPage() {
 
       {/* Recent sections: 최근 프로젝트 + 최근 생성 이력 */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* 최근 프로젝트 — 클라이언트 컴포넌트 (GET /api/projects?status=active&limit=5) */}
-        <RecentProjectsPanel />
+        <RecentProjectsPanel initialProjects={recentProjects.map((p) => ({
+          ...p,
+          createdAt: p.createdAt.toISOString(),
+          updatedAt: p.updatedAt.toISOString(),
+        }))} />
 
         {/* Recent Jobs */}
         <Card>
