@@ -20,6 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
+import { OrgSwitcher } from "@/components/layout/org-switcher";
 
 const navItems = [
   { label: "대시보드", href: "/dashboard", icon: LayoutDashboard },
@@ -56,6 +57,10 @@ export function Sidebar() {
         >
           <X className="h-5 w-5" />
         </button>
+      </div>
+
+      <div className="border-b px-2 py-2">
+        <OrgSwitcher />
       </div>
 
       <nav className="flex-1 space-y-1 p-3">
