@@ -48,28 +48,18 @@ export function CommentSection({ jobId, currentUserId }: CommentSectionProps) {
     return () => controllerRef.current?.abort();
   }, [fetchComments]);
 
-  // 다른 사용자의 코멘트를 실시간으로 반영
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
+    const onCommentChange = (payload: { new: Record<string, unknown> }) => {
+      if (payload.new?.jobId === jobId) fetchComments();
+    };
 
     const channel = supabase
       .channel(`comments:${jobId}`)
-      .on(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        "postgres_changes" as any,
-        { event: "INSERT", schema: "public", table: "Comment" },
-        (payload: { new: Record<string, unknown> }) => {
-          if (payload.new?.jobId === jobId) fetchComments();
-        }
-      )
-      .on(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        "postgres_changes" as any,
-        { event: "UPDATE", schema: "public", table: "Comment" },
-        (payload: { new: Record<string, unknown> }) => {
-          if (payload.new?.jobId === jobId) fetchComments();
-        }
-      )
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .on("postgres_changes" as any, { event: "INSERT", schema: "public", table: "Comment" }, onCommentChange)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .on("postgres_changes" as any, { event: "UPDATE", schema: "public", table: "Comment" }, onCommentChange)
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };

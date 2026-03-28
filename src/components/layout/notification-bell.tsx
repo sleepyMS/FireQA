@@ -73,19 +73,18 @@ export function NotificationBell() {
     }
   }
 
-  // 마운트 시 카운트 조회 + Supabase Realtime 구독
   useEffect(() => {
     fetchCount();
 
     const supabase = createSupabaseBrowserClient();
-    let subscribed = false;
+    // channel은 async getUser 이후에 할당되므로 ref로 cleanup에서 접근
+    let channel: ReturnType<typeof supabase.channel> | null = null;
 
     supabase.auth.getUser().then(({ data }) => {
       const userId = data.user?.id;
-      if (!userId || subscribed) return;
-      subscribed = true;
+      if (!userId) return;
 
-      const channel = supabase
+      channel = supabase
         .channel(`notifications:${userId}`)
         .on(
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -98,9 +97,9 @@ export function NotificationBell() {
           }
         )
         .subscribe();
-
-      return () => { supabase.removeChannel(channel); };
     });
+
+    return () => { if (channel) supabase.removeChannel(channel); };
   }, []);
 
   // 드롭다운 열릴 때 알림 목록 조회
