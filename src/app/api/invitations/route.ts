@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { requireRole } from "@/lib/auth/require-role";
-import { UserRole, InviteStatus, ActivityAction } from "@/types/enums";
+import { UserRole, InviteStatus, ActivityAction, PLAN_LABEL } from "@/types/enums";
 import { randomBytes, createHash } from "crypto";
 import { logActivity } from "@/lib/activity/log-activity";
+import { getOrgPlan } from "@/lib/billing/get-org-plan";
+import { getPlanLimits } from "@/lib/billing/plan-limits";
 
 export async function GET(request: NextRequest) {
   const user = await getCurrentUser(request);
@@ -57,6 +59,18 @@ export async function POST(request: NextRequest) {
   const role = body.role ?? UserRole.MEMBER;
   const email: string | undefined = body.email;
   const expiresInHours: number = body.expiresInHours ?? 72;
+
+  const [plan, memberCount] = await Promise.all([
+    getOrgPlan(user.organizationId),
+    prisma.organizationMembership.count({ where: { organizationId: user.organizationId } }),
+  ]);
+  const limits = getPlanLimits(plan);
+  if (limits.membersMax !== Infinity && memberCount >= limits.membersMax) {
+    return NextResponse.json(
+      { error: `${PLAN_LABEL[plan] ?? plan} 플랜의 멤버 한도(${limits.membersMax}명)에 도달했습니다. 플랜을 업그레이드하세요.` },
+      { status: 403 }
+    );
+  }
 
   if (email) {
     const existing = await prisma.invitation.findFirst({

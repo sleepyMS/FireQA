@@ -6,6 +6,9 @@ vi.mock("@/lib/db", () => ({
     generationJob: {
       count: vi.fn(),
     },
+    organization: {
+      findUnique: vi.fn().mockResolvedValue({ plan: "free" }),
+    },
   },
 }));
 

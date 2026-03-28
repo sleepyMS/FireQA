@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { logActivity } from "@/lib/activity/log-activity";
-import { ActivityAction } from "@/types/enums";
+import { ActivityAction, PLAN_LABEL } from "@/types/enums";
+import { getOrgPlan } from "@/lib/billing/get-org-plan";
+import { getPlanLimits } from "@/lib/billing/plan-limits";
 
 // GET /api/projects — 조직 프로젝트 목록 (커서 페이지네이션)
 export async function GET(request: NextRequest) {
@@ -105,6 +107,18 @@ export async function POST(request: NextRequest) {
 
     if (!name?.trim()) {
       return NextResponse.json({ error: "프로젝트 이름은 필수입니다." }, { status: 400 });
+    }
+
+    const [plan, projectCount] = await Promise.all([
+      getOrgPlan(user.organizationId),
+      prisma.project.count({ where: { organizationId: user.organizationId, status: "active" } }),
+    ]);
+    const limits = getPlanLimits(plan);
+    if (limits.projectsMax !== Infinity && projectCount >= limits.projectsMax) {
+      return NextResponse.json(
+        { error: `${PLAN_LABEL[plan] ?? plan} 플랜의 프로젝트 한도(${limits.projectsMax}개)에 도달했습니다. 플랜을 업그레이드하세요.` },
+        { status: 403 }
+      );
     }
 
     const project = await prisma.project.create({
