@@ -26,8 +26,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "자신에게 소유권을 이전할 수 없습니다." }, { status: 400 });
     }
 
-    const target = await prisma.user.findFirst({
-      where: { id: targetUserId, organizationId: user.organizationId },
+    const target = await prisma.organizationMembership.findUnique({
+      where: {
+        userId_organizationId: {
+          userId: targetUserId,
+          organizationId: user.organizationId,
+        },
+      },
     });
 
     if (!target) {
@@ -35,12 +40,22 @@ export async function POST(request: NextRequest) {
     }
 
     await prisma.$transaction([
-      prisma.user.update({
-        where: { id: targetUserId },
+      prisma.organizationMembership.update({
+        where: {
+          userId_organizationId: {
+            userId: targetUserId,
+            organizationId: user.organizationId,
+          },
+        },
         data: { role: UserRole.OWNER },
       }),
-      prisma.user.update({
-        where: { id: user.userId },
+      prisma.organizationMembership.update({
+        where: {
+          userId_organizationId: {
+            userId: user.userId,
+            organizationId: user.organizationId,
+          },
+        },
         data: { role: UserRole.ADMIN },
       }),
     ]);
