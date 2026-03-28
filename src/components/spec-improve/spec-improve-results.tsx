@@ -8,14 +8,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { SpecImproveSummary } from "@/types/spec-improve";
+import { VersionBar } from "@/components/versions/version-bar";
 
 interface SpecImproveResultsProps {
+  jobId: string;
   markdown: string;
   summary: SpecImproveSummary;
   originalFileName: string;
 }
 
-export function SpecImproveResults({ markdown, summary, originalFileName }: SpecImproveResultsProps) {
+export function SpecImproveResults({ jobId, markdown, summary, originalFileName }: SpecImproveResultsProps) {
   const [copied, setCopied] = useState(false);
   const [showComparison, setShowComparison] = useState(false);
 
@@ -39,6 +41,7 @@ export function SpecImproveResults({ markdown, summary, originalFileName }: Spec
 
   return (
     <div className="space-y-4">
+      <VersionBar jobId={jobId} />
       {/* 변경 요약 카드 */}
       <Card>
         <CardHeader className="pb-3">

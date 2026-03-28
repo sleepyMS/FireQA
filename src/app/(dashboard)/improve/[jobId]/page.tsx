@@ -40,6 +40,7 @@ export default async function SpecImproveResultPage({
 
       {job.status === JobStatus.COMPLETED && result && (
         <SpecImproveResults
+          jobId={job.id}
           markdown={result.markdown}
           summary={result.summary}
           originalFileName={job.upload.fileName}

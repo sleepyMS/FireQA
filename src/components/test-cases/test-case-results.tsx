@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import type { TestSheet } from "@/types/test-case";
+import { VersionBar } from "@/components/versions/version-bar";
 
 interface TestCaseResultsProps {
   jobId: string;
@@ -45,6 +46,7 @@ export function TestCaseResults({
 
   return (
     <div className="min-w-0 space-y-4">
+      <VersionBar jobId={jobId} />
       {/* Summary */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">

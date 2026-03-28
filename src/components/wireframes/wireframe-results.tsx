@@ -15,6 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { VersionBar } from "@/components/versions/version-bar";
 
 interface Screen {
   id: string;
@@ -83,6 +84,7 @@ export function WireframeResults({
 
   return (
     <div className="space-y-6">
+      <VersionBar jobId={jobId} />
       {/* 요약 */}
       <div className="flex items-center gap-4">
         <Badge variant="secondary" className="text-sm">
