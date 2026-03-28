@@ -21,46 +21,60 @@ export async function POST(request: NextRequest) {
     where: { tokenHash },
   });
 
-  if (!invitation || invitation.status !== InviteStatus.PENDING || invitation.expiresAt < new Date()) {
+  if (
+    !invitation ||
+    invitation.status !== InviteStatus.PENDING ||
+    invitation.expiresAt < new Date()
+  ) {
     return NextResponse.json(
       { error: "유효하지 않거나 만료된 초대입니다." },
       { status: 400 }
     );
   }
 
-  if (user.organizationId === invitation.organizationId) {
+  // 이미 멤버인지 확인
+  const existingMembership = await prisma.organizationMembership.findUnique({
+    where: {
+      userId_organizationId: {
+        userId: user.userId,
+        organizationId: invitation.organizationId,
+      },
+    },
+  });
+  if (existingMembership) {
     return NextResponse.json(
       { error: "이미 해당 조직의 멤버입니다." },
       { status: 409 }
     );
   }
 
-  const oldOrgId = user.organizationId;
-
   await prisma.$transaction(async (tx) => {
-    const memberCount = await tx.user.count({
-      where: { organizationId: oldOrgId },
-    });
-
-    // 사용자를 새 조직으로 이동한 뒤 기존 조직 삭제 (cascade 순서 보장)
-    await tx.user.update({
-      where: { id: user.userId },
+    // 멤버십 추가
+    await tx.organizationMembership.create({
       data: {
+        userId: user.userId,
         organizationId: invitation.organizationId,
         role: invitation.role,
       },
     });
 
-    if (memberCount === 1) {
-      await tx.organization.delete({ where: { id: oldOrgId } });
+    // 활성 조직 업데이트
+    await tx.user.update({
+      where: { id: user.userId },
+      data: { activeOrganizationId: invitation.organizationId },
+    });
+
+    // 기존 조직이 본인 혼자이고 owner인 경우 → 기존 조직 삭제
+    const oldMemberCount = await tx.organizationMembership.count({
+      where: { organizationId: user.organizationId },
+    });
+    if (oldMemberCount === 1) {
+      await tx.organization.delete({ where: { id: user.organizationId } });
     }
 
     await tx.invitation.update({
       where: { id: invitation.id },
-      data: {
-        status: InviteStatus.ACCEPTED,
-        acceptedById: user.userId,
-      },
+      data: { status: InviteStatus.ACCEPTED, acceptedById: user.userId },
     });
   });
 

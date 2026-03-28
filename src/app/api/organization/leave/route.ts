@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (user.role === UserRole.OWNER) {
-      const memberCount = await prisma.user.count({
+      const memberCount = await prisma.organizationMembership.count({
         where: { organizationId: user.organizationId },
       });
 
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // 유일한 멤버이므로 조직 전체 삭제 (cascade)
+      // 유일한 멤버 + owner → 조직 전체 삭제 (CASCADE)
       await prisma.organization.delete({
         where: { id: user.organizationId },
       });
@@ -30,7 +30,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
-    await prisma.user.delete({ where: { id: user.userId } });
+    // owner 아닌 경우 → 멤버십만 삭제
+    await prisma.$transaction(async (tx) => {
+      await tx.organizationMembership.delete({
+        where: {
+          userId_organizationId: {
+            userId: user.userId,
+            organizationId: user.organizationId,
+          },
+        },
+      });
+
+      // 다른 멤버십이 있으면 첫 번째로 activeOrganizationId 업데이트
+      const remaining = await tx.organizationMembership.findFirst({
+        where: { userId: user.userId },
+      });
+
+      await tx.user.update({
+        where: { id: user.userId },
+        data: { activeOrganizationId: remaining?.organizationId ?? null },
+      });
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {
