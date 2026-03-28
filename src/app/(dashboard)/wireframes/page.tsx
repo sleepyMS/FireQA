@@ -11,14 +11,13 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Dropzone } from "@/components/upload/dropzone";
 import { cn } from "@/lib/utils";
 import { useSSE } from "@/hooks/use-sse";
 import { GenerationProgress } from "@/components/generation-progress";
 import { GenerationError } from "@/components/generation-error";
 import { RecentJobsPanel } from "@/components/recent-jobs-panel";
+import { ProjectSelector } from "@/components/projects/project-selector";
 
 const SCREEN_TYPE_OPTIONS = [
   {
@@ -47,9 +46,14 @@ const SCREEN_TYPE_OPTIONS = [
   },
 ] as const;
 
+type ProjectSelection =
+  | { type: "existing"; id: string; name: string }
+  | { type: "new"; name: string };
+
 export default function WireframesPage() {
   const router = useRouter();
-  const [projectName, setProjectName] = useState("");
+  const [projectSelection, setProjectSelection] =
+    useState<ProjectSelection | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [screenTypeMode, setScreenTypeMode] = useState<string>("auto");
 
@@ -67,11 +71,16 @@ export default function WireframesPage() {
   };
 
   const handleGenerate = () => {
-    if (!file || !projectName.trim()) return;
+    if (!file || !projectSelection) return;
 
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("projectName", projectName);
+    // 기존 프로젝트면 projectId, 새 프로젝트면 projectName 전달
+    if (projectSelection.type === "existing") {
+      formData.append("projectId", projectSelection.id);
+    } else {
+      formData.append("projectName", projectSelection.name);
+    }
     formData.append("screenTypeMode", screenTypeMode);
 
     sse.start(formData);
@@ -84,7 +93,7 @@ export default function WireframesPage() {
         <div>
           <h2 className="text-2xl font-bold tracking-tight">와이어프레임 생성</h2>
           <p className="text-muted-foreground">
-            {projectName} — AI가 와이어프레임을 생성하고 있습니다.
+            {projectSelection?.name} — AI가 와이어프레임을 생성하고 있습니다.
           </p>
         </div>
         <GenerationProgress
@@ -127,15 +136,11 @@ export default function WireframesPage() {
               <CardTitle className="text-base">1. 프로젝트 이름</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                <Label htmlFor="projectName">프로젝트 이름</Label>
-                <Input
-                  id="projectName"
-                  placeholder="예: 공간 제휴 신청"
-                  value={projectName}
-                  onChange={(e) => setProjectName(e.target.value)}
-                />
-              </div>
+              <ProjectSelector
+                value={projectSelection}
+                onChange={setProjectSelection}
+                disabled={sse.isStreaming}
+              />
             </CardContent>
           </Card>
 
@@ -196,7 +201,7 @@ export default function WireframesPage() {
           <Button
             className="w-full"
             size="lg"
-            disabled={!file || !projectName.trim() || sse.isStreaming}
+            disabled={!file || !projectSelection || sse.isStreaming}
             onClick={handleGenerate}
           >
             <Smartphone className="mr-2 h-4 w-4" />

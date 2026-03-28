@@ -10,8 +10,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dropzone } from "@/components/upload/dropzone";
 import { cn } from "@/lib/utils";
@@ -19,6 +17,7 @@ import { useSSE } from "@/hooks/use-sse";
 import { GenerationProgress } from "@/components/generation-progress";
 import { GenerationError } from "@/components/generation-error";
 import { RecentJobsPanel } from "@/components/recent-jobs-panel";
+import { ProjectSelector } from "@/components/projects/project-selector";
 
 interface Template {
   id: string;
@@ -29,9 +28,14 @@ interface Template {
   parsedSheets?: { name: string }[];
 }
 
+type ProjectSelection =
+  | { type: "existing"; id: string; name: string }
+  | { type: "new"; name: string };
+
 export default function GeneratePage() {
   const router = useRouter();
-  const [projectName, setProjectName] = useState("");
+  const [projectSelection, setProjectSelection] =
+    useState<ProjectSelection | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [parsedPreview, setParsedPreview] = useState<string | null>(null);
 
@@ -90,11 +94,16 @@ export default function GeneratePage() {
   };
 
   const handleGenerate = () => {
-    if (!file || !projectName.trim()) return;
+    if (!file || !projectSelection) return;
 
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("projectName", projectName);
+    // 기존 프로젝트면 projectId, 새 프로젝트면 projectName 전달
+    if (projectSelection.type === "existing") {
+      formData.append("projectId", projectSelection.id);
+    } else {
+      formData.append("projectName", projectSelection.name);
+    }
     formData.append("type", "test-cases");
     if (mode === "template" && selectedTemplateId) {
       formData.append("templateId", selectedTemplateId);
@@ -110,7 +119,7 @@ export default function GeneratePage() {
         <div>
           <h2 className="text-2xl font-bold tracking-tight">TC 자동 생성</h2>
           <p className="text-muted-foreground">
-            {projectName} — AI가 테스트케이스를 생성하고 있습니다.
+            {projectSelection?.name} — AI가 테스트케이스를 생성하고 있습니다.
           </p>
         </div>
         <GenerationProgress
@@ -153,15 +162,11 @@ export default function GeneratePage() {
               <CardTitle className="text-base">1. 프로젝트 이름</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                <Label htmlFor="projectName">프로젝트 이름</Label>
-                <Input
-                  id="projectName"
-                  placeholder="예: 공간 제휴 신청"
-                  value={projectName}
-                  onChange={(e) => setProjectName(e.target.value)}
-                />
-              </div>
+              <ProjectSelector
+                value={projectSelection}
+                onChange={setProjectSelection}
+                disabled={sse.isStreaming}
+              />
             </CardContent>
           </Card>
 
@@ -309,7 +314,7 @@ export default function GeneratePage() {
             size="lg"
             disabled={
               !file ||
-              !projectName.trim() ||
+              !projectSelection ||
               sse.isStreaming ||
               (mode === "template" && !selectedTemplateId)
             }
