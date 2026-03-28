@@ -20,14 +20,19 @@ export const maxDuration = 300;
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const file = formData.get("file") as File;
-  const projectName = formData.get("projectName") as string;
+  const projectId = formData.get("projectId") as string | null;
+  const projectName = formData.get("projectName") as string | null;
 
-  if (!file || !projectName) {
+  // projectId 또는 projectName 중 하나는 반드시 필요
+  if (!file || (!projectId && !projectName)) {
     return NextResponse.json(
       { error: "파일과 프로젝트 이름이 필요합니다." },
       { status: 400 }
     );
   }
+
+  // projectId 우선; 없으면 projectName으로 새 프로젝트 생성
+  const projectInput = projectId ? { id: projectId } : (projectName as string);
 
   const user = await getCurrentUser(request);
   if (!user) {
@@ -37,7 +42,7 @@ export async function POST(request: NextRequest) {
   return createSSEStream(async (writer) => {
     writer.send({ type: "stage", stage: Stage.PARSING, message: "문서를 파싱하고 있습니다...", progress: 10 });
 
-    const { jobId, parsedText } = await createGenerationJob(file, projectName, JobType.DIAGRAMS, {
+    const { jobId, parsedText } = await createGenerationJob(file, projectInput, JobType.DIAGRAMS, {
       userId: user.userId,
       organizationId: user.organizationId,
     });

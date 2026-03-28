@@ -12,7 +12,8 @@ interface CreateJobResult {
 
 export async function createGenerationJob(
   file: File,
-  projectName: string,
+  // string이면 새 프로젝트 생성, { id } 객체면 기존 프로젝트 재사용
+  projectInput: string | { id: string },
   jobType: JobType,
   auth: { userId: string; organizationId: string }
 ): Promise<CreateJobResult> {
@@ -21,13 +22,25 @@ export async function createGenerationJob(
   // PostgreSQL은 text 필드에 null 바이트(\0)를 허용하지 않음
   parsed.text = parsed.text.replace(/\0/g, "");
 
-  const project = await prisma.project.create({
-    data: {
-      name: projectName,
-      organizationId: auth.organizationId,
-      createdById: auth.userId,
-    },
-  });
+  let project: { id: string; name: string };
+  if (typeof projectInput === "string") {
+    // projectName이 전달된 경우 → 새 프로젝트 생성 (기존 동작 유지)
+    project = await prisma.project.create({
+      data: {
+        name: projectInput,
+        organizationId: auth.organizationId,
+        createdById: auth.userId,
+      },
+    });
+  } else {
+    // projectId가 전달된 경우 → 기존 프로젝트 재사용 (소속 조직 검증 포함)
+    const existing = await prisma.project.findFirst({
+      where: { id: projectInput.id, organizationId: auth.organizationId },
+    });
+    if (!existing) throw new Error("프로젝트를 찾을 수 없습니다.");
+    if (existing.status === "deleted") throw new Error("삭제된 프로젝트에는 생성할 수 없습니다.");
+    project = existing;
+  }
 
   const upload = await prisma.upload.create({
     data: {
