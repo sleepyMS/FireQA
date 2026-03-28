@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import SettingsGeneral from "./settings-general";
 import SettingsMembers from "./settings-members";
 import SettingsBilling from "./settings-billing";
+import SettingsWebhooks from "./settings-webhooks";
 
 export default async function SettingsPage({
   searchParams,
@@ -10,12 +11,17 @@ export default async function SettingsPage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const { tab } = await searchParams;
-  const activeTab = tab === "members" ? "members" : tab === "billing" ? "billing" : "general";
+  const activeTab =
+    tab === "members" ? "members"
+    : tab === "billing" ? "billing"
+    : tab === "webhooks" ? "webhooks"
+    : "general";
 
   const tabs = [
     { key: "general", label: "일반", href: "/settings" },
     { key: "members", label: "멤버", href: "/settings?tab=members" },
     { key: "billing", label: "결제", href: "/settings?tab=billing" },
+    { key: "webhooks", label: "웹훅", href: "/settings?tab=webhooks" },
   ];
 
   return (
@@ -52,8 +58,10 @@ export default async function SettingsPage({
           <SettingsGeneral />
         ) : activeTab === "members" ? (
           <SettingsMembers />
-        ) : (
+        ) : activeTab === "billing" ? (
           <SettingsBilling />
+        ) : (
+          <SettingsWebhooks />
         )}
       </Suspense>
     </div>

@@ -18,13 +18,14 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  memberships  OrganizationMembership[]
-  activeUsers  User[]         @relation("ActiveOrg")
-  projects     Project[]
-  uploads      Upload[]
-  templates    QATemplate[]
-  invitations  Invitation[]
-  subscription Subscription?
+  memberships       OrganizationMembership[]
+  activeUsers       User[]            @relation("ActiveOrg")
+  projects          Project[]
+  uploads           Upload[]
+  templates         QATemplate[]
+  invitations       Invitation[]
+  subscription      Subscription?
+  webhookEndpoints  WebhookEndpoint[]
 }
 
 model Subscription {
@@ -277,6 +278,21 @@ model Notification {
   createdAt      DateTime  @default(now())
 
   @@index([userId, isRead, createdAt(sort: Desc)])
+}
+
+model WebhookEndpoint {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  url            String
+  secret         String       // HMAC-SHA256 서명 키
+  events         String       @default("[]") // JSON: ["generation.completed", ...] — 빈 배열이면 전체
+  description    String?
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId])
 }
 
 model QATemplate {
