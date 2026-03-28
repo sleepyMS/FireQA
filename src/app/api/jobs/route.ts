@@ -13,12 +13,15 @@ export async function GET(request: NextRequest) {
 
     const type = request.nextUrl.searchParams.get("type");
     const all = request.nextUrl.searchParams.get("all");
+    // projectId 필터 추가: 프로젝트 상세 페이지에서 해당 프로젝트의 Job만 조회
+    const projectId = request.nextUrl.searchParams.get("projectId");
 
     if (all) {
       // 이력 페이지용: 모든 상태의 Job 목록
       const jobs = await prisma.generationJob.findMany({
         where: {
           project: { organizationId: user.organizationId },
+          ...(projectId ? { projectId } : {}),
           ...(type ? { type } : {}),
         },
         orderBy: { createdAt: "desc" },
