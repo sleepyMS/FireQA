@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { CommentWithReplies } from "@/types/comment";
 import { CommentForm } from "./comment-form";
 import { CommentThread } from "./comment-thread";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 interface CommentSectionProps {
   jobId: string;
@@ -46,6 +47,33 @@ export function CommentSection({ jobId, currentUserId }: CommentSectionProps) {
     fetchComments(true);
     return () => controllerRef.current?.abort();
   }, [fetchComments]);
+
+  // 다른 사용자의 코멘트를 실시간으로 반영
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+
+    const channel = supabase
+      .channel(`comments:${jobId}`)
+      .on(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        "postgres_changes" as any,
+        { event: "INSERT", schema: "public", table: "Comment" },
+        (payload: { new: Record<string, unknown> }) => {
+          if (payload.new?.jobId === jobId) fetchComments();
+        }
+      )
+      .on(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        "postgres_changes" as any,
+        { event: "UPDATE", schema: "public", table: "Comment" },
+        (payload: { new: Record<string, unknown> }) => {
+          if (payload.new?.jobId === jobId) fetchComments();
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [jobId, fetchComments]);
 
   async function handleNewComment(body: string) {
     const res = await fetch("/api/comments", {

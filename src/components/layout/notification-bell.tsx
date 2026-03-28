@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Bell } from "lucide-react";
 import Link from "next/link";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 interface NotificationItem {
   id: string;
@@ -72,11 +73,34 @@ export function NotificationBell() {
     }
   }
 
-  // 마운트 시 카운트 조회 + 30초 폴링
+  // 마운트 시 카운트 조회 + Supabase Realtime 구독
   useEffect(() => {
     fetchCount();
-    const interval = setInterval(fetchCount, 30_000);
-    return () => clearInterval(interval);
+
+    const supabase = createSupabaseBrowserClient();
+    let subscribed = false;
+
+    supabase.auth.getUser().then(({ data }) => {
+      const userId = data.user?.id;
+      if (!userId || subscribed) return;
+      subscribed = true;
+
+      const channel = supabase
+        .channel(`notifications:${userId}`)
+        .on(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          "postgres_changes" as any,
+          { event: "INSERT", schema: "public", table: "Notification" },
+          (payload: { new: Record<string, unknown> }) => {
+            if (payload.new?.userId !== userId) return;
+            setUnreadCount((prev) => prev + 1);
+            if (isOpenRef.current) fetchNotifications();
+          }
+        )
+        .subscribe();
+
+      return () => { supabase.removeChannel(channel); };
+    });
   }, []);
 
   // 드롭다운 열릴 때 알림 목록 조회
