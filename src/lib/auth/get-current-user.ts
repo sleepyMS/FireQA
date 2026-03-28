@@ -87,12 +87,11 @@ async function resolveAuthUser(
 ): Promise<AuthUser | null> {
   if (user.memberships.length === 0) return null;
 
-  // activeOrganizationId에 해당하는 멤버십 찾기
   let membership = user.memberships.find(
     (m) => m.organizationId === user.activeOrganizationId
   );
 
-  // 없으면 첫 번째 멤버십으로 폴백하고 DB 업데이트
+  // activeOrganizationId가 stale하거나 없을 때 첫 번째 멤버십으로 폴백
   if (!membership) {
     membership = user.memberships[0];
     prisma.user

@@ -32,7 +32,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // 이미 멤버인지 확인
   const existingMembership = await prisma.organizationMembership.findUnique({
     where: {
       userId_organizationId: {
@@ -49,7 +48,6 @@ export async function POST(request: NextRequest) {
   }
 
   await prisma.$transaction(async (tx) => {
-    // 멤버십 추가
     await tx.organizationMembership.create({
       data: {
         userId: user.userId,
@@ -58,13 +56,12 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // 활성 조직 업데이트
     await tx.user.update({
       where: { id: user.userId },
       data: { activeOrganizationId: invitation.organizationId },
     });
 
-    // 기존 조직이 본인 혼자이고 owner인 경우 → 기존 조직 삭제
+    // 기존 조직 단독 owner이면 빈 조직이 되므로 삭제
     const oldMemberCount = await tx.organizationMembership.count({
       where: { organizationId: user.organizationId },
     });

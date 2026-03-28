@@ -1,6 +1,16 @@
 import { prisma } from "@/lib/db";
 import { UserRole } from "@/types/enums";
 
+export function generateOrgSlug(email: string): string {
+  const base = email
+    .split("@")[0]
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 30) || "team";
+  return `${base}-${Date.now()}`;
+}
+
 export async function provisionUserAndOrg(params: {
   supabaseId: string;
   email: string;
@@ -14,13 +24,7 @@ export async function provisionUserAndOrg(params: {
 
   const displayName = name || email.split("@")[0];
   const orgDisplayName = orgName || `${displayName}의 팀`;
-  const baseSlug = email
-    .split("@")[0]
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 30) || "team";
-  const slug = `${baseSlug}-${Date.now()}`;
+  const slug = generateOrgSlug(email);
 
   return prisma.$transaction(async (tx) => {
     const organization = await tx.organization.create({

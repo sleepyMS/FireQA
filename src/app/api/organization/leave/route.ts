@@ -22,7 +22,6 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // 유일한 멤버 + owner → 조직 전체 삭제 (CASCADE)
       await prisma.organization.delete({
         where: { id: user.organizationId },
       });
@@ -30,7 +29,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
-    // owner 아닌 경우 → 멤버십만 삭제
     await prisma.$transaction(async (tx) => {
       await tx.organizationMembership.delete({
         where: {
@@ -41,7 +39,6 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // 다른 멤버십이 있으면 첫 번째로 activeOrganizationId 업데이트
       const remaining = await tx.organizationMembership.findFirst({
         where: { userId: user.userId },
       });

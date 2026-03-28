@@ -9,18 +9,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
     }
 
-    const dbUser = await prisma.user.findUnique({
-      where: { id: user.userId },
-      select: { activeOrganizationId: true },
-    });
-
-    const memberships = await prisma.organizationMembership.findMany({
-      where: { userId: user.userId },
-      include: {
-        organization: { select: { id: true, name: true, slug: true } },
-      },
-      orderBy: { joinedAt: "asc" },
-    });
+    const [dbUser, memberships] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: user.userId },
+        select: { activeOrganizationId: true },
+      }),
+      prisma.organizationMembership.findMany({
+        where: { userId: user.userId },
+        include: {
+          organization: { select: { id: true, name: true, slug: true } },
+        },
+        orderBy: { joinedAt: "asc" },
+      }),
+    ]);
 
     return NextResponse.json({
       activeOrganizationId: dbUser?.activeOrganizationId ?? null,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { generateOrgSlug } from "@/lib/auth/provision-user";
 import { UserRole } from "@/types/enums";
 
 export async function POST(request: NextRequest) {
@@ -15,13 +16,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "팀 이름은 필수입니다." }, { status: 400 });
     }
 
-    const baseSlug = user.email
-      .split("@")[0]
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 30) || "team";
-    const slug = `${baseSlug}-${Date.now()}`;
+    const slug = generateOrgSlug(user.email);
 
     const org = await prisma.$transaction(async (tx) => {
       const organization = await tx.organization.create({

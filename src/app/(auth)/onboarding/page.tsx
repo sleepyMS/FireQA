@@ -9,6 +9,14 @@ import { Label } from "@/components/ui/label";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 
+const spinner = (
+  <Card className="w-full max-w-sm">
+    <CardContent className="flex justify-center py-12">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+    </CardContent>
+  </Card>
+);
+
 function OnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -20,7 +28,6 @@ function OnboardingContent() {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    // 이미 온보딩 완료된 유저는 대시보드로 보냄
     fetch("/api/user/memberships")
       .then((r) => r.json())
       .then((data) => {
@@ -32,7 +39,6 @@ function OnboardingContent() {
       })
       .catch(() => setChecking(false));
 
-    // Supabase 세션에서 이름 미리 채우기
     const supabase = createSupabaseBrowserClient();
     supabase.auth.getUser().then(({ data }) => {
       const fullName = data.user?.user_metadata?.full_name as string | undefined;
@@ -78,15 +84,7 @@ function OnboardingContent() {
     }
   }
 
-  if (checking) {
-    return (
-      <Card className="w-full max-w-sm">
-        <CardContent className="flex justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-        </CardContent>
-      </Card>
-    );
-  }
+  if (checking) return spinner;
 
   return (
     <Card className="w-full max-w-sm">
@@ -132,15 +130,7 @@ function OnboardingContent() {
 
 export default function OnboardingPage() {
   return (
-    <Suspense
-      fallback={
-        <Card className="w-full max-w-sm">
-          <CardContent className="flex justify-center py-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          </CardContent>
-        </Card>
-      }
-    >
+    <Suspense fallback={spinner}>
       <OnboardingContent />
     </Suspense>
   );
