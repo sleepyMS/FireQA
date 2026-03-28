@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
 
     const org = await prisma.organization.findUnique({
       where: { id: user.organizationId },
-      include: { _count: { select: { users: true } } },
+      include: { _count: { select: { memberships: true } } },
     });
 
     if (!org) {
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
       name: org.name,
       slug: org.slug,
       plan: org.plan,
-      memberCount: org._count.users,
+      memberCount: org._count.memberships,
     });
   } catch (error) {
     console.error("조직 정보 조회 오류:", error);
