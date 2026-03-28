@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { requireRole } from "@/lib/auth/require-role";
-import { UserRole, InviteStatus } from "@/types/enums";
+import { UserRole, InviteStatus, ActivityAction } from "@/types/enums";
 import { randomBytes, createHash } from "crypto";
 import { logActivity } from "@/lib/activity/log-activity";
 
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  logActivity({ organizationId: user.organizationId, actorId: user.userId, action: "member.invited", metadata: { email: email ?? null, role } });
+  logActivity({ organizationId: user.organizationId, actorId: user.userId, action: ActivityAction.MEMBER_INVITED, metadata: { email: email ?? null, role } });
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
 

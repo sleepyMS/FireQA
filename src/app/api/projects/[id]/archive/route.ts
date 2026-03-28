@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { getOrgProject } from "@/lib/projects/get-org-project";
 import { logActivity } from "@/lib/activity/log-activity";
+import { ActivityAction } from "@/types/enums";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -37,7 +38,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
         archivedAt: isArchived ? null : new Date(),
       },
     });
-    logActivity({ organizationId: user.organizationId, actorId: user.userId, action: isArchived ? "project.unarchived" : "project.archived", projectId: id });
+    logActivity({ organizationId: user.organizationId, actorId: user.userId, action: isArchived ? ActivityAction.PROJECT_UNARCHIVED : ActivityAction.PROJECT_ARCHIVED, projectId: id });
 
     return NextResponse.json({
       status: updated.status,

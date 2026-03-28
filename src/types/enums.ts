@@ -76,3 +76,21 @@ export const DeviceAuthStatus = {
 
 export type DeviceAuthStatus =
   (typeof DeviceAuthStatus)[keyof typeof DeviceAuthStatus];
+
+export const ActivityAction = {
+  GENERATION_COMPLETED: "generation.completed",
+  GENERATION_FAILED: "generation.failed",
+  PROJECT_CREATED: "project.created",
+  PROJECT_UPDATED: "project.updated",
+  PROJECT_ARCHIVED: "project.archived",
+  PROJECT_UNARCHIVED: "project.unarchived",
+  PROJECT_DELETED: "project.deleted",
+  PROJECT_RESTORED: "project.restored",
+  MEMBER_INVITED: "member.invited",
+  MEMBER_ROLE_CHANGED: "member.role_changed",
+  MEMBER_REMOVED: "member.removed",
+  VERSION_CREATED: "version.created",
+  VERSION_ACTIVATED: "version.activated",
+} as const;
+
+export type ActivityAction = (typeof ActivityAction)[keyof typeof ActivityAction];

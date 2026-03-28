@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { logActivity } from "@/lib/activity/log-activity";
+import { ActivityAction } from "@/types/enums";
 
 // GET /api/versions?jobId=xxx — list versions for a job
 export async function GET(request: NextRequest) {
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    logActivity({ organizationId: user.organizationId, actorId: user.userId, action: "version.created", jobId, metadata: { changeType, version: version.version } });
+    logActivity({ organizationId: user.organizationId, actorId: user.userId, action: ActivityAction.VERSION_CREATED, jobId, metadata: { changeType, version: version.version } });
 
     return NextResponse.json({ version });
   } catch (error) {

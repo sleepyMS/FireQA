@@ -1,9 +1,10 @@
 import { prisma } from "@/lib/db";
+import type { ActivityAction } from "@/types/enums";
 
 export function logActivity(params: {
   organizationId: string;
   actorId: string | null;
-  action: string;
+  action: ActivityAction;
   projectId?: string;
   jobId?: string;
   metadata?: Record<string, unknown>;

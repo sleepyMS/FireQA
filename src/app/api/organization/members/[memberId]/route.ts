@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { requireRole } from "@/lib/auth/require-role";
-import { UserRole } from "@/types/enums";
+import { UserRole, ActivityAction } from "@/types/enums";
 import { logActivity } from "@/lib/activity/log-activity";
 
 export async function PATCH(
@@ -51,7 +51,7 @@ export async function PATCH(
       where: { userId_organizationId: { userId: memberId, organizationId: user.organizationId } },
       data: { role },
     });
-    logActivity({ organizationId: user.organizationId, actorId: user.userId, action: "member.role_changed", metadata: { targetUserId: memberId, newRole: role } });
+    logActivity({ organizationId: user.organizationId, actorId: user.userId, action: ActivityAction.MEMBER_ROLE_CHANGED, metadata: { targetUserId: memberId, newRole: role } });
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -99,7 +99,7 @@ export async function DELETE(
     await prisma.organizationMembership.delete({
       where: { userId_organizationId: { userId: memberId, organizationId: user.organizationId } },
     });
-    logActivity({ organizationId: user.organizationId, actorId: user.userId, action: "member.removed", metadata: { targetUserId: memberId } });
+    logActivity({ organizationId: user.organizationId, actorId: user.userId, action: ActivityAction.MEMBER_REMOVED, metadata: { targetUserId: memberId } });
 
     return NextResponse.json({ success: true });
   } catch (error) {
