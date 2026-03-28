@@ -40,13 +40,22 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const parsed = JSON.parse(job.result) as { markdown: string };
-    const projectName = job.project.name;
+    const parsed = JSON.parse(job.result) as { markdown?: string };
+
+    if (typeof parsed.markdown !== "string") {
+      return NextResponse.json({ error: "마크다운 데이터가 올바르지 않습니다." }, { status: 500 });
+    }
+
+    const safeProjectName = job.project.name
+      .replace(/[^\w\s-]/g, "")
+      .trim()
+      .replace(/\s+/g, "-")
+      .slice(0, 50) || "project";
 
     return new NextResponse(parsed.markdown, {
       headers: {
         "Content-Type": "text/markdown; charset=utf-8",
-        "Content-Disposition": `attachment; filename="${encodeURIComponent(projectName)}-improved.md"`,
+        "Content-Disposition": `attachment; filename="${safeProjectName}-improved.md"`,
       },
     });
   } catch (error) {

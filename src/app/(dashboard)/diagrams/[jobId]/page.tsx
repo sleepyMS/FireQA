@@ -23,8 +23,12 @@ export default async function DiagramResultPage({
   ]);
 
   if (!job) notFound();
+  if (!currentUser || job.project.organizationId !== currentUser.organizationId) notFound();
 
-  const result = job.result ? JSON.parse(job.result) : null;
+  let result = null;
+  if (job.result) {
+    try { result = JSON.parse(job.result); } catch { /* malformed — treat as no result */ }
+  }
 
   return (
     <div className="space-y-6">

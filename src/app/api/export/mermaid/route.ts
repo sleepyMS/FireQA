@@ -40,20 +40,26 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const parsed = JSON.parse(job.result) as {
-      diagrams: { title: string; mermaidCode: string }[];
-    };
+    const parsed = JSON.parse(job.result) as { diagrams?: { title: string; mermaidCode: string }[] };
+
+    if (!Array.isArray(parsed.diagrams)) {
+      return NextResponse.json({ error: "다이어그램 데이터가 올바르지 않습니다." }, { status: 500 });
+    }
 
     const mmdContent = parsed.diagrams
       .map((d) => `%% ${d.title}\n${d.mermaidCode}`)
       .join("\n\n");
 
-    const projectName = job.project.name;
+    const safeProjectName = job.project.name
+      .replace(/[^\w\s-]/g, "")
+      .trim()
+      .replace(/\s+/g, "-")
+      .slice(0, 50) || "project";
 
     return new NextResponse(mmdContent, {
       headers: {
         "Content-Type": "text/plain; charset=utf-8",
-        "Content-Disposition": `attachment; filename="${encodeURIComponent(projectName)}-diagrams.mmd"`,
+        "Content-Disposition": `attachment; filename="${safeProjectName}-diagrams.mmd"`,
       },
     });
   } catch (error) {
