@@ -2,25 +2,24 @@ import { describe, it, expect } from "vitest";
 import { generateOrgSlug } from "./provision-user";
 
 describe("generateOrgSlug", () => {
-  it("이메일 로컬 파트를 slug로 변환한다", () => {
-    const slug = generateOrgSlug("user@example.com");
-    expect(slug).toMatch(/^user-\d+$/);
+  it("팀 이름을 소문자 slug로 변환한다", () => {
+    const slug = generateOrgSlug("My Team");
+    expect(slug).toBe("my-team");
   });
 
   it("특수문자를 하이픈으로 치환한다", () => {
-    const slug = generateOrgSlug("john.doe+test@example.com");
-    expect(slug).toMatch(/^john-doe-test-\d+$/);
+    const slug = generateOrgSlug("john.doe's Team!");
+    expect(slug).toBe("john-doe-s-team");
   });
 
-  it("30자를 초과하는 로컬 파트는 잘린다", () => {
-    const slug = generateOrgSlug("averylongemailaddressthatexceedslimit@example.com");
-    // slug = base(≤30) + '-' + timestamp
-    const base = slug.split("-").slice(0, -1).join("-");
-    expect(base.length).toBeLessThanOrEqual(30);
+  it("48자를 초과하는 이름은 잘린다", () => {
+    const longName = "a".repeat(60);
+    const slug = generateOrgSlug(longName);
+    expect(slug.length).toBeLessThanOrEqual(48);
   });
 
-  it("빈 로컬 파트는 team으로 대체된다", () => {
-    const slug = generateOrgSlug("@example.com");
-    expect(slug).toMatch(/^team-\d+$/);
+  it("하이픈만 남는 이름은 team으로 대체된다", () => {
+    const slug = generateOrgSlug("---");
+    expect(slug).toBe("team");
   });
 });
