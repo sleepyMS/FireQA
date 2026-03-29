@@ -38,10 +38,13 @@ export default function LoginForm() {
   }
 
   async function handleGoogleLogin() {
+    // redirect 목적지를 쿠키에 저장 — redirectTo URL에 쿼리 파라미터를 붙이면
+    // Supabase 허용 목록 매칭 실패로 Site URL(배포)로 fallback되기 때문
+    document.cookie = `auth_redirect=${encodeURIComponent(redirect)};path=/;max-age=300;SameSite=Lax`;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirect)}`,
+        redirectTo: `${window.location.origin}/auth/callback`,
       },
     });
     if (error) setError(error.message);
