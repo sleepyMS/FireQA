@@ -29,17 +29,17 @@ export function ProjectSelector({
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const dropdownStyleRef = useRef<React.CSSProperties>({});
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
 
   function updateDropdownPosition() {
     if (!inputRef.current) return;
     const rect = inputRef.current.getBoundingClientRect();
-    dropdownStyleRef.current = {
+    setDropdownStyle({
       position: "fixed",
       top: rect.bottom + 4,
       left: rect.left,
       width: rect.width,
-    };
+    });
   }
 
   // 외부 클릭 시 드롭다운 닫기
@@ -78,7 +78,7 @@ export function ProjectSelector({
   }
 
   const dropdown = open && (inputValue || filtered.length > 0) && (
-    <div style={dropdownStyleRef.current} className="z-50 rounded-md border bg-popover shadow-md">
+    <div style={dropdownStyle} className="z-50 rounded-md border bg-popover shadow-md">
       {filtered.slice(0, 10).map((p) => (
         <button
           key={p.id}
