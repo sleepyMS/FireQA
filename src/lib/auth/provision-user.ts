@@ -1,14 +1,27 @@
 import { prisma } from "@/lib/db";
 import { UserRole } from "@/types/enums";
 
-export function generateOrgSlug(email: string): string {
-  const base = email
-    .split("@")[0]
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 30) || "team";
-  return `${base}-${Date.now()}`;
+// 조직 이름 → URL 안전 slug (예: "Acme Team QA" → "acme-team-qa")
+export function generateOrgSlug(name: string): string {
+  return (
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 48) || "team"
+  );
+}
+
+// DB 중복 확인 후 고유 slug 반환 (예: acme-team, acme-team-2, acme-team-3, ...)
+export async function generateUniqueOrgSlug(name: string): Promise<string> {
+  const base = generateOrgSlug(name);
+  let slug = base;
+  let suffix = 2;
+  while (await prisma.organization.findUnique({ where: { slug } })) {
+    slug = `${base}-${suffix}`;
+    suffix++;
+  }
+  return slug;
 }
 
 export async function provisionUserAndOrg(params: {
@@ -24,7 +37,7 @@ export async function provisionUserAndOrg(params: {
 
   const displayName = name || email.split("@")[0];
   const orgDisplayName = orgName || `${displayName}의 팀`;
-  const slug = generateOrgSlug(email);
+  const slug = await generateUniqueOrgSlug(orgDisplayName);
 
   return prisma.$transaction(async (tx) => {
     const organization = await tx.organization.create({
