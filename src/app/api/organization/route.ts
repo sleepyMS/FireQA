@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
       slug: org.slug,
       plan: org.plan,
       memberCount: org._count.memberships,
+      role: user.role,
     });
   } catch (error) {
     console.error("조직 정보 조회 오류:", error);

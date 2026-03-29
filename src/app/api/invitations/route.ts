@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
 
   logActivity({ organizationId: user.organizationId, actorId: user.userId, action: ActivityAction.MEMBER_INVITED, metadata: { email: email ?? null, role } });
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
   const inviteUrl = `${baseUrl}/invite?token=${rawToken}`;
 
   // 이메일 지정 초대 시 Brevo로 초대 메일 발송 (fire-and-forget)

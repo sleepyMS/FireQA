@@ -27,6 +27,7 @@ interface OrgInfo {
   slug: string;
   plan: string;
   memberCount: number;
+  role: string;
 }
 
 const SLUG_REGEX = /^[a-z0-9-]+$/;
@@ -40,6 +41,7 @@ export default function SettingsGeneral() {
   const [saving, setSaving] = useState(false);
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [deleteConfirmName, setDeleteConfirmName] = useState("");
   const [pluginToken, setPluginToken] = useState<{ hasToken: boolean; lastUsedAt: string | null; createdAt: string | null } | null>(null);
   const [generatedToken, setGeneratedToken] = useState<string | null>(null);
   const [tokenCopied, setTokenCopied] = useState(false);
@@ -47,6 +49,8 @@ export default function SettingsGeneral() {
 
   const { t, locale, setLocale } = useLocale();
   const isDirty = org !== null && (name !== org.name || slug !== org.slug);
+  const isOwner = org?.role === "owner";
+  const isAlone = (org?.memberCount ?? 0) <= 1;
   const slugValid = SLUG_REGEX.test(slug);
 
   useEffect(() => {
@@ -313,9 +317,15 @@ export default function SettingsGeneral() {
       <Card className="border-destructive/30">
         <CardContent className="flex items-center justify-between py-4">
           <div>
-            <p className="text-sm font-semibold text-destructive">조직 나가기</p>
+            <p className="text-sm font-semibold text-destructive">
+              {isOwner ? "조직 삭제" : "조직 나가기"}
+            </p>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              나가면 이 조직의 데이터에 접근할 수 없습니다
+              {isOwner && !isAlone
+                ? `조직원 ${org!.memberCount - 1}명을 포함한 모든 데이터가 영구 삭제됩니다`
+                : isOwner
+                  ? "조직과 모든 데이터가 영구 삭제됩니다"
+                  : "나가면 이 조직의 데이터에 접근할 수 없습니다"}
             </p>
           </div>
           <Button
@@ -323,28 +333,46 @@ export default function SettingsGeneral() {
             size="sm"
             onClick={() => setLeaveOpen(true)}
           >
-            나가기
+            {isOwner ? "삭제" : "나가기"}
           </Button>
         </CardContent>
       </Card>
 
-      <Dialog open={leaveOpen} onOpenChange={setLeaveOpen}>
+      <Dialog open={leaveOpen} onOpenChange={(open) => { setLeaveOpen(open); if (!open) setDeleteConfirmName(""); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>조직 나가기</DialogTitle>
+            <DialogTitle>{isOwner ? "조직 삭제" : "조직 나가기"}</DialogTitle>
             <DialogDescription>
-              정말로 &quot;{org?.name}&quot; 조직을 나가시겠습니까? 이 작업은
-              되돌릴 수 없습니다.
+              {isOwner && !isAlone
+                ? `"${org?.name}" 조직원 ${org!.memberCount - 1}명을 포함한 모든 데이터가 영구 삭제됩니다. 이 작업은 되돌릴 수 없습니다.`
+                : isOwner
+                  ? `"${org?.name}" 조직과 모든 데이터가 영구 삭제됩니다. 이 작업은 되돌릴 수 없습니다.`
+                  : `정말로 "${org?.name}" 조직을 나가시겠습니까? 이 작업은 되돌릴 수 없습니다.`}
             </DialogDescription>
           </DialogHeader>
+          {isOwner && (
+            <div className="space-y-2">
+              <Label className="text-sm">
+                확인을 위해 조직 이름 <span className="font-semibold">{org?.name}</span>을 입력하세요
+              </Label>
+              <Input
+                value={deleteConfirmName}
+                onChange={(e) => setDeleteConfirmName(e.target.value)}
+                placeholder={org?.name}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && deleteConfirmName === org?.name && !leaving) handleLeave();
+                }}
+              />
+            </div>
+          )}
           <DialogFooter>
             <DialogClose render={<Button variant="outline" />}>취소</DialogClose>
             <Button
               variant="destructive"
               onClick={handleLeave}
-              disabled={leaving}
+              disabled={leaving || (isOwner && deleteConfirmName !== org?.name)}
             >
-              {leaving ? "처리 중..." : "나가기"}
+              {leaving ? "처리 중..." : isOwner ? "삭제" : "나가기"}
             </Button>
           </DialogFooter>
         </DialogContent>

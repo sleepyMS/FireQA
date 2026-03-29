@@ -11,6 +11,14 @@ export type AuthUser = {
   role: string;
 };
 
+// org 없이 Supabase 세션만으로 식별되는 유저 (온보딩 전 상태 등)
+export type SessionUser = {
+  supabaseId: string;
+  userId: string | null; // DB에 아직 없으면 null
+  email: string;
+  name: string | null;
+};
+
 // AuthUser와 달리 멤버십 전체를 보관해 조직 전환 시 캐시 내에서 해결
 type CachedUser = {
   id: string;
@@ -29,6 +37,13 @@ export function updateCachedActiveOrg(userId: string, organizationId: string) {
   const supabaseId = prismaIdToSupabaseId.get(userId);
   if (!supabaseId) return;
   userDataCache.update(supabaseId, (cached) => ({ ...cached, activeOrganizationId: organizationId }));
+}
+
+// 조직 삭제 등 캐시를 완전히 무효화해야 할 때 사용
+export function invalidateCachedUser(userId: string) {
+  const supabaseId = prismaIdToSupabaseId.get(userId);
+  if (!supabaseId) return;
+  userDataCache.delete(supabaseId);
 }
 
 // 새 조직 생성 시 멤버십 추가 + activeOrganizationId 업데이트 (DB 재조회 없음)
@@ -159,4 +174,30 @@ async function resolveAuthUser(
     email: user.email,
     name: user.name,
   };
+}
+
+/**
+ * org 멤버십 없이 Supabase 세션만으로 유저를 반환한다.
+ * 온보딩 전이거나 모든 org를 탈퇴한 유저도 인증된 상태로 처리해야 하는 엔드포인트에서 사용.
+ */
+export async function getSessionUser(): Promise<SessionUser | null> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data: { user: supabaseUser } } = await supabase.auth.getUser();
+    if (!supabaseUser) return null;
+
+    const dbUser = await prisma.user.findUnique({
+      where: { supabaseId: supabaseUser.id },
+      select: { id: true, email: true, name: true },
+    });
+
+    if (!dbUser) {
+      // DB에 아직 없는 경우 (OAuth 신규 가입 직후 등) — Supabase 정보로 최소 반환
+      return { supabaseId: supabaseUser.id, userId: null, email: supabaseUser.email ?? "", name: null };
+    }
+
+    return { supabaseId: supabaseUser.id, userId: dbUser.id, email: dbUser.email, name: dbUser.name };
+  } catch {
+    return null;
+  }
 }

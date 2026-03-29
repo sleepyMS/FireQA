@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { getCurrentUser, invalidateCachedUser } from "@/lib/auth/get-current-user";
 import { UserRole } from "@/types/enums";
 
 export async function POST(request: NextRequest) {
@@ -11,21 +11,13 @@ export async function POST(request: NextRequest) {
     }
 
     if (user.role === UserRole.OWNER) {
-      const memberCount = await prisma.organizationMembership.count({
-        where: { organizationId: user.organizationId },
-      });
-
-      if (memberCount > 1) {
-        return NextResponse.json(
-          { error: "소유권을 이전한 후 다시 시도하세요." },
-          { status: 400 }
-        );
-      }
-
+      // CASCADE로 멤버십, 프로젝트 등 관련 데이터 일괄 삭제
       await prisma.organization.delete({
         where: { id: user.organizationId },
       });
 
+      // 삭제된 조직이 캐시에 남아 stale 데이터를 반환하지 않도록 무효화
+      invalidateCachedUser(user.userId);
       return NextResponse.json({ success: true });
     }
 
@@ -49,6 +41,8 @@ export async function POST(request: NextRequest) {
       });
     });
 
+    // 탈퇴한 멤버십이 캐시에 남아 stale 데이터를 반환하지 않도록 무효화
+    invalidateCachedUser(user.userId);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("조직 탈퇴 오류:", error);

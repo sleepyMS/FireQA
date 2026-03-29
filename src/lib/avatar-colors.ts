@@ -7,5 +7,5 @@ const AVATAR_COLORS = [
 ] as const;
 
 export function getAvatarColor(name: string): string {
-  return AVATAR_COLORS[(name.charCodeAt(0) || 0) % AVATAR_COLORS.length];
+  return AVATAR_COLORS[((name?.charCodeAt(0)) || 0) % AVATAR_COLORS.length];
 }

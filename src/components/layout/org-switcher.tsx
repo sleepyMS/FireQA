@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import useSWR from "swr";
 import { SWR_KEYS } from "@/lib/swr/keys";
-import { ChevronsUpDown, Check, Plus } from "lucide-react";
+import { ChevronsUpDown, Check, Plus, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -38,6 +38,15 @@ interface OrgSwitcherProps {
   initialActiveOrgId: string | null;
 }
 
+function extractInviteToken(input: string): string {
+  try {
+    const url = new URL(input);
+    return url.searchParams.get("token") ?? input;
+  } catch {
+    return input;
+  }
+}
+
 function deriveSlug(name: string): string {
   return name
     .toLowerCase()
@@ -65,6 +74,8 @@ export function OrgSwitcher({ initialMemberships, initialActiveOrgId }: OrgSwitc
   const [newOrgSlug, setNewOrgSlug] = useState("");
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [joinOpen, setJoinOpen] = useState(false);
+  const [inviteInput, setInviteInput] = useState("");
 
   function handleNameChange(name: string) {
     setNewOrgName(name);
@@ -156,8 +167,48 @@ export function OrgSwitcher({ initialMemberships, initialActiveOrgId }: OrgSwitc
             <Plus className="h-4 w-4" />
             새 팀 만들기
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setJoinOpen(true)}>
+            <LogIn className="h-4 w-4" />
+            초대 코드로 참여
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <Dialog open={joinOpen} onOpenChange={(open) => { setJoinOpen(open); if (!open) setInviteInput(""); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>초대 코드로 참여</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>초대 링크 또는 코드</Label>
+            <Input
+              value={inviteInput}
+              onChange={(e) => setInviteInput(e.target.value)}
+              placeholder="초대 링크를 붙여넣으세요"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && inviteInput.trim()) {
+                  router.push(`/invite?token=${extractInviteToken(inviteInput.trim())}`);
+                  setJoinOpen(false);
+                  setInviteInput("");
+                }
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>취소</DialogClose>
+            <Button
+              disabled={!inviteInput.trim()}
+              onClick={() => {
+                router.push(`/invite?token=${extractInviteToken(inviteInput.trim())}`);
+                setJoinOpen(false);
+                setInviteInput("");
+              }}
+            >
+              참여하기
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={createOpen} onOpenChange={(open) => {
           setCreateOpen(open);

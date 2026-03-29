@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,16 @@ const spinner = (
   </Card>
 );
 
+// 초대 링크(URL) 또는 토큰 문자열 모두 수용
+function extractToken(input: string): string {
+  try {
+    const url = new URL(input);
+    return url.searchParams.get("token") ?? input;
+  } catch {
+    return input;
+  }
+}
+
 function OnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -26,6 +37,8 @@ function OnboardingContent() {
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [inviteToken, setInviteToken] = useState("");
+  const [showInvite, setShowInvite] = useState(false);
 
   useEffect(() => {
     fetch("/api/user/memberships")
@@ -123,6 +136,48 @@ function OnboardingContent() {
             {submitting ? "생성 중..." : "시작하기 →"}
           </Button>
         </form>
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t" />
+          </div>
+          <div className="relative flex justify-center text-xs">
+            <span className="bg-card px-2 text-muted-foreground">또는</span>
+          </div>
+        </div>
+
+        {!showInvite ? (
+          <button
+            type="button"
+            onClick={() => setShowInvite(true)}
+            className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            초대 코드로 기존 팀 참여하기
+          </button>
+        ) : (
+          <div className="space-y-2">
+            <Label htmlFor="inviteToken">초대 코드 또는 초대 링크</Label>
+            <Input
+              id="inviteToken"
+              value={inviteToken}
+              onChange={(e) => setInviteToken(e.target.value)}
+              placeholder="초대 링크를 붙여넣으세요"
+            />
+            <Link
+              href={inviteToken.trim() ? `/invite?token=${extractToken(inviteToken.trim())}` : "#"}
+              className="block"
+            >
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                disabled={!inviteToken.trim()}
+              >
+                초대 수락하기 →
+              </Button>
+            </Link>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
