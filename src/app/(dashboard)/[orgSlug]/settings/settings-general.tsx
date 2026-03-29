@@ -135,7 +135,7 @@ export default function SettingsGeneral() {
       const res = await fetch("/api/organization/leave", { method: "POST" });
       if (res.ok) {
         toast.success("조직에서 나갔습니다.");
-        router.push("/dashboard");
+        router.push("/");
       } else {
         const data = await res.json();
         toast.error(data.error || "조직 탈퇴에 실패했습니다.");

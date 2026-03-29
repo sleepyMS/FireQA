@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import {
   FileText,
   GitBranch,
@@ -70,6 +70,7 @@ export function HistoryClient({
   projectName?: string;
 }) {
   const router = useRouter();
+  const { orgSlug } = useParams<{ orgSlug?: string }>();
 
   const params = new URLSearchParams({ all: "1" });
   if (type) params.set("type", type);
@@ -131,7 +132,7 @@ export function HistoryClient({
   const [deleting, setDeleting] = useState(false);
 
   const handleNavigate = (job: Job) => {
-    router.push(`${JOB_TYPE_PATH[job.type] || "/generate"}/${job.id}`);
+    router.push(`${orgSlug ? `/${orgSlug}` : ""}${JOB_TYPE_PATH[job.type] || "/generate"}/${job.id}`);
   };
 
   const openEdit = (job: Job) => {
@@ -191,7 +192,8 @@ export function HistoryClient({
             variant={type === f.value ? "default" : "outline"}
             className="cursor-pointer px-3 py-1"
             onClick={() => {
-              const base = f.value ? `/history?type=${f.value}` : "/history";
+              const orgPrefix = orgSlug ? `/${orgSlug}` : "";
+              const base = f.value ? `${orgPrefix}/history?type=${f.value}` : `${orgPrefix}/history`;
               router.push(projectId ? `${base}${f.value ? "&" : "?"}projectId=${projectId}` : base);
             }}
           >

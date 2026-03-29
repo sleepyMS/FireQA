@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import {
   Dialog,
@@ -110,6 +110,9 @@ function OverviewTab({
   jobCounts: JobCountMap;
   recentJobs: RecentJob[];
 }) {
+  const { orgSlug } = useParams<{ orgSlug?: string }>();
+  const orgPrefix = orgSlug ? `/${orgSlug}` : "";
+
   return (
     <div className="space-y-6">
       {/* 통계 카드 */}
@@ -135,7 +138,7 @@ function OverviewTab({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>최근 생성 이력</CardTitle>
-          <Link href={`/projects/${projectId}?tab=jobs`}>
+          <Link href={`${orgPrefix}/projects/${projectId}?tab=jobs`}>
             <Button variant="ghost" size="sm">
               전체 보기
             </Button>
@@ -152,7 +155,7 @@ function OverviewTab({
               {recentJobs.map((job) => (
                 <Link
                   key={job.id}
-                  href={`${JOB_TYPE_PATH[job.type] ?? "/generate"}/${job.id}`}
+                  href={`${orgPrefix}${JOB_TYPE_PATH[job.type] ?? "/generate"}/${job.id}`}
                   className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors"
                 >
                   <div className="flex items-center gap-3">
@@ -187,7 +190,7 @@ function OverviewTab({
           <CardContent>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {QUICK_ACTIONS.map(({ href, label, color, bg }) => (
-                <Link key={href} href={`${href}?projectId=${projectId}`}>
+                <Link key={href} href={`${orgPrefix}${href}?projectId=${projectId}`}>
                   <div
                     className={`flex items-center gap-2 rounded-lg border p-3 cursor-pointer hover:shadow-sm transition-shadow`}
                   >
@@ -223,6 +226,8 @@ const TYPE_FILTERS = [
 
 function JobsTab({ projectId }: { projectId: string }) {
   const router = useRouter();
+  const { orgSlug } = useParams<{ orgSlug?: string }>();
+  const orgPrefix = orgSlug ? `/${orgSlug}` : "";
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState("");
@@ -281,7 +286,7 @@ function JobsTab({ projectId }: { projectId: string }) {
               className="transition-shadow hover:shadow-md cursor-pointer"
               onClick={() =>
                 router.push(
-                  `${JOB_TYPE_PATH[job.type] ?? "/generate"}/${job.id}`
+                  `${orgPrefix}${JOB_TYPE_PATH[job.type] ?? "/generate"}/${job.id}`
                 )
               }
             >
@@ -305,7 +310,7 @@ function JobsTab({ projectId }: { projectId: string }) {
                     {STATUS_CONFIG[job.status]?.label ?? job.status}
                   </Badge>
                   <Link
-                    href={`${JOB_TYPE_PATH[job.type] ?? "/generate"}/${job.id}`}
+                    href={`${orgPrefix}${JOB_TYPE_PATH[job.type] ?? "/generate"}/${job.id}`}
                     onClick={(e) => e.stopPropagation()}
                   >
                     <Button variant="outline" size="sm">
@@ -428,6 +433,9 @@ export function ProjectTabs({
   recentJobs,
   uploads,
 }: ProjectTabsProps) {
+  const { orgSlug } = useParams<{ orgSlug?: string }>();
+  const orgPrefix = orgSlug ? `/${orgSlug}` : "";
+
   return (
     <div className="space-y-6">
       {/* 탭 내비게이션 */}
@@ -435,7 +443,7 @@ export function ProjectTabs({
         {TABS.map((t) => (
           <Link
             key={t.value}
-            href={`/projects/${projectId}?tab=${t.value}`}
+            href={`${orgPrefix}/projects/${projectId}?tab=${t.value}`}
             className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
               tab === t.value
                 ? "bg-background text-foreground shadow-sm"

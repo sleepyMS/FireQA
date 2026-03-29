@@ -189,7 +189,7 @@ function InviteContent() {
             </p>
             <p className="mt-1 text-sm text-muted-foreground">멤버로 추가되었습니다</p>
           </div>
-          <Link href="/dashboard">
+          <Link href="/">
             <Button className="w-full bg-emerald-600 hover:bg-emerald-700">
               대시보드로 이동 →
             </Button>

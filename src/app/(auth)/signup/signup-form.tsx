@@ -66,7 +66,7 @@ export default function SignupForm() {
     }
 
     const redirect = searchParams.get("redirect");
-    router.push(redirect || "/dashboard");
+    router.push(redirect || "/");
     router.refresh();
   }
 

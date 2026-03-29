@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
 import { ProjectHeader } from "@/components/projects/project-header";
 
@@ -22,6 +22,7 @@ export function ProjectHeaderClient({
   projectId,
 }: ProjectHeaderClientProps) {
   const router = useRouter();
+  const { orgSlug } = useParams<{ orgSlug?: string }>();
   const [project, setProject] = useState(initialProject);
 
   const handleUpdate = async (data: { name?: string; description?: string }) => {
@@ -81,7 +82,7 @@ export function ProjectHeaderClient({
       }
       toast.success("프로젝트가 삭제되었습니다.");
       // 삭제 후 프로젝트 목록으로 이동
-      router.push("/projects");
+      router.push(`${orgSlug ? `/${orgSlug}` : ""}/projects`);
     } catch {
       toast.error("네트워크 오류가 발생했습니다.");
     }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, useParams } from "next/navigation";
 import {
   Smartphone,
   Monitor,
@@ -53,6 +53,7 @@ type ProjectSelection =
 export default function WireframesPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { orgSlug } = useParams<{ orgSlug?: string }>();
   const [projectSelection, setProjectSelection] =
     useState<ProjectSelection | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -81,9 +82,9 @@ export default function WireframesPage() {
   // 완료 시 결과 페이지로 리다이렉트
   useEffect(() => {
     if (sse.result && sse.jobId) {
-      router.push(`/wireframes/${sse.jobId}`);
+      router.push(`${orgSlug ? `/${orgSlug}` : ""}/wireframes/${sse.jobId}`);
     }
-  }, [sse.result, sse.jobId, router]);
+  }, [sse.result, sse.jobId, router, orgSlug]);
 
   const handleFileSelected = (selectedFile: File) => {
     setFile(selectedFile);

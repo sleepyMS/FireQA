@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import {
   FileText,
   GitBranch,
@@ -62,6 +62,7 @@ export function RecentJobsPanel({
   initialJobs,
 }: RecentJobsPanelProps) {
   const router = useRouter();
+  const { orgSlug } = useParams<{ orgSlug?: string }>();
 
   const swrKey = SWR_KEYS.jobs(new URLSearchParams({ all: "1", type }).toString());
   const { data, isLoading: loading } = useSWR<{ jobs: Job[] }>(
@@ -74,7 +75,7 @@ export function RecentJobsPanel({
 
   const handleNavigate = (job: Job) => {
     const basePath = JOB_TYPE_PATH[job.type] || "/generate";
-    router.push(`${basePath}/${job.id}`);
+    router.push(`${orgSlug ? `/${orgSlug}` : ""}${basePath}/${job.id}`);
   };
 
   const config = TYPE_CONFIG[type] || TYPE_CONFIG["test-cases"];
@@ -91,7 +92,7 @@ export function RecentJobsPanel({
             variant="ghost"
             size="sm"
             className="text-xs text-muted-foreground"
-            onClick={() => router.push(`/history?type=${type}`)}
+            onClick={() => router.push(`${orgSlug ? `/${orgSlug}` : ""}/history?type=${type}`)}
           >
             전체 보기
             <ChevronRight className="ml-1 h-3 w-3" />
