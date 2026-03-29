@@ -4,12 +4,20 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   FileText,
   GitBranch,
   Smartphone,
   FileEdit,
   Search,
   Upload,
+  Download,
+  Eye,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -54,6 +62,7 @@ interface JobCountMap {
 interface ProjectTabsProps {
   projectId: string;
   projectName: string;
+  projectStatus: string;
   tab: string;
   // 개요 탭용 서버사이드 데이터
   jobCounts: JobCountMap;
@@ -92,10 +101,12 @@ const QUICK_ACTIONS = [
 
 function OverviewTab({
   projectId,
+  projectStatus,
   jobCounts,
   recentJobs,
 }: {
   projectId: string;
+  projectStatus: string;
   jobCounts: JobCountMap;
   recentJobs: RecentJob[];
 }) {
@@ -167,33 +178,35 @@ function OverviewTab({
         </CardContent>
       </Card>
 
-      {/* 빠른 생성 액션 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>생성하기</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {QUICK_ACTIONS.map(({ href, label, color, bg }) => (
-              <Link key={href} href={`${href}?projectId=${projectId}`}>
-                <div
-                  className={`flex items-center gap-2 rounded-lg border p-3 cursor-pointer hover:shadow-sm transition-shadow`}
-                >
-                  <div className={`rounded-md p-1.5 ${bg}`}>
-                    <JobTypeIcon type={
-                      href === "/generate" ? JobType.TEST_CASES
-                      : href === "/diagrams" ? JobType.DIAGRAMS
-                      : href === "/wireframes" ? JobType.WIREFRAMES
-                      : JobType.SPEC_IMPROVE
-                    } className={`h-4 w-4 ${color}`} />
+      {/* 빠른 생성 액션 — 삭제된 프로젝트는 표시 안 함 */}
+      {projectStatus !== "deleted" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>생성하기</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {QUICK_ACTIONS.map(({ href, label, color, bg }) => (
+                <Link key={href} href={`${href}?projectId=${projectId}`}>
+                  <div
+                    className={`flex items-center gap-2 rounded-lg border p-3 cursor-pointer hover:shadow-sm transition-shadow`}
+                  >
+                    <div className={`rounded-md p-1.5 ${bg}`}>
+                      <JobTypeIcon type={
+                        href === "/generate" ? JobType.TEST_CASES
+                        : href === "/diagrams" ? JobType.DIAGRAMS
+                        : href === "/wireframes" ? JobType.WIREFRAMES
+                        : JobType.SPEC_IMPROVE
+                      } className={`h-4 w-4 ${color}`} />
+                    </div>
+                    <span className="text-sm font-medium">{label}</span>
                   </div>
-                  <span className="text-sm font-medium">{label}</span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+                </Link>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
@@ -312,6 +325,20 @@ function JobsTab({ projectId }: { projectId: string }) {
 // ── 업로드 탭 ─────────────────────────────────────────────────────────────────
 
 function UploadsTab({ uploads }: { uploads: UploadRecord[] }) {
+  const [preview, setPreview] = useState<{ fileName: string; text: string } | null>(null);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+
+  async function openPreview(uploadId: string) {
+    setLoadingId(uploadId);
+    try {
+      const res = await fetch(`/api/uploads/${uploadId}`);
+      const data = await res.json() as { fileName: string; text: string };
+      setPreview(data);
+    } finally {
+      setLoadingId(null);
+    }
+  }
+
   if (uploads.length === 0) {
     return (
       <Card>
@@ -325,25 +352,62 @@ function UploadsTab({ uploads }: { uploads: UploadRecord[] }) {
   }
 
   return (
-    <div className="space-y-3">
-      {uploads.map((upload) => (
-        <Card key={upload.id}>
-          <CardHeader className="flex flex-row items-center gap-3 py-3">
-            <div className="rounded-md bg-muted p-2">
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{upload.fileName}</p>
-              <p className="text-xs text-muted-foreground">
-                {upload.fileType} &middot;{" "}
-                {(upload.fileSize / 1024).toFixed(1)} KB &middot;{" "}
-                {new Date(upload.createdAt).toLocaleDateString("ko-KR")}
-              </p>
-            </div>
-          </CardHeader>
-        </Card>
-      ))}
-    </div>
+    <>
+      <div className="space-y-3">
+        {uploads.map((upload) => (
+          <Card
+            key={upload.id}
+            className="cursor-pointer transition-shadow hover:shadow-md"
+            onClick={() => openPreview(upload.id)}
+          >
+            <CardHeader className="flex flex-row items-center gap-3 py-3">
+              <div className="rounded-md bg-muted p-2">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{upload.fileName}</p>
+                <p className="text-xs text-muted-foreground">
+                  {upload.fileType} &middot;{" "}
+                  {(upload.fileSize / 1024).toFixed(1)} KB &middot;{" "}
+                  {new Date(upload.createdAt).toLocaleDateString("ko-KR")}
+                </p>
+              </div>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  title="미리보기"
+                  disabled={loadingId === upload.id}
+                  onClick={(e) => { e.stopPropagation(); openPreview(upload.id); }}
+                >
+                  <Eye className="h-4 w-4" />
+                </Button>
+                <a
+                  href={`/api/uploads/${upload.id}?download=1`}
+                  download
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Button variant="ghost" size="icon-sm" title="텍스트 다운로드">
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </a>
+              </div>
+            </CardHeader>
+          </Card>
+        ))}
+      </div>
+
+      <Dialog open={!!preview} onOpenChange={(open) => !open && setPreview(null)}>
+        <DialogContent className="sm:max-w-[75vw] sm:w-[75vw] h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>{preview?.fileName}</DialogTitle>
+          </DialogHeader>
+          <pre className="flex-1 overflow-y-auto whitespace-pre-wrap break-words rounded-md bg-muted p-4 text-xs leading-relaxed">
+            {preview?.text}
+          </pre>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
@@ -358,6 +422,7 @@ const TABS = [
 export function ProjectTabs({
   projectId,
   projectName,
+  projectStatus,
   tab,
   jobCounts,
   recentJobs,
@@ -386,6 +451,7 @@ export function ProjectTabs({
       {tab === "overview" && (
         <OverviewTab
           projectId={projectId}
+          projectStatus={projectStatus}
           jobCounts={jobCounts}
           recentJobs={recentJobs}
         />

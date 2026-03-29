@@ -12,6 +12,7 @@ import {
   History,
   ChevronLeft,
   ChevronRight,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -45,6 +46,8 @@ interface DiagramState {
   improving: boolean;
   loaded: boolean;
 }
+
+const PLUGIN_ID = "1618296186536480339";
 
 export function DiagramResults({ jobId, diagrams }: DiagramResultsProps) {
   const [copied, setCopied] = useState<string | null>(null);
@@ -556,13 +559,21 @@ export function DiagramResults({ jobId, diagrams }: DiagramResultsProps) {
                   <pre className="max-h-[500px] overflow-auto rounded-md bg-muted p-4 text-xs">
                     {currentCode}
                   </pre>
-                  <div className="mt-4 rounded-md bg-blue-50 p-3 text-xs text-blue-700">
-                    <p className="font-medium">FigJam으로 가져오기</p>
-                    <p className="mt-1">
-                      1. Figma에서 FireQA 플러그인을 실행하거나
-                      <br />
-                      2. 위 코드를 복사하여 &quot;Mermaid to FigJam&quot;
-                      플러그인에 붙여넣기
+                  <div className="mt-4 space-y-2">
+                    <Button
+                      className="w-full gap-2"
+                      onClick={async function () {
+                        await navigator.clipboard.writeText(`FIREQA_JOB:${jobId}`);
+                        // figma:// 딥링크 시도 — 미설치 시 커뮤니티 페이지로 fallback
+                        const figmaUrl = `https://www.figma.com/community/plugin/${PLUGIN_ID}`;
+                        window.open(figmaUrl, "_blank");
+                      }}
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      FigJam에서 열기
+                    </Button>
+                    <p className="text-center text-[10px] text-muted-foreground">
+                      클릭하면 작업 ID가 클립보드에 복사됩니다 → 플러그인에서 &quot;웹에서 가져오기&quot; 클릭
                     </p>
                   </div>
                 </CardContent>

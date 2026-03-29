@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import type { ActivityLog } from "@/types/activity";
 
 interface ActivityTimelineProps {
-  // TODO: wire up when /api/activity supports ?projectId= filter
   projectId?: string;
 }
 
@@ -22,16 +21,17 @@ function SkeletonRow() {
   );
 }
 
-export function ActivityTimeline({ projectId: _projectId }: ActivityTimelineProps) {
+export function ActivityTimeline({ projectId }: ActivityTimelineProps) {
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
 
   const fetchLogs = useCallback(async (cursor?: string, signal?: AbortSignal) => {
-    const url = cursor
-      ? `/api/activity?limit=20&cursor=${encodeURIComponent(cursor)}`
-      : "/api/activity?limit=20";
+    const params = new URLSearchParams({ limit: "20" });
+    if (projectId) params.set("projectId", projectId);
+    if (cursor) params.set("cursor", cursor);
+    const url = `/api/activity?${params}`;
 
     const res = await fetch(url, { signal });
     if (!res.ok) throw new Error("활동 로그 조회 실패");
@@ -40,6 +40,8 @@ export function ActivityTimeline({ projectId: _projectId }: ActivityTimelineProp
 
   useEffect(() => {
     const controller = new AbortController();
+    setLogs([]);
+    setNextCursor(null);
     setLoading(true);
     fetchLogs(undefined, controller.signal)
       .then(({ logs: items, nextCursor: cursor }) => {
@@ -51,7 +53,7 @@ export function ActivityTimeline({ projectId: _projectId }: ActivityTimelineProp
       })
       .finally(() => setLoading(false));
     return () => controller.abort();
-  }, [fetchLogs]);
+  }, [fetchLogs, projectId]);
 
   const handleLoadMore = async () => {
     if (!nextCursor) return;

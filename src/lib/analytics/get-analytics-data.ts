@@ -14,20 +14,30 @@ export interface AnalyticsData {
   topMembers: { userId: string; name: string | null; email: string; count: number }[];
 }
 
-export async function getAnalyticsData(organizationId: string): Promise<AnalyticsData> {
+export async function getAnalyticsData(
+  organizationId: string,
+  projectId?: string,
+): Promise<AnalyticsData> {
   const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
   const orgDateFilter = {
     project: { organizationId },
+    ...(projectId ? { projectId } : {}),
     createdAt: { gte: thirtyDaysAgo },
   };
 
   const [summary, thisMonth, byStatus, byType, dailyJobDates, topProjects, memberJobCounts, memberships] =
     await Promise.all([
       prisma.generationJob.aggregate({ where: orgDateFilter, _count: true, _sum: { tokenUsage: true } }),
-      prisma.generationJob.count({ where: { project: { organizationId }, createdAt: { gte: thisMonthStart } } }),
+      prisma.generationJob.count({
+        where: {
+          project: { organizationId },
+          ...(projectId ? { projectId } : {}),
+          createdAt: { gte: thisMonthStart },
+        },
+      }),
       prisma.generationJob.groupBy({ by: ["status"], where: orgDateFilter, _count: true }),
       prisma.generationJob.groupBy({
         by: ["type"],
@@ -40,12 +50,15 @@ export async function getAnalyticsData(organizationId: string): Promise<Analytic
         where: orgDateFilter,
         select: { createdAt: true },
       }),
-      prisma.project.findMany({
-        where: { organizationId, status: "active" },
-        select: { id: true, name: true, _count: { select: { jobs: true } } },
-        orderBy: { jobs: { _count: "desc" } },
-        take: 5,
-      }),
+      // 단일 프로젝트 조회 시 topProjects 불필요
+      projectId
+        ? Promise.resolve([] as { id: string; name: string; _count: { jobs: number } }[])
+        : prisma.project.findMany({
+            where: { organizationId, status: "active" },
+            select: { id: true, name: true, _count: { select: { jobs: true } } },
+            orderBy: { jobs: { _count: "desc" } },
+            take: 5,
+          }),
       prisma.generationJob.groupBy({
         by: ["userId"],
         where: { ...orgDateFilter, userId: { not: null } },

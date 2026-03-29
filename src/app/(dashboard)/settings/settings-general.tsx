@@ -16,6 +16,7 @@ import {
   DialogTitle,
   DialogClose,
 } from "@/components/ui/dialog";
+import { Key } from "lucide-react";
 import { getAvatarColor } from "@/lib/avatar-colors";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import type { Locale } from "@/lib/i18n/messages";
@@ -39,18 +40,25 @@ export default function SettingsGeneral() {
   const [saving, setSaving] = useState(false);
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [pluginToken, setPluginToken] = useState<{ hasToken: boolean; lastUsedAt: string | null; createdAt: string | null } | null>(null);
+  const [generatedToken, setGeneratedToken] = useState<string | null>(null);
+  const [tokenCopied, setTokenCopied] = useState(false);
+  const [tokenLoading, setTokenLoading] = useState(false);
 
   const { t, locale, setLocale } = useLocale();
   const isDirty = org !== null && (name !== org.name || slug !== org.slug);
   const slugValid = SLUG_REGEX.test(slug);
 
   useEffect(() => {
-    fetch("/api/organization")
-      .then((r) => r.json())
-      .then((data) => {
-        setOrg(data);
-        setName(data.name);
-        setSlug(data.slug);
+    Promise.all([
+      fetch("/api/organization").then((r) => r.json()),
+      fetch("/api/user/plugin-token").then((r) => r.json()),
+    ])
+      .then(([orgData, tokenData]) => {
+        setOrg(orgData);
+        setName(orgData.name);
+        setSlug(orgData.slug);
+        setPluginToken(tokenData);
       })
       .catch(() => toast.error("조직 정보를 불러오지 못했습니다."))
       .finally(() => setLoading(false));
@@ -77,6 +85,42 @@ export default function SettingsGeneral() {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function handleGenerateToken() {
+    setTokenLoading(true);
+    try {
+      const res = await fetch("/api/user/plugin-token", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        setGeneratedToken(data.token);
+        setPluginToken({ hasToken: true, lastUsedAt: null, createdAt: new Date().toISOString() });
+      } else {
+        toast.error(data.error || "토큰 생성에 실패했습니다.");
+      }
+    } catch {
+      toast.error("네트워크 오류가 발생했습니다.");
+    } finally {
+      setTokenLoading(false);
+    }
+  }
+
+  async function handleRevokeToken() {
+    try {
+      await fetch("/api/user/plugin-token", { method: "DELETE" });
+      setPluginToken({ hasToken: false, lastUsedAt: null, createdAt: null });
+      setGeneratedToken(null);
+      toast.success("플러그인 토큰이 해제되었습니다.");
+    } catch {
+      toast.error("해제에 실패했습니다.");
+    }
+  }
+
+  async function handleCopyToken() {
+    if (!generatedToken) return;
+    await navigator.clipboard.writeText(generatedToken);
+    setTokenCopied(true);
+    setTimeout(() => setTokenCopied(false), 2000);
   }
 
   async function handleLeave() {
@@ -194,6 +238,58 @@ export default function SettingsGeneral() {
               </button>
             ))}
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <div className="flex items-center gap-3 border-b p-4">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-purple-100">
+            <Key className="h-4 w-4 text-purple-600" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold">Figma 플러그인 연동</p>
+            <p className="text-xs text-muted-foreground">
+              FigJam 플러그인에서 빠르게 연결할 토큰을 발급합니다
+            </p>
+          </div>
+        </div>
+        <CardContent className="space-y-3 pt-4">
+          {!generatedToken ? (
+            <>
+              {pluginToken?.hasToken && (
+                <div className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+                  토큰이 발급되어 있습니다.{pluginToken.lastUsedAt ? ` 마지막 사용: ${new Date(pluginToken.lastUsedAt).toLocaleDateString("ko-KR")}` : ""}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <Button size="sm" onClick={handleGenerateToken} disabled={tokenLoading}>
+                  {tokenLoading ? "발급 중..." : pluginToken?.hasToken ? "토큰 재발급" : "토큰 발급하기"}
+                </Button>
+                {pluginToken?.hasToken && (
+                  <Button size="sm" variant="outline" onClick={handleRevokeToken}>
+                    해제
+                  </Button>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-amber-700">
+                이 토큰은 지금만 표시됩니다. 복사 후 플러그인에 붙여넣으세요.
+              </p>
+              <div className="flex gap-2">
+                <code className="flex-1 truncate rounded-md bg-muted px-3 py-2 text-xs font-mono">
+                  {generatedToken}
+                </code>
+                <Button size="sm" variant="outline" onClick={handleCopyToken}>
+                  {tokenCopied ? "복사됨" : "복사"}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                플러그인 → 토큰으로 연결하기 → 붙여넣기
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

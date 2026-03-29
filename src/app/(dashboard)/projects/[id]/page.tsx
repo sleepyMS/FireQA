@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { ProjectHeaderClient } from "./project-header-client";
 import { ProjectTabs } from "./project-tabs";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
+import { Trash2, Archive } from "lucide-react";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -99,6 +100,20 @@ export default async function ProjectDetailPage({
         ]}
       />
 
+      {/* 삭제/보관 상태 배너 */}
+      {project.status === "deleted" && (
+        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <Trash2 className="h-4 w-4 shrink-0" />
+          이 프로젝트는 삭제되었습니다. 이력과 파일은 열람할 수 있지만 새로운 생성은 불가합니다.
+        </div>
+      )}
+      {project.status === "archived" && (
+        <div className="flex items-center gap-2 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-700">
+          <Archive className="h-4 w-4 shrink-0" />
+          이 프로젝트는 보관 중입니다.
+        </div>
+      )}
+
       {/* 헤더 — 클라이언트 컴포넌트 (인라인 편집, 보관, 삭제) */}
       <ProjectHeaderClient project={projectData} projectId={id} />
 
@@ -106,6 +121,7 @@ export default async function ProjectDetailPage({
       <ProjectTabs
         projectId={id}
         projectName={project.name}
+        projectStatus={project.status}
         tab={tab}
         jobCounts={jobCounts}
         recentJobs={recentJobs}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
@@ -30,9 +30,6 @@ function buildNavItems(nav: Messages["nav"]) {
   return [
     { label: nav.dashboard, href: "/dashboard", icon: LayoutDashboard },
     { label: nav.projects, href: "/projects", icon: FolderOpen },
-    { label: nav.history, href: "/history", icon: Clock },
-    { label: nav.activity, href: "/activity", icon: Activity },
-    { label: nav.analytics, href: "/analytics", icon: BarChart2 },
     { label: nav.templates, href: "/templates", icon: Settings },
     { label: nav.guide, href: "/guide", icon: BookOpen },
     { label: nav.settings, href: "/settings", icon: Settings2 },
@@ -46,7 +43,9 @@ function buildProjectNavItems(projectId: string) {
     { label: "다이어그램", href: `/diagrams?projectId=${projectId}`, icon: GitBranch },
     { label: "와이어프레임", href: `/wireframes?projectId=${projectId}`, icon: Smartphone },
     { label: "기획서 개선", href: `/improve?projectId=${projectId}`, icon: FileEdit },
-    { label: "생성 결과", href: `/projects/${projectId}?tab=jobs`, icon: Clock },
+    { label: "생성 이력", href: `/history?projectId=${projectId}`, icon: Clock },
+    { label: "활동 로그", href: `/activity?projectId=${projectId}`, icon: Activity },
+    { label: "분석", href: `/analytics?projectId=${projectId}`, icon: BarChart2 },
     { label: "파일", href: `/projects/${projectId}?tab=uploads`, icon: FolderOpen },
   ];
 }
@@ -69,10 +68,9 @@ function isProjectNavActive(
   if (item.href.startsWith("/diagrams")) return pathname === "/diagrams";
   if (item.href.startsWith("/wireframes")) return pathname === "/wireframes";
   if (item.href.startsWith("/improve")) return pathname === "/improve";
-  // /projects/{id}?tab=jobs
-  if (item.label === "생성 결과") {
-    return pathname === `/projects/${projectId}` && searchParams.get("tab") === "jobs";
-  }
+  if (item.label === "생성 이력") return pathname === "/history";
+  if (item.label === "활동 로그") return pathname === "/activity";
+  if (item.label === "분석") return pathname === "/analytics";
   // /projects/{id}?tab=uploads
   if (item.label === "파일") {
     return pathname === `/projects/${projectId}` && searchParams.get("tab") === "uploads";
@@ -94,7 +92,15 @@ export function Sidebar({ initialMemberships, initialActiveOrgId }: SidebarProps
   const navItems = buildNavItems(t.nav);
 
   const projectMatch = pathname.match(/^\/projects\/([^/]+)/);
-  const currentProjectId = projectMatch?.[1] ?? searchParams.get("projectId");
+  const urlProjectId = projectMatch?.[1] ?? searchParams.get("projectId");
+
+  // 마지막으로 방문한 프로젝트 ID를 유지 — 이력/설정 등 글로벌 페이지로 이동해도 서브 메뉴 유지
+  const [lastProjectId, setLastProjectId] = useState<string | null>(null);
+  useEffect(() => {
+    if (urlProjectId) setLastProjectId(urlProjectId);
+  }, [urlProjectId]);
+
+  const currentProjectId = urlProjectId ?? lastProjectId;
   const projectNavItems = currentProjectId ? buildProjectNavItems(currentProjectId) : [];
 
   const navContent = (

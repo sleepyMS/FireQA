@@ -60,15 +60,20 @@ export function HistoryClient({
   initialJobs,
   initialHasMore,
   type,
+  projectId,
+  projectName,
 }: {
   initialJobs: Job[];
   initialHasMore: boolean;
   type: string;
+  projectId?: string;
+  projectName?: string;
 }) {
   const router = useRouter();
 
   const params = new URLSearchParams({ all: "1" });
   if (type) params.set("type", type);
+  if (projectId) params.set("projectId", projectId);
   const swrKey = SWR_KEYS.jobs(params.toString());
 
   const { data, mutate } = useSWR<{ jobs: Job[]; hasMore: boolean }>(swrKey, {
@@ -79,7 +84,7 @@ export function HistoryClient({
   const [hasMoreExtra, setHasMoreExtra] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  // type 변경 시 로드된 추가 페이지 초기화
+  // type/projectId 변경 시 로드된 추가 페이지 초기화
   const prevTypeRef = useRef(type);
   useEffect(() => {
     if (prevTypeRef.current !== type) {
@@ -99,6 +104,7 @@ export function HistoryClient({
     try {
       const moreParams = new URLSearchParams({ all: "1" });
       if (type) moreParams.set("type", type);
+      if (projectId) moreParams.set("projectId", projectId);
       moreParams.set("cursor", cursor);
       const res = await fetch(`/api/jobs?${moreParams}`);
       const moreData = await res.json() as { jobs: Job[]; hasMore: boolean };
@@ -170,9 +176,11 @@ export function HistoryClient({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">생성 이력</h2>
+        <h2 className="text-2xl font-bold tracking-tight">
+          생성 이력{projectName ? ` — ${projectName}` : ""}
+        </h2>
         <p className="text-muted-foreground">
-          모든 TC 생성, 다이어그램, 와이어프레임, 기획서 개선 이력을 확인합니다.
+          {projectId ? `${projectName ?? "이 프로젝트"}의 생성 이력을 확인합니다.` : "모든 TC 생성, 다이어그램, 와이어프레임, 기획서 개선 이력을 확인합니다."}
         </p>
       </div>
 
@@ -182,7 +190,10 @@ export function HistoryClient({
             key={f.value}
             variant={type === f.value ? "default" : "outline"}
             className="cursor-pointer px-3 py-1"
-            onClick={() => router.push(f.value ? `/history?type=${f.value}` : "/history")}
+            onClick={() => {
+              const base = f.value ? `/history?type=${f.value}` : "/history";
+              router.push(projectId ? `${base}${f.value ? "&" : "?"}projectId=${projectId}` : base);
+            }}
           >
             {f.icon}
             {f.label}

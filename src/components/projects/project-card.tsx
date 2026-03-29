@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { MoreHorizontal, Archive, ArchiveRestore, Trash2 } from "lucide-react";
 import {
@@ -62,12 +63,16 @@ export function ProjectCard({
   onRestore,
 }: ProjectCardProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const router = useRouter();
 
   const lastUpdated = new Date(project.updatedAt).toLocaleDateString("ko-KR");
 
   return (
     <>
-      <Card className="cursor-pointer transition-shadow hover:shadow-md">
+      <Card
+        className="cursor-pointer transition-shadow hover:shadow-md"
+        onClick={() => router.push(`/projects/${project.id}`)}
+      >
         <CardHeader>
           <CardTitle>
             <Link
@@ -92,7 +97,6 @@ export function ProjectCard({
                     variant="ghost"
                     size="icon-sm"
                     className="shrink-0"
-                    // 카드 클릭 이벤트와 분리
                     onClick={(e) => e.stopPropagation()}
                   />
                 }

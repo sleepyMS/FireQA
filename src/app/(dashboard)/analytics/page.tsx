@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { prisma } from "@/lib/db";
 import { getAnalyticsData, type AnalyticsData } from "@/lib/analytics/get-analytics-data";
 import { Card, CardContent } from "@/components/ui/card";
 import { JOB_TYPE_LABEL } from "@/types/enums";
@@ -58,11 +59,22 @@ function DailyChart({ daily }: { daily: AnalyticsData["daily"] }) {
   );
 }
 
-export default async function AnalyticsPage() {
+export default async function AnalyticsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ projectId?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) redirect("/onboarding");
 
-  const data = await getAnalyticsData(user.organizationId);
+  const { projectId } = await searchParams;
+
+  const [data, projectRow] = await Promise.all([
+    getAnalyticsData(user.organizationId, projectId),
+    projectId
+      ? prisma.project.findUnique({ where: { id: projectId }, select: { name: true } })
+      : null,
+  ]);
   const { summary, byType, daily, topProjects, topMembers } = data;
 
   const successRate =
@@ -77,8 +89,12 @@ export default async function AnalyticsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">분석</h2>
-        <p className="text-muted-foreground">최근 30일 기준</p>
+        <h2 className="text-2xl font-bold tracking-tight">
+          분석{projectRow ? ` — ${projectRow.name}` : ""}
+        </h2>
+        <p className="text-muted-foreground">
+          {projectId ? `${projectRow?.name ?? "이 프로젝트"} · 최근 30일 기준` : "최근 30일 기준"}
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -96,7 +112,7 @@ export default async function AnalyticsPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className={`grid gap-4 ${projectId ? "md:grid-cols-2" : "md:grid-cols-3"}`}>
         <Card>
           <CardContent className="space-y-3 pt-4">
             <p className="text-sm font-semibold">타입별 생성</p>
@@ -110,18 +126,20 @@ export default async function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="space-y-3 pt-4">
-            <p className="text-sm font-semibold">프로젝트별 생성 (상위 5)</p>
-            {topProjects.length === 0 ? (
-              <p className="text-xs text-muted-foreground">데이터 없음</p>
-            ) : (
-              topProjects.map((p) => (
-                <HBar key={p.id} label={p.name} count={p.count} max={maxProject} />
-              ))
-            )}
-          </CardContent>
-        </Card>
+        {!projectId && (
+          <Card>
+            <CardContent className="space-y-3 pt-4">
+              <p className="text-sm font-semibold">프로젝트별 생성 (상위 5)</p>
+              {topProjects.length === 0 ? (
+                <p className="text-xs text-muted-foreground">데이터 없음</p>
+              ) : (
+                topProjects.map((p) => (
+                  <HBar key={p.id} label={p.name} count={p.count} max={maxProject} />
+                ))
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardContent className="space-y-3 pt-4">

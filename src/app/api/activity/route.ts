@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
     const limitParam = parseInt(searchParams.get("limit") || "50", 10);
     const limit = isNaN(limitParam) || limitParam < 1 ? 50 : Math.min(limitParam, 100);
     const cursor = searchParams.get("cursor") || "";
+    const projectId = searchParams.get("projectId") || undefined;
 
     // 커서 파싱: "ISO날짜_cuid" 형식
     let cursorDate: Date | undefined;
@@ -33,6 +34,7 @@ export async function GET(request: NextRequest) {
 
     const where = {
       organizationId: user.organizationId,
+      ...(projectId ? { projectId } : {}),
       ...(cursorDate && cursorId
         ? {
             OR: [
@@ -56,16 +58,31 @@ export async function GET(request: NextRequest) {
       ? `${items[items.length - 1].createdAt.toISOString()}_${items[items.length - 1].id}`
       : null;
 
+    // actorId → 이름/이메일 매핑
+    const actorIds = [...new Set(items.map((i) => i.actorId).filter(Boolean))] as string[];
+    const actors = actorIds.length
+      ? await prisma.user.findMany({
+          where: { id: { in: actorIds } },
+          select: { id: true, name: true, email: true },
+        })
+      : [];
+    const actorMap = new Map(actors.map((a) => [a.id, a]));
+
     return NextResponse.json({
-      logs: items.map((log) => ({
-        id: log.id,
-        action: log.action,
-        actorId: log.actorId,
-        projectId: log.projectId,
-        jobId: log.jobId,
-        metadata: JSON.parse(log.metadata) as Record<string, unknown>,
-        createdAt: log.createdAt.toISOString(),
-      })),
+      logs: items.map((log) => {
+        const actor = log.actorId ? actorMap.get(log.actorId) : undefined;
+        return {
+          id: log.id,
+          action: log.action,
+          actorId: log.actorId,
+          actorName: actor?.name ?? null,
+          actorEmail: actor?.email ?? null,
+          projectId: log.projectId,
+          jobId: log.jobId,
+          metadata: JSON.parse(log.metadata) as Record<string, unknown>,
+          createdAt: log.createdAt.toISOString(),
+        };
+      }),
       nextCursor,
     });
   } catch (error) {

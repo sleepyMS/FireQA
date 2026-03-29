@@ -18,22 +18,28 @@ const jobSelect = {
 export default async function HistoryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string }>;
+  searchParams: Promise<{ type?: string; projectId?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/onboarding");
 
-  const { type = "" } = await searchParams;
+  const { type = "", projectId } = await searchParams;
 
-  const jobs = await prisma.generationJob.findMany({
-    where: {
-      project: { organizationId: user.organizationId },
-      ...(type ? { type } : {}),
-    },
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-    select: jobSelect,
-    take: 51,
-  });
+  const [jobs, projectRow] = await Promise.all([
+    prisma.generationJob.findMany({
+      where: {
+        project: { organizationId: user.organizationId },
+        ...(projectId ? { projectId } : {}),
+        ...(type ? { type } : {}),
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      select: jobSelect,
+      take: 51,
+    }),
+    projectId
+      ? prisma.project.findUnique({ where: { id: projectId }, select: { name: true } })
+      : null,
+  ]);
 
   const hasMore = jobs.length === 51;
   const initialJobs: Job[] = jobs.slice(0, 50).map((j) => ({
@@ -46,5 +52,13 @@ export default async function HistoryPage({
     upload: j.upload,
   }));
 
-  return <HistoryClient initialJobs={initialJobs} initialHasMore={hasMore} type={type} />;
+  return (
+    <HistoryClient
+      initialJobs={initialJobs}
+      initialHasMore={hasMore}
+      type={type}
+      projectId={projectId}
+      projectName={projectRow?.name}
+    />
+  );
 }
