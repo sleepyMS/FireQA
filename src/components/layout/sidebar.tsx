@@ -98,12 +98,13 @@ export function Sidebar({ initialMemberships, initialActiveOrgId }: SidebarProps
   const projectMatch = pathname.match(/^\/[^/]+\/projects\/([^/?]+)/);
   const urlProjectId = projectMatch?.[1] ?? searchParams.get("projectId");
 
-  const [lastProjectId, setLastProjectId] = useState<string | null>(null);
+  const [lastProjectEntry, setLastProjectEntry] = useState<{ orgSlug: string; projectId: string } | null>(null);
   useEffect(() => {
-    if (urlProjectId) setLastProjectId(urlProjectId);
-  }, [urlProjectId]);
+    if (urlProjectId) setLastProjectEntry({ orgSlug, projectId: urlProjectId });
+  }, [urlProjectId, orgSlug]);
 
-  const currentProjectId = urlProjectId ?? lastProjectId;
+  // 다른 조직으로 전환 시 lastProjectEntry 무효화 → 프로젝트 nav 숨김
+  const currentProjectId = urlProjectId ?? (lastProjectEntry?.orgSlug === orgSlug ? lastProjectEntry.projectId : null);
   const projectNavItems = currentProjectId ? buildProjectNavItems(currentProjectId, orgSlug) : [];
 
   const navContent = (
