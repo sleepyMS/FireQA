@@ -20,6 +20,7 @@ import { Key } from "lucide-react";
 import { getAvatarColor } from "@/lib/avatar-colors";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import type { Locale } from "@/lib/i18n/messages";
+import { SLUG_REGEX } from "@/lib/slug";
 
 interface OrgInfo {
   id: string;
@@ -30,7 +31,6 @@ interface OrgInfo {
   role: string;
 }
 
-const SLUG_REGEX = /^[a-z0-9-]+$/;
 
 export default function SettingsGeneral() {
   const router = useRouter();
@@ -137,11 +137,12 @@ export default function SettingsGeneral() {
     setLeaving(true);
     try {
       const res = await fetch("/api/organization/leave", { method: "POST" });
+      const data = await res.json();
       if (res.ok) {
         toast.success("조직에서 나갔습니다.");
-        router.push("/");
+        // "/" 경유 없이 서버가 계산한 다음 목적지로 바로 이동 (루프 방지)
+        router.push(data.redirectTo ?? "/onboarding");
       } else {
-        const data = await res.json();
         toast.error(data.error || "조직 탈퇴에 실패했습니다.");
       }
     } catch {

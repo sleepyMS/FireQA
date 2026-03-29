@@ -26,7 +26,7 @@ function getCorsHeaders(request: NextRequest): Record<string, string> {
     origin === "null";
 
   return {
-    "Access-Control-Allow-Origin": isAllowed ? origin || "*" : "",
+    "Access-Control-Allow-Origin": isAllowed ? (origin === "null" ? "*" : origin!) : "",
     "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
     "Access-Control-Max-Age": "86400",

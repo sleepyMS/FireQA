@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Input } from "@/components/ui/input";
 import useSWR from "swr";
 import { SWR_KEYS } from "@/lib/swr/keys";
@@ -27,6 +28,19 @@ export function ProjectSelector({
   const [inputValue, setInputValue] = useState(value?.name || "");
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const dropdownStyleRef = useRef<React.CSSProperties>({});
+
+  function updateDropdownPosition() {
+    if (!inputRef.current) return;
+    const rect = inputRef.current.getBoundingClientRect();
+    dropdownStyleRef.current = {
+      position: "fixed",
+      top: rect.bottom + 4,
+      left: rect.left,
+      width: rect.width,
+    };
+  }
 
   // 외부 클릭 시 드롭다운 닫기
   useEffect(() => {
@@ -48,7 +62,6 @@ export function ProjectSelector({
   function handleInputChange(text: string) {
     setInputValue(text);
     setOpen(true);
-    // 아직 타이핑 중이므로 onChange는 호출하지 않음
   }
 
   function selectExisting(p: Project) {
@@ -64,43 +77,46 @@ export function ProjectSelector({
     onChange({ type: "new", name });
   }
 
+  const dropdown = open && (inputValue || filtered.length > 0) && (
+    <div style={dropdownStyleRef.current} className="z-50 rounded-md border bg-popover shadow-md">
+      {filtered.slice(0, 10).map((p) => (
+        <button
+          key={p.id}
+          type="button"
+          onMouseDown={() => selectExisting(p)}
+          className="flex w-full items-center px-3 py-2 text-sm hover:bg-accent text-left"
+        >
+          {p.name}
+        </button>
+      ))}
+      {showNewOption && (
+        <button
+          type="button"
+          onMouseDown={selectNew}
+          className="flex w-full items-center px-3 py-2 text-sm hover:bg-accent text-left text-primary"
+        >
+          + 새 프로젝트로 생성: &quot;{inputValue.trim()}&quot;
+        </button>
+      )}
+      {!filtered.length && !showNewOption && (
+        <div className="px-3 py-2 text-sm text-muted-foreground">
+          검색 결과 없음
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div ref={containerRef} className="relative">
       <Input
+        ref={inputRef}
         value={inputValue}
         onChange={(e) => handleInputChange(e.target.value)}
-        onFocus={() => setOpen(true)}
+        onFocus={() => { updateDropdownPosition(); setOpen(true); }}
         placeholder="프로젝트 이름 입력 또는 선택"
         disabled={disabled}
       />
-      {open && (inputValue || filtered.length > 0) && (
-        <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md">
-          {filtered.slice(0, 10).map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              onMouseDown={() => selectExisting(p)}
-              className="flex w-full items-center px-3 py-2 text-sm hover:bg-accent text-left"
-            >
-              {p.name}
-            </button>
-          ))}
-          {showNewOption && (
-            <button
-              type="button"
-              onMouseDown={selectNew}
-              className="flex w-full items-center px-3 py-2 text-sm hover:bg-accent text-left text-primary"
-            >
-              + 새 프로젝트로 생성: &quot;{inputValue.trim()}&quot;
-            </button>
-          )}
-          {!filtered.length && !showNewOption && (
-            <div className="px-3 py-2 text-sm text-muted-foreground">
-              검색 결과 없음
-            </div>
-          )}
-        </div>
-      )}
+      {dropdown && createPortal(dropdown, document.body)}
     </div>
   );
 }

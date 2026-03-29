@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { SLUG_REGEX, deriveOrgSlug } from "@/lib/slug";
 
 const spinner = (
   <Card className="w-full max-w-sm">
@@ -34,6 +35,7 @@ function OnboardingContent() {
   const redirect = searchParams.get("redirect") || "/";
 
   const [orgName, setOrgName] = useState("");
+  const [orgSlug, setOrgSlug] = useState("");
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [checking, setChecking] = useState(true);
@@ -59,9 +61,21 @@ function OnboardingContent() {
     });
   }, [router]);
 
+  function handleOrgNameChange(value: string) {
+    setOrgName(value);
+    // 슬러그가 현재 자동 유도값과 같으면 (아직 수동 편집 안 함) 계속 자동 갱신
+    if (orgSlug === deriveOrgSlug(orgName)) {
+      setOrgSlug(deriveOrgSlug(value));
+    }
+  }
+
+  const slugValid = SLUG_REGEX.test(orgSlug);
+  const slugEmpty = orgSlug === "" && orgName.trim() !== "";
+  const canSubmit = !!orgName.trim() && slugValid && !submitting;
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!orgName.trim()) return;
+    if (!canSubmit) return;
 
     setSubmitting(true);
     try {
@@ -81,6 +95,7 @@ function OnboardingContent() {
           email: userData.user.email,
           name: name.trim() || userData.user.email?.split("@")[0],
           orgName: orgName.trim(),
+          orgSlug: orgSlug.trim(),
         }),
       });
 
@@ -123,15 +138,43 @@ function OnboardingContent() {
             <Input
               id="orgName"
               value={orgName}
-              onChange={(e) => setOrgName(e.target.value)}
+              onChange={(e) => handleOrgNameChange(e.target.value)}
               placeholder="예: 파이브스팟 QA팀"
               required
             />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="orgSlug">팀 URL 슬러그 *</Label>
+            <div className="flex items-center rounded-md border bg-muted/50 focus-within:ring-2 focus-within:ring-ring">
+              <span className="pl-3 text-sm text-muted-foreground select-none shrink-0">
+                fireqa.com/
+              </span>
+              <Input
+                id="orgSlug"
+                value={orgSlug}
+                onChange={(e) => setOrgSlug(e.target.value)}
+                placeholder="my-team"
+                className="flex-1 border-0 bg-transparent shadow-none focus-visible:ring-0"
+              />
+            </div>
+            {slugEmpty && (
+              <p className="text-xs text-amber-600">
+                한글 팀 이름은 슬러그를 직접 입력해주세요 (예: my-team)
+              </p>
+            )}
+            {orgSlug && !slugValid && (
+              <p className="text-xs text-destructive">
+                소문자, 숫자, 하이픈만 사용 가능하며 하이픈으로 시작·끝날 수 없습니다
+              </p>
+            )}
+            {orgSlug && slugValid && (
+              <p className="text-xs text-emerald-600">올바른 형식입니다</p>
+            )}
+          </div>
           <Button
             type="submit"
             className="w-full"
-            disabled={submitting || !orgName.trim()}
+            disabled={!canSubmit}
           >
             {submitting ? "생성 중..." : "시작하기 →"}
           </Button>

@@ -3,11 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "FIREQA_SERVER_URL=http://localhost:3000 node build.mjs --watch",
+    "dev": "FIREQA_SERVER_URL=http://localhost:3001 node build.mjs --watch",
     "build": "node build.mjs",
     "build:prod": "FIREQA_SERVER_URL=https://fire-qa.vercel.app node build.mjs",
-    "build:dev": "FIREQA_SERVER_URL=http://localhost:3000 node build.mjs",
-    "watch": "FIREQA_SERVER_URL=http://localhost:3000 node build.mjs --watch"
+    "build:dev": "FIREQA_SERVER_URL=http://localhost:3001 node build.mjs",
+    "watch": "FIREQA_SERVER_URL=http://localhost:3001 node build.mjs --watch"
   },
   "devDependencies": {
     "@figma/plugin-typings": "^1.104.0",

@@ -4,7 +4,7 @@ import { readFileSync, writeFileSync, mkdirSync } from "fs";
 const isWatch = process.argv.includes("--watch");
 
 // 빌드 타임에 서버 URL 주입 (환경변수 또는 기본값)
-const serverUrl = process.env.FIREQA_SERVER_URL || "http://localhost:3000";
+const serverUrl = process.env.FIREQA_SERVER_URL || "http://localhost:3001";
 
 // Build main.ts (Figma sandbox)
 const mainConfig = {

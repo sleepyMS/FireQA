@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
     }
 
-    const { name, orgName } = await request.json();
+    const { name, orgName, orgSlug } = await request.json();
 
     if (!orgName) {
       return NextResponse.json(
@@ -24,18 +24,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 기존 유저 여부 확인 (모든 조직을 떠난 후 재온보딩하는 경우)
-    const existingUser = await prisma.user.findUnique({
+    // 슬러그 결정과 유저 조회를 병렬 실행
+    const existingUserPromise = prisma.user.findUnique({
       where: { supabaseId: supabaseUser.id },
       select: { id: true },
     });
 
+    let finalSlug: string;
+    if (orgSlug) {
+      const taken = await prisma.organization.findUnique({ where: { slug: orgSlug } });
+      if (taken) {
+        return NextResponse.json({ error: "이미 사용 중인 슬러그입니다." }, { status: 409 });
+      }
+      finalSlug = orgSlug;
+    } else {
+      finalSlug = await generateUniqueOrgSlug(orgName.trim());
+    }
+
+    const existingUser = await existingUserPromise;
+
     if (existingUser) {
       // 기존 유저: 새 조직만 생성 (provisionUserAndOrg은 기존 유저면 조직을 만들지 않음)
-      const slug = await generateUniqueOrgSlug(orgName.trim());
       await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
         const org = await tx.organization.create({
-          data: { name: orgName.trim(), slug },
+          data: { name: orgName.trim(), slug: finalSlug },
         });
         await tx.organizationMembership.create({
           data: { userId: existingUser.id, organizationId: org.id, role: UserRole.OWNER },
@@ -52,6 +64,7 @@ export async function POST(request: NextRequest) {
         email: supabaseUser.email ?? "",
         name,
         orgName,
+        slug: finalSlug,
       });
     }
 

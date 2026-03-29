@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { getAvatarColor } from "@/lib/avatar-colors";
+import { deriveOrgSlug } from "@/lib/slug";
 
 interface Membership {
   organizationId: string;
@@ -47,13 +48,6 @@ function extractInviteToken(input: string): string {
   }
 }
 
-function deriveSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .slice(0, 48)
-    .replace(/^-+|-+$/g, "");
-}
 
 export function OrgSwitcher({ initialMemberships, initialActiveOrgId }: OrgSwitcherProps) {
   const router = useRouter();
@@ -80,7 +74,7 @@ export function OrgSwitcher({ initialMemberships, initialActiveOrgId }: OrgSwitc
   function handleNameChange(name: string) {
     setNewOrgName(name);
     if (!slugManuallyEdited) {
-      setNewOrgSlug(deriveSlug(name));
+      setNewOrgSlug(deriveOrgSlug(name));
     }
   }
 

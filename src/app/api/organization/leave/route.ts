@@ -16,10 +16,19 @@ export async function POST(request: NextRequest) {
         where: { id: user.organizationId },
       });
 
-      // 삭제된 조직이 캐시에 남아 stale 데이터를 반환하지 않도록 무효화
       invalidateCachedUser(user.userId);
-      return NextResponse.json({ success: true });
+
+      // 삭제 후 이동할 조직 탐색 (다른 조직이 있으면 거기로, 없으면 온보딩)
+      const remaining = await prisma.organizationMembership.findFirst({
+        where: { userId: user.userId },
+        include: { organization: { select: { slug: true } } },
+      });
+      const redirectTo = remaining ? `/${remaining.organization.slug}/dashboard` : "/onboarding";
+
+      return NextResponse.json({ success: true, redirectTo });
     }
+
+    let remainingSlug: string | null = null;
 
     await prisma.$transaction(async (tx) => {
       await tx.organizationMembership.delete({
@@ -33,17 +42,21 @@ export async function POST(request: NextRequest) {
 
       const remaining = await tx.organizationMembership.findFirst({
         where: { userId: user.userId },
+        include: { organization: { select: { slug: true } } },
       });
 
       await tx.user.update({
         where: { id: user.userId },
         data: { activeOrganizationId: remaining?.organizationId ?? null },
       });
+
+      remainingSlug = remaining?.organization.slug ?? null;
     });
 
-    // 탈퇴한 멤버십이 캐시에 남아 stale 데이터를 반환하지 않도록 무효화
     invalidateCachedUser(user.userId);
-    return NextResponse.json({ success: true });
+
+    const redirectTo = remainingSlug ? `/${remainingSlug}/dashboard` : "/onboarding";
+    return NextResponse.json({ success: true, redirectTo });
   } catch (error) {
     console.error("조직 탈퇴 오류:", error);
     return NextResponse.json({ error: "조직 탈퇴에 실패했습니다." }, { status: 500 });

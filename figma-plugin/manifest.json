@@ -7,7 +7,11 @@
   "documentAccess": "dynamic-page",
   "editorType": ["figma", "figjam"],
   "networkAccess": {
-    "allowedDomains": ["https://fire-qa.vercel.app"],
+    "allowedDomains": [
+      "https://fire-qa.vercel.app",
+      "http://localhost:3001",
+      "http://localhost:3000"
+    ],
     "reasoning": "FireQA 서버에서 다이어그램/와이어프레임 데이터를 가져오고 Device Authorization 인증을 수행합니다."
   }
 }
