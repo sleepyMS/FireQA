@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { FolderOpen, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ interface RecentProjectsPanelProps {
 }
 
 export function RecentProjectsPanel({ initialProjects }: RecentProjectsPanelProps) {
+  const { orgSlug } = useParams<{ orgSlug?: string }>();
   const { data, isLoading: loading } = useSWR<{ projects: Project[] }>(
     SWR_KEYS.projects("status=active&limit=5"),
     { ...(initialProjects ? { fallbackData: { projects: initialProjects } } : {}) }
@@ -35,7 +37,7 @@ export function RecentProjectsPanel({ initialProjects }: RecentProjectsPanelProp
             <FolderOpen className="h-4 w-4 text-muted-foreground" />
             최근 프로젝트
           </CardTitle>
-          <Link href="/projects">
+          <Link href={`/${orgSlug ?? ""}/projects`}>
             <Button variant="ghost" size="sm" className="text-xs text-muted-foreground">
               전체 보기
               <ChevronRight className="ml-1 h-3 w-3" />
@@ -61,7 +63,7 @@ export function RecentProjectsPanel({ initialProjects }: RecentProjectsPanelProp
             <FolderOpen className="mb-3 h-10 w-10 opacity-40" />
             <p className="text-sm">아직 프로젝트가 없습니다.</p>
             <p className="mt-1 text-xs">
-              <Link href="/projects" className="text-primary underline-offset-2 hover:underline">
+              <Link href={`/${orgSlug ?? ""}/projects`} className="text-primary underline-offset-2 hover:underline">
                 프로젝트 페이지
               </Link>
               에서 새 프로젝트를 만들어 보세요.
@@ -72,7 +74,7 @@ export function RecentProjectsPanel({ initialProjects }: RecentProjectsPanelProp
             {projects.map((project) => (
               <Link
                 key={project.id}
-                href={`/projects/${project.id}`}
+                href={`/${orgSlug ?? ""}/projects/${project.id}`}
                 className="flex items-center gap-3 rounded-xl border bg-card p-3 transition-all hover:border-primary/30 hover:shadow-sm"
               >
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-orange-50">

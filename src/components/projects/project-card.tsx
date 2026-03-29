@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { MoreHorizontal, Archive, ArchiveRestore, Trash2 } from "lucide-react";
 import {
@@ -64,6 +64,7 @@ export function ProjectCard({
 }: ProjectCardProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const router = useRouter();
+  const { orgSlug } = useParams<{ orgSlug?: string }>();
 
   const lastUpdated = new Date(project.updatedAt).toLocaleDateString("ko-KR");
 
@@ -71,12 +72,12 @@ export function ProjectCard({
     <>
       <Card
         className="cursor-pointer transition-shadow hover:shadow-md"
-        onClick={() => router.push(`/projects/${project.id}`)}
+        onClick={() => router.push(`/${orgSlug ?? ""}/projects/${project.id}`)}
       >
         <CardHeader>
           <CardTitle>
             <Link
-              href={`/projects/${project.id}`}
+              href={`/${orgSlug ?? ""}/projects/${project.id}`}
               className="hover:underline"
               // 카드 전체 클릭과 링크 충돌 방지: 링크 클릭은 버블링 차단
               onClick={(e) => e.stopPropagation()}
