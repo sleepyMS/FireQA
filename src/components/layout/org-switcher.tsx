@@ -42,8 +42,8 @@ function deriveSlug(name: string): string {
   return name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 45);
+    .slice(0, 48)
+    .replace(/^-+|-+$/g, "");
 }
 
 export function OrgSwitcher({ initialMemberships, initialActiveOrgId }: OrgSwitcherProps) {
@@ -98,6 +98,10 @@ export function OrgSwitcher({ initialMemberships, initialActiveOrgId }: OrgSwitc
       });
       const responseData = await res.json();
       if (res.ok) {
+        if (!responseData.slug) {
+          toast.error("서버 응답에 슬러그가 없습니다.");
+          return;
+        }
         setCreateOpen(false);
         setNewOrgName("");
         setNewOrgSlug("");
@@ -155,7 +159,14 @@ export function OrgSwitcher({ initialMemberships, initialActiveOrgId }: OrgSwitc
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <Dialog open={createOpen} onOpenChange={(open) => {
+          setCreateOpen(open);
+          if (!open) {
+            setNewOrgName("");
+            setNewOrgSlug("");
+            setSlugManuallyEdited(false);
+          }
+        }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>새 팀 만들기</DialogTitle>
@@ -182,11 +193,14 @@ export function OrgSwitcher({ initialMemberships, initialActiveOrgId }: OrgSwitc
                 />
               </div>
               <p className="text-xs text-muted-foreground">소문자, 숫자, 하이픈만 사용 가능</p>
+              {newOrgSlug && !newOrgSlug.replace(/-/g, "").length && (
+                <p className="text-xs text-destructive">슬러그는 영문자나 숫자를 포함해야 합니다.</p>
+              )}
             </div>
           </div>
           <DialogFooter>
             <DialogClose render={<Button variant="outline" />}>취소</DialogClose>
-            <Button onClick={handleCreate} disabled={creating || !newOrgName.trim()}>
+            <Button onClick={handleCreate} disabled={creating || !newOrgName.trim() || !newOrgSlug.replace(/-/g, "").length}>
               {creating ? "생성 중..." : "만들기"}
             </Button>
           </DialogFooter>
