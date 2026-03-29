@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { Search, FolderOpen, FileText, MessageSquare } from "lucide-react";
 import { JOB_TYPE_LABEL } from "@/types/enums";
 
@@ -20,6 +20,7 @@ const JOB_TYPE_PATH: Record<string, string> = {
 
 export function SearchDialog() {
   const router = useRouter();
+  const { orgSlug = "" } = useParams<{ orgSlug?: string }>();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResults | null>(null);
@@ -129,7 +130,7 @@ export function SearchDialog() {
                 <button
                   key={p.id}
                   className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm hover:bg-accent"
-                  onClick={() => navigate(`/projects/${p.id}`)}
+                  onClick={() => navigate(`${orgSlug ? `/${orgSlug}` : ""}/projects/${p.id}`)}
                 >
                   <FolderOpen className="h-4 w-4 shrink-0 text-muted-foreground" />
                   <span className="flex-1 truncate font-medium">{p.name}</span>
@@ -152,7 +153,7 @@ export function SearchDialog() {
                 <button
                   key={j.id}
                   className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm hover:bg-accent"
-                  onClick={() => navigate(`/${JOB_TYPE_PATH[j.type] ?? "generate"}/${j.id}`)}
+                  onClick={() => navigate(`${orgSlug ? `/${orgSlug}` : ""}/${JOB_TYPE_PATH[j.type] ?? "generate"}/${j.id}`)}
                 >
                   <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
                   <span className="flex-1 truncate font-medium">{j.projectName}</span>
@@ -174,7 +175,7 @@ export function SearchDialog() {
                   key={c.id}
                   className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm hover:bg-accent"
                   onClick={() =>
-                    navigate(c.jobId ? `/generate/${c.jobId}` : "/history")
+                    navigate(c.jobId ? `${orgSlug ? `/${orgSlug}` : ""}/generate/${c.jobId}` : `${orgSlug ? `/${orgSlug}` : ""}/history`)
                   }
                 >
                   <MessageSquare className="h-4 w-4 shrink-0 text-muted-foreground" />

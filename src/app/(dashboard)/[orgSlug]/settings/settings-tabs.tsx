@@ -1,19 +1,21 @@
 "use client";
 
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { useLocale } from "@/lib/i18n/locale-provider";
 
-const TAB_HREFS = {
-  general: "/settings",
-  members: "/settings?tab=members",
-  billing: "/settings?tab=billing",
-  webhooks: "/settings?tab=webhooks",
-} as const;
-
-type TabKey = keyof typeof TAB_HREFS;
+type TabKey = "general" | "members" | "billing" | "webhooks";
 
 export function SettingsTabs({ activeTab }: { activeTab: TabKey }) {
   const { t } = useLocale();
+  const { orgSlug = "" } = useParams<{ orgSlug?: string }>();
+
+  const TAB_HREFS: Record<TabKey, string> = {
+    general: `/${orgSlug}/settings`,
+    members: `/${orgSlug}/settings?tab=members`,
+    billing: `/${orgSlug}/settings?tab=billing`,
+    webhooks: `/${orgSlug}/settings?tab=webhooks`,
+  };
 
   const tabs: { key: TabKey; label: string }[] = [
     { key: "general", label: t.settings.tabs.general },

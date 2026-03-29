@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ function UsageBar({ used, max }: { used: number; max: number | null }) {
 }
 
 export default function SettingsBilling() {
+  const { orgSlug = "" } = useParams<{ orgSlug?: string }>();
   const [data, setData] = useState<UsageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [redirecting, setRedirecting] = useState(false);
@@ -59,8 +61,8 @@ export default function SettingsBilling() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          successUrl: `${window.location.origin}/settings?tab=billing&success=1`,
-          cancelUrl: `${window.location.origin}/settings?tab=billing`,
+          successUrl: `${window.location.origin}/${orgSlug}/settings?tab=billing&success=1`,
+          cancelUrl: `${window.location.origin}/${orgSlug}/settings?tab=billing`,
         }),
       });
       const body = await res.json();
@@ -82,7 +84,7 @@ export default function SettingsBilling() {
       const res = await fetch("/api/billing/portal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ returnUrl: `${window.location.origin}/settings?tab=billing` }),
+        body: JSON.stringify({ returnUrl: `${window.location.origin}/${orgSlug}/settings?tab=billing` }),
       });
       const body = await res.json();
       if (res.ok && body.url) {

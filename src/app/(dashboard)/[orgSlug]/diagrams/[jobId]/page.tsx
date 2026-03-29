@@ -13,9 +13,9 @@ import { Breadcrumb } from "@/components/ui/breadcrumb";
 export default async function DiagramResultPage({
   params,
 }: {
-  params: Promise<{ jobId: string }>;
+  params: Promise<{ orgSlug: string; jobId: string }>;
 }) {
-  const { jobId } = await params;
+  const { orgSlug, jobId } = await params;
   const [job, currentUser] = await Promise.all([
     prisma.generationJob.findUnique({
       where: { id: jobId },
@@ -36,8 +36,8 @@ export default async function DiagramResultPage({
     <div className="space-y-6">
       <Breadcrumb
         items={[
-          { label: "프로젝트", href: "/projects" },
-          { label: job.project.name, href: `/projects/${job.project.id}` },
+          { label: "프로젝트", href: `/${orgSlug}/projects` },
+          { label: job.project.name, href: `/${orgSlug}/projects/${job.project.id}` },
           { label: "다이어그램 결과" },
         ]}
       />

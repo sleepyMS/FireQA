@@ -275,7 +275,7 @@ export default function GeneratePage() {
                     <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
                       <p>저장된 템플릿이 없습니다.</p>
                       <a
-                        href="/templates"
+                        href={`${orgSlug ? `/${orgSlug}` : ""}/templates`}
                         className="mt-1 inline-block text-xs text-primary underline"
                       >
                         템플릿 만들러 가기

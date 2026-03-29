@@ -20,7 +20,7 @@ const spinner = (
 function OnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") || "/dashboard";
+  const redirect = searchParams.get("redirect") || "/";
 
   const [orgName, setOrgName] = useState("");
   const [name, setName] = useState("");
@@ -32,7 +32,7 @@ function OnboardingContent() {
       .then((r) => r.json())
       .then((data) => {
         if ((data.memberships ?? []).length > 0) {
-          router.replace("/dashboard");
+          router.replace("/");
         } else {
           setChecking(false);
         }

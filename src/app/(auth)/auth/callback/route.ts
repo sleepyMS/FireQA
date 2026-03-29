@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get("code");
   // redirect 목적지는 쿠키에서 읽음 (URL 쿼리 파라미터로 전달 시 Supabase 허용 목록 매칭 실패)
   const redirectCookie = request.cookies.get("auth_redirect")?.value;
-  const redirect = redirectCookie ? decodeURIComponent(redirectCookie) : "/dashboard";
+  const redirect = redirectCookie ? decodeURIComponent(redirectCookie) : "/";
 
   if (!code) {
     return NextResponse.redirect(new URL("/login", request.url));
