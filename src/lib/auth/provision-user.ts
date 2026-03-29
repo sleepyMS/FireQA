@@ -19,7 +19,8 @@ const MAX_SLUG_ATTEMPTS = 20;
 
 /** DB에서 slug 중복을 확인하고 고유한 값을 반환한다. DB 쿼리를 수행하므로 트랜잭션 외부에서만 호출할 것. */
 export async function generateUniqueOrgSlug(name: string): Promise<string> {
-  const base = generateOrgSlug(name);
+  // suffix "-20"(3자)를 고려해 base를 45자로 제한
+  const base = generateOrgSlug(name).slice(0, 45).replace(/-+$/, "");
   let slug = base;
   let suffix = 2;
   while (await prisma.organization.findUnique({ where: { slug } })) {

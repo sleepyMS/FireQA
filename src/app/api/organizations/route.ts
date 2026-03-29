@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { generateUniqueOrgSlug } from "@/lib/auth/provision-user";
@@ -22,6 +23,9 @@ export async function POST(request: NextRequest) {
 
     if (!name?.trim()) {
       return NextResponse.json({ error: "팀 이름은 필수입니다." }, { status: 400 });
+    }
+    if (name.trim().length > 100) {
+      return NextResponse.json({ error: "팀 이름은 100자 이하여야 합니다." }, { status: 400 });
     }
 
     let slug: string;
@@ -65,6 +69,14 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ id: org.id, name: org.name, slug: org.slug });
   } catch (error) {
+    // 동시 요청으로 slug 충돌이 발생한 경우 409 반환
+    if (
+      error instanceof PrismaClientKnownRequestError &&
+      error.code === "P2002" &&
+      (error.meta?.target as string[] | undefined)?.includes("slug")
+    ) {
+      return NextResponse.json({ error: "이미 사용 중인 슬러그입니다." }, { status: 409 });
+    }
     console.error("조직 생성 오류:", error);
     return NextResponse.json({ error: "조직 생성에 실패했습니다." }, { status: 500 });
   }
