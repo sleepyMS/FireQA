@@ -212,7 +212,7 @@ export function DiagramResults({ jobId, diagrams }: DiagramResultsProps) {
       const vData = await vRes.json();
 
       setDiagramStates(function (prev) {
-        var newVersions = [...prev[title].versions, vData.version];
+        const newVersions = [...prev[title].versions, vData.version];
         return {
           ...prev,
           [title]: {
@@ -272,7 +272,7 @@ export function DiagramResults({ jobId, diagrams }: DiagramResultsProps) {
       const vData = await vRes.json();
 
       setDiagramStates(function (prev) {
-        var newVersions = [...prev[title].versions, vData.version];
+        const newVersions = [...prev[title].versions, vData.version];
         return {
           ...prev,
           [title]: {
@@ -298,7 +298,7 @@ export function DiagramResults({ jobId, diagrams }: DiagramResultsProps) {
   // 버전 이동
   function goToVersion(title: string, index: number) {
     setDiagramStates(function (prev) {
-      var state = prev[title];
+      const state = prev[title];
       if (!state || index < 0 || index >= state.versions.length) return prev;
       return {
         ...prev,
@@ -325,7 +325,7 @@ export function DiagramResults({ jobId, diagrams }: DiagramResultsProps) {
     });
 
     setDiagramStates(function (prev) {
-      var newVersions = prev[title].versions.map(function (v, i) {
+      const newVersions = prev[title].versions.map(function (v, i) {
         return {
           ...v,
           isConfirmed: i === prev[title].currentVersionIndex,
@@ -344,7 +344,7 @@ export function DiagramResults({ jobId, diagrams }: DiagramResultsProps) {
         <div className="flex w-max gap-1">
           <TabsList className="h-auto flex-none gap-1 bg-transparent p-0">
             {diagrams.map(function (d) {
-              var state = diagramStates[d.title];
+              const state = diagramStates[d.title];
               return (
                 <TabsTrigger
                   key={d.title}
@@ -363,12 +363,12 @@ export function DiagramResults({ jobId, diagrams }: DiagramResultsProps) {
       </div>
 
       {diagrams.map(function (diagram) {
-        var state = diagramStates[diagram.title];
-        var currentCode = getCurrentCode(diagram.title);
-        var currentVer = getCurrentVersion(diagram.title);
-        var canUndo =
+        const state = diagramStates[diagram.title];
+        const currentCode = getCurrentCode(diagram.title);
+        const currentVer = getCurrentVersion(diagram.title);
+        const canUndo =
           state && state.versions && state.currentVersionIndex > 0;
-        var canRedo =
+        const canRedo =
           state &&
           state.versions &&
           state.currentVersionIndex < state.versions.length - 1;
@@ -413,8 +413,8 @@ export function DiagramResults({ jobId, diagrams }: DiagramResultsProps) {
                   {/* 버전 도트 */}
                   <div className="flex items-center gap-1 px-1">
                     {state.versions.filter(Boolean).map(function (v, i) {
-                      var isCurrent = i === state.currentVersionIndex;
-                      var isConfirmed = v?.isConfirmed || false;
+                      const isCurrent = i === state.currentVersionIndex;
+                      const isConfirmed = v?.isConfirmed || false;
                       return (
                         <button
                           key={v.id}

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useCallback } from "react";
 import type { Locale, Messages } from "./messages";
 import { ko } from "./ko";
 import { en } from "./en";
@@ -21,15 +21,14 @@ const LocaleContext = createContext<LocaleContextValue>({
 });
 
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>("ko");
-
-  useEffect(() => {
+  const [locale, setLocaleState] = useState<Locale>(() => {
+    if (typeof document === "undefined") return "ko";
     const saved = document.cookie
       .split("; ")
       .find((row) => row.startsWith(`${LOCALE_COOKIE}=`))
       ?.split("=")[1];
-    if (saved === "ko" || saved === "en") setLocaleState(saved);
-  }, []);
+    return saved === "ko" || saved === "en" ? saved : "ko";
+  });
 
   const setLocale = useCallback((next: Locale) => {
     setLocaleState(next);

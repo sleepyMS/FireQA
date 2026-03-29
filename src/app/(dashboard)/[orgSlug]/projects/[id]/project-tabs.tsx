@@ -229,11 +229,11 @@ function JobsTab({ projectId }: { projectId: string }) {
   const { orgSlug } = useParams<{ orgSlug?: string }>();
   const orgPrefix = orgSlug ? `/${orgSlug}` : "";
   const [jobs, setJobs] = useState<Job[]>([]);
+  // loading 초기값을 true로 설정 — effect에서 setLoading(true) 호출 불필요
   const [loading, setLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState("");
 
   useEffect(() => {
-    setLoading(true);
     const params = new URLSearchParams({ projectId, all: "1" });
     if (typeFilter) params.set("type", typeFilter);
     fetch(`/api/jobs?${params}`)
@@ -426,7 +426,7 @@ const TABS = [
 
 export function ProjectTabs({
   projectId,
-  projectName,
+  projectName: _projectName, // eslint-disable-line @typescript-eslint/no-unused-vars
   projectStatus,
   tab,
   jobCounts,

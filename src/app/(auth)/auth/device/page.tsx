@@ -9,16 +9,16 @@ function DeviceAuthContent() {
   const router = useRouter();
   const code = searchParams.get("code");
 
-  const [status, setStatus] = useState<"loading" | "confirm" | "success" | "error">("loading");
-  const [error, setError] = useState("");
+  const [status, setStatus] = useState<"loading" | "confirm" | "success" | "error">(() =>
+    !code ? "error" : "loading"
+  );
+  const [error, setError] = useState<string | null>(() =>
+    !code ? "인증 코드가 없습니다." : null
+  );
   const [currentUser, setCurrentUser] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!code) {
-      setStatus("error");
-      setError("인증 코드가 없습니다.");
-      return;
-    }
+    if (!code) return;
 
     const supabase = createSupabaseBrowserClient();
     supabase.auth.getUser().then(({ data }) => {

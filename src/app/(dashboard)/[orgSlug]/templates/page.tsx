@@ -72,14 +72,18 @@ export default function TemplatesPage() {
     DEFAULT_COLUMNS.map((c) => ({ ...c }))
   );
 
-  const loadTemplates = async () => {
+  async function loadTemplates() {
     const res = await fetch("/api/templates");
     const data = await res.json();
     setTemplates(data.templates || []);
-  };
+  }
 
   useEffect(() => {
-    loadTemplates();
+    (async () => {
+      const res = await fetch("/api/templates");
+      const data = await res.json();
+      setTemplates(data.templates || []);
+    })();
   }, []);
 
   const resetForm = () => {

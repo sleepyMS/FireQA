@@ -4,14 +4,6 @@ import { useCallback, useState } from "react";
 import { Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const ACCEPTED_TYPES = [
-  "application/pdf",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "text/plain",
-  "text/markdown",
-];
-
 const ACCEPTED_EXTENSIONS = [".pdf", ".docx", ".xlsx", ".txt", ".md"];
 
 interface DropzoneProps {

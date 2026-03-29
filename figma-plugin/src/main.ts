@@ -22,7 +22,7 @@ interface Diagram {
 }
 
 // 노드 타입별 색상
-var NODE_COLORS: Record<string, { r: number; g: number; b: number }> = {
+const NODE_COLORS: Record<string, { r: number; g: number; b: number }> = {
   screen: { r: 0.91, g: 0.94, b: 1 },
   decision: { r: 1, g: 0.95, b: 0.8 },
   action: { r: 0.83, g: 0.93, b: 0.85 },
@@ -31,11 +31,11 @@ var NODE_COLORS: Record<string, { r: number; g: number; b: number }> = {
 };
 
 // 레이아웃 상수
-var NODE_W = 280;
-var NODE_H = 100;
-var DECISION_W = 320;
-var DECISION_H = 190;
-var DIAGRAM_X_OFFSET = 2500;
+const NODE_W = 280;
+const NODE_H = 100;
+const DECISION_W = 320;
+const DECISION_H = 190;
+const DIAGRAM_X_OFFSET = 2500;
 
 figma.showUI(__html__, { width: 400, height: 560 });
 
@@ -105,10 +105,10 @@ figma.ui.onmessage = async function (msg: {
 };
 
 async function createDiagram(diagram: Diagram, diagramIndex: number) {
-  var nodes = diagram.nodes;
-  var edges = diagram.edges;
-  var title = diagram.title;
-  var xOffset = diagramIndex * DIAGRAM_X_OFFSET;
+  const nodes = diagram.nodes;
+  const edges = diagram.edges;
+  const title = diagram.title;
+  const xOffset = diagramIndex * DIAGRAM_X_OFFSET;
 
   if (!nodes || nodes.length === 0) {
     figma.notify("노드 데이터가 없습니다.");
@@ -122,14 +122,14 @@ async function createDiagram(diagram: Diagram, diagramIndex: number) {
   ]);
 
   // dagre 레이아웃 계산
-  var positions = calculateLayout(nodes, edges);
+  const positions = calculateLayout(nodes, edges);
 
   // 생성된 노드 맵
-  var createdNodes: Map<string, SceneNode> = new Map();
+  const createdNodes: Map<string, SceneNode> = new Map();
 
   // 타이틀 스티키노트
   try {
-    var titleSticky = figma.createSticky();
+    const titleSticky = figma.createSticky();
     titleSticky.text.characters = title;
     titleSticky.x = xOffset;
     titleSticky.y = -150;
@@ -138,13 +138,13 @@ async function createDiagram(diagram: Diagram, diagramIndex: number) {
   }
 
   // 노드 생성
-  for (var i = 0; i < nodes.length; i++) {
-    var node = nodes[i];
-    var pos = positions.get(node.id);
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    const pos = positions.get(node.id);
     if (!pos) continue;
 
     try {
-      var shape = figma.createShapeWithText();
+      const shape = figma.createShapeWithText();
 
       if (node.type === "decision") {
         shape.shapeType = "DIAMOND";
@@ -156,21 +156,21 @@ async function createDiagram(diagram: Diagram, diagramIndex: number) {
 
       shape.text.characters = node.label;
 
-      var w = node.type === "decision" ? DECISION_W : NODE_W;
-      var h = node.type === "decision" ? DECISION_H : NODE_H;
+      const w = node.type === "decision" ? DECISION_W : NODE_W;
+      const h = node.type === "decision" ? DECISION_H : NODE_H;
       shape.resize(w, h);
 
       shape.x = pos.x + xOffset;
       shape.y = pos.y;
 
-      var color = NODE_COLORS[node.type] || { r: 1, g: 1, b: 1 };
+      const color = NODE_COLORS[node.type] || { r: 1, g: 1, b: 1 };
       shape.fills = [{ type: "SOLID", color: color }];
 
       createdNodes.set(node.id, shape);
     } catch (e) {
       console.log("노드 생성 실패 [" + node.id + "]:", e);
       try {
-        var fallback = figma.createSticky();
+        const fallback = figma.createSticky();
         fallback.text.characters = node.label;
         fallback.x = pos.x + xOffset;
         fallback.y = pos.y;
@@ -182,19 +182,19 @@ async function createDiagram(diagram: Diagram, diagramIndex: number) {
   }
 
   // 커넥터 생성
-  for (var j = 0; j < edges.length; j++) {
-    var edge = edges[j];
-    var fromNode = createdNodes.get(edge.from);
-    var toNode = createdNodes.get(edge.to);
+  for (let j = 0; j < edges.length; j++) {
+    const edge = edges[j];
+    const fromNode = createdNodes.get(edge.from);
+    const toNode = createdNodes.get(edge.to);
 
     if (!fromNode || !toNode) continue;
 
     try {
-      var fromPos = positions.get(edge.from);
-      var toPos = positions.get(edge.to);
-      var magnets = getMagnets(fromPos, toPos);
+      const fromPos = positions.get(edge.from);
+      const toPos = positions.get(edge.to);
+      const magnets = getMagnets(fromPos, toPos);
 
-      var connector = figma.createConnector();
+      const connector = figma.createConnector();
       connector.connectorStart = {
         endpointNodeId: fromNode.id,
         magnet: magnets.start,
@@ -209,7 +209,7 @@ async function createDiagram(diagram: Diagram, diagramIndex: number) {
       }
 
       // 역방향 엣지는 CURVE, 정방향은 ELBOWED
-      var dy = (toPos ? toPos.y : 0) - (fromPos ? fromPos.y : 0);
+      const dy = (toPos ? toPos.y : 0) - (fromPos ? fromPos.y : 0);
       connector.connectorLineType = dy < -80 ? "CURVE" : "ELBOWED";
     } catch (e) {
       console.log("커넥터 생성 실패 [" + edge.from + " -> " + edge.to + "]:", e);
@@ -217,7 +217,7 @@ async function createDiagram(diagram: Diagram, diagramIndex: number) {
   }
 
   // 뷰포트 이동
-  var allCreated = Array.from(createdNodes.values());
+  const allCreated = Array.from(createdNodes.values());
   if (allCreated.length > 0) {
     figma.viewport.scrollAndZoomIntoView(allCreated);
   }
@@ -232,8 +232,8 @@ function getMagnets(
 ): { start: "AUTO" | "TOP" | "BOTTOM" | "LEFT" | "RIGHT"; end: "AUTO" | "TOP" | "BOTTOM" | "LEFT" | "RIGHT" } {
   if (!fromPos || !toPos) return { start: "AUTO", end: "AUTO" };
 
-  var dx = toPos.x - fromPos.x;
-  var dy = toPos.y - fromPos.y;
+  const dx = toPos.x - fromPos.x;
+  const dy = toPos.y - fromPos.y;
 
   // 아래로 흐르는 정상 연결
   if (dy > 80) {
@@ -260,10 +260,10 @@ function calculateLayout(
   nodes: DiagramNode[],
   edges: DiagramEdge[]
 ): Map<string, { x: number; y: number }> {
-  var positions = new Map<string, { x: number; y: number }>();
+  const positions = new Map<string, { x: number; y: number }>();
   if (nodes.length === 0) return positions;
 
-  var g = new dagre.graphlib.Graph();
+  const g = new dagre.graphlib.Graph();
   g.setGraph({
     rankdir: "TB",
     nodesep: 200,        // 같은 레벨 노드 간 가로 간격
@@ -276,17 +276,17 @@ function calculateLayout(
   g.setDefaultEdgeLabel(function () { return {}; });
 
   // 노드 추가
-  for (var i = 0; i < nodes.length; i++) {
-    var node = nodes[i];
-    var w = node.type === "decision" ? DECISION_W : NODE_W;
-    var h = node.type === "decision" ? DECISION_H : NODE_H;
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    const w = node.type === "decision" ? DECISION_W : NODE_W;
+    const h = node.type === "decision" ? DECISION_H : NODE_H;
     g.setNode(node.id, { width: w, height: h });
   }
 
   // 엣지 추가 (중복 제거)
-  var edgeSet: Record<string, boolean> = {};
-  for (var j = 0; j < edges.length; j++) {
-    var key = edges[j].from + "->" + edges[j].to;
+  const edgeSet: Record<string, boolean> = {};
+  for (let j = 0; j < edges.length; j++) {
+    const key = edges[j].from + "->" + edges[j].to;
     if (!edgeSet[key]) {
       edgeSet[key] = true;
       g.setEdge(edges[j].from, edges[j].to);
@@ -298,7 +298,7 @@ function calculateLayout(
 
   // 결과 좌표 추출 (dagre는 중심 좌표 반환 → 좌상단으로 변환)
   g.nodes().forEach(function (nodeId: string) {
-    var n = g.node(nodeId);
+    const n = g.node(nodeId);
     if (n) {
       positions.set(nodeId, {
         x: n.x - n.width / 2,
@@ -342,21 +342,21 @@ interface WireframeData {
   flows: WireframeFlow[];
 }
 
-var SCREEN_WIDTHS: Record<string, number> = {
+const SCREEN_WIDTHS: Record<string, number> = {
   mobile: 360,
   desktop: 800,
   modal: 480,
   toast: 320,
 };
-var SCREEN_PADDING = 24;
-var ELEMENT_GAP = 10;
-var COL_GAP = 8;
-var STEP_X_GAP = 200;
-var SAME_STEP_Y_GAP = 80;
-var MAX_STEPS_PER_ROW = 5;
-var ROW_GAP = 150;
+const SCREEN_PADDING = 24;
+const ELEMENT_GAP = 10;
+const COL_GAP = 8;
+const STEP_X_GAP = 200;
+const SAME_STEP_Y_GAP = 80;
+const MAX_STEPS_PER_ROW = 5;
+const ROW_GAP = 150;
 
-var ELEMENT_STYLES: Record<string, { h: number; fill: { r: number; g: number; b: number }; radius: number }> = {
+const ELEMENT_STYLES: Record<string, { h: number; fill: { r: number; g: number; b: number }; radius: number }> = {
   header:   { h: 48,  fill: { r: 0.15, g: 0.15, b: 0.15 }, radius: 0 },
   nav:      { h: 44,  fill: { r: 0.96, g: 0.96, b: 0.98 }, radius: 8 },
   text:     { h: 24,  fill: { r: 1,    g: 1,    b: 1    }, radius: 0 },
@@ -388,7 +388,7 @@ function makeRect(
   strokeColor?: { r: number; g: number; b: number },
   strokeWeight?: number
 ): RectangleNode {
-  var rect = figma.createRectangle();
+  const rect = figma.createRectangle();
   rect.resize(w, h);
   rect.fills = [{ type: "SOLID", color: fill }];
   if (radius !== undefined) rect.cornerRadius = radius;
@@ -413,7 +413,7 @@ function makeText(
   alignH?: "LEFT" | "CENTER" | "RIGHT",
   alignV?: "TOP" | "CENTER" | "BOTTOM"
 ): TextNode {
-  var txt = figma.createText();
+  const txt = figma.createText();
   txt.characters = chars;
   txt.fontSize = size;
   txt.fontName = { family: "Inter", style: weight };
@@ -434,30 +434,30 @@ function getElementHeight(elem: WireframeElement): number {
 }
 
 // 공유 색상 상수
-var C_WHITE =   { r: 1,    g: 1,    b: 1    };
-var C_BLUE  =   { r: 0.2,  g: 0.4,  b: 1    };
-var C_DARK  =   { r: 0.25, g: 0.25, b: 0.3  };
-var C_MUTED =   { r: 0.5,  g: 0.5,  b: 0.55 };
-var C_GRAY_TXT= { r: 0.6,  g: 0.6,  b: 0.6  };
-var C_BORDER =  { r: 0.9,  g: 0.9,  b: 0.92 };
-var C_CHEVRON = { r: 0.65, g: 0.65, b: 0.7  };
+const C_WHITE =   { r: 1,    g: 1,    b: 1    };
+const C_BLUE  =   { r: 0.2,  g: 0.4,  b: 1    };
+const C_DARK  =   { r: 0.25, g: 0.25, b: 0.3  };
+const C_MUTED =   { r: 0.5,  g: 0.5,  b: 0.55 };
+const C_GRAY_TXT= { r: 0.6,  g: 0.6,  b: 0.6  };
+const C_BORDER =  { r: 0.9,  g: 0.9,  b: 0.92 };
+const C_CHEVRON = { r: 0.65, g: 0.65, b: 0.7  };
 
 // ─────────────────────────────────────────────────────────────────────────────
 
 function groupElementsIntoRows(
   elements: WireframeElement[]
 ): Array<{ items: WireframeElement[] }> {
-  var rows: Array<{ items: WireframeElement[] }> = [];
-  var i = 0;
+  const rows: Array<{ items: WireframeElement[] }> = [];
+  let i = 0;
   while (i < elements.length) {
-    var el = elements[i];
-    var w = el.width || "full";
+    const el = elements[i];
+    const w = el.width || "full";
     if (w === "full") {
       rows.push({ items: [el] });
       i++;
     } else {
-      var maxCols = w === "half" ? 2 : 3;
-      var group: WireframeElement[] = [el];
+      const maxCols = w === "half" ? 2 : 3;
+      const group: WireframeElement[] = [el];
       while (
         group.length < maxCols &&
         i + group.length < elements.length &&
@@ -473,12 +473,12 @@ function groupElementsIntoRows(
 }
 
 function calculateScreenHeight(rows: Array<{ items: WireframeElement[] }>): number {
-  var h = 44 + SCREEN_PADDING;
-  for (var ri = 0; ri < rows.length; ri++) {
-    var maxH = 0;
-    var items = rows[ri].items;
-    for (var ii = 0; ii < items.length; ii++) {
-      var eh = getElementHeight(items[ii]);
+  let h = 44 + SCREEN_PADDING;
+  for (let ri = 0; ri < rows.length; ri++) {
+    let maxH = 0;
+    const items = rows[ri].items;
+    for (let ii = 0; ii < items.length; ii++) {
+      const eh = getElementHeight(items[ii]);
       if (eh > maxH) maxH = eh;
     }
     h += maxH + ELEMENT_GAP;
@@ -491,12 +491,12 @@ function renderElement(
   elem: WireframeElement,
   x: number, y: number, w: number
 ): number {
-  var type = elem.type;
-  var label = elem.label || "";
-  var variant = elem.variant || "default";
-  var sublabel = elem.sublabel || null;
-  var style = ELEMENT_STYLES[type] || ELEMENT_STYLES.text;
-  var h = getElementHeight(elem);
+  const type = elem.type;
+  const label = elem.label || "";
+  const variant = elem.variant || "default";
+  const sublabel = elem.sublabel || null;
+  const style = ELEMENT_STYLES[type] || ELEMENT_STYLES.text;
+  const h = getElementHeight(elem);
 
   if (type === "divider") {
     makeRect(frame, x, y, w, 1, style.fill);
@@ -510,12 +510,12 @@ function renderElement(
   }
 
   if (type === "button") {
-    var isOutline = variant === "outline" || variant === "ghost";
-    var btnFill = isOutline ? C_WHITE :
+    const isOutline = variant === "outline" || variant === "ghost";
+    const btnFill = isOutline ? C_WHITE :
                   variant === "secondary" ? { r: 0.93, g: 0.93, b: 0.96 } : style.fill;
     makeRect(frame, x, y, w, h, btnFill, style.radius,
       isOutline ? C_BLUE : undefined, isOutline ? 1.5 : undefined);
-    var btnTextColor = isOutline ? C_BLUE :
+    const btnTextColor = isOutline ? C_BLUE :
                        variant === "secondary" ? { r: 0.25, g: 0.25, b: 0.3 } : C_WHITE;
     makeText(frame, x, y, label, 13, "Medium", btnTextColor, w, h, "CENTER", "CENTER");
     return h;
@@ -523,7 +523,7 @@ function renderElement(
 
   if (type === "input" || type === "search" || type === "dropdown") {
     makeRect(frame, x, y, w, h, style.fill, style.radius, { r: 0.82, g: 0.82, b: 0.82 });
-    var textX = x + 12;
+    let textX = x + 12;
     if (type === "search") {
       makeText(frame, x + 12, y + Math.floor((h - 12) / 2), "○", 11, "Regular", C_MUTED);
       textX = x + 28;
@@ -542,11 +542,11 @@ function renderElement(
   }
 
   if (type === "tabs") {
-    var tabNames = label.split(",").map(function (s: string) { return s.trim(); });
+    const tabNames = label.split(",").map(function (s: string) { return s.trim(); });
     makeRect(frame, x, y + h - 1, w, 1, { r: 0.88, g: 0.88, b: 0.88 });
-    var tabW = Math.floor(w / tabNames.length);
-    for (var ti = 0; ti < tabNames.length; ti++) {
-      var isActive = ti === 0;
+    const tabW = Math.floor(w / tabNames.length);
+    for (let ti = 0; ti < tabNames.length; ti++) {
+      const isActive = ti === 0;
       makeText(frame, x + ti * tabW, y, tabNames[ti], 13, isActive ? "Medium" : "Regular",
         isActive ? C_BLUE : C_MUTED, tabW, h, "CENTER", "CENTER");
       if (isActive) makeRect(frame, x + ti * tabW, y + h - 2, tabW, 2, C_BLUE);
@@ -555,11 +555,11 @@ function renderElement(
   }
 
   if (type === "checkbox" || type === "radio") {
-    var ctrlY = y + Math.floor((h - 16) / 2);
+    const ctrlY = y + Math.floor((h - 16) / 2);
     if (type === "checkbox") {
       makeRect(frame, x, ctrlY, 16, 16, C_WHITE, 3, { r: 0.6, g: 0.6, b: 0.65 }, 1.5);
     } else {
-      var circle = figma.createEllipse();
+      const circle = figma.createEllipse();
       circle.resize(16, 16);
       circle.fills = [{ type: "SOLID", color: C_WHITE }];
       circle.strokeWeight = 1.5;
@@ -573,10 +573,10 @@ function renderElement(
   }
 
   if (type === "toggle") {
-    var isOn = variant === "primary";
+    const isOn = variant === "primary";
     makeRect(frame, x, y + Math.floor((h - 20) / 2), 36, 20,
       isOn ? C_BLUE : { r: 0.75, g: 0.75, b: 0.78 }, 10);
-    var thumb = figma.createEllipse();
+    const thumb = figma.createEllipse();
     thumb.resize(16, 16);
     thumb.fills = [{ type: "SOLID", color: C_WHITE }];
     frame.appendChild(thumb);
@@ -587,9 +587,9 @@ function renderElement(
   }
 
   if (type === "badge") {
-    var badgeW = Math.max(label.length * 7 + 16, 40);
-    var isBadgeOutline = variant === "outline";
-    var badgeFill = isBadgeOutline ? C_WHITE :
+    const badgeW = Math.max(label.length * 7 + 16, 40);
+    const isBadgeOutline = variant === "outline";
+    const badgeFill = isBadgeOutline ? C_WHITE :
                     variant === "secondary" ? { r: 0.85, g: 0.85, b: 0.88 } : C_BLUE;
     makeRect(frame, x, y, badgeW, h, badgeFill, style.radius,
       isBadgeOutline ? { r: 0.6, g: 0.6, b: 0.65 } : undefined);
@@ -607,18 +607,18 @@ function renderElement(
   }
 
   if (type === "table") {
-    var colHeaders = label.split(",").map(function (s: string) { return s.trim(); });
-    var colCount = Math.max(colHeaders.length, 2);
-    var colW = Math.floor(w / colCount);
-    var rowH = 30;
+    const colHeaders = label.split(",").map(function (s: string) { return s.trim(); });
+    const colCount = Math.max(colHeaders.length, 2);
+    const colW = Math.floor(w / colCount);
+    const rowH = 30;
     makeRect(frame, x, y, w, rowH, { r: 0.93, g: 0.93, b: 0.96 }, style.radius);
-    for (var ci = 0; ci < colCount; ci++) {
+    for (let ci = 0; ci < colCount; ci++) {
       makeText(frame, x + ci * colW + 8, y + 8,
         colHeaders[ci] || ("컬럼" + (ci + 1)), 11, "Medium", { r: 0.25, g: 0.25, b: 0.3 });
     }
-    for (var ri = 1; ri <= 3; ri++) {
+    for (let ri = 1; ri <= 3; ri++) {
       makeRect(frame, x, y + ri * rowH, w, 1, { r: 0.9, g: 0.9, b: 0.92 });
-      for (var rci = 0; rci < colCount; rci++) {
+      for (let rci = 0; rci < colCount; rci++) {
         makeRect(frame, x + rci * colW + 8, y + ri * rowH + 11,
           Math.floor(colW * 0.6), 8, { r: 0.88, g: 0.88, b: 0.9 }, 4);
       }
@@ -656,8 +656,8 @@ function renderElement(
 }
 
 async function createWireframe(data: WireframeData) {
-  var screens = data.screens;
-  var flows = data.flows;
+  const screens = data.screens;
+  const flows = data.flows;
 
   if (!screens || screens.length === 0) {
     figma.notify("화면 데이터가 없습니다.");
@@ -670,64 +670,64 @@ async function createWireframe(data: WireframeData) {
     figma.loadFontAsync({ family: "Inter", style: "Regular" }),
   ]);
 
-  var isFigJam = figma.editorType === "figjam";
+  const isFigJam = figma.editorType === "figjam";
 
   // 화면별 너비/높이/행 그룹 계산 (행 그룹은 높이 계산과 렌더링에서 공유)
-  var screenWidths: Record<string, number> = {};
-  var screenHeights: Record<string, number> = {};
-  var screenRowsMap: Record<string, Array<{ items: WireframeElement[] }>> = {};
+  const screenWidths: Record<string, number> = {};
+  const screenHeights: Record<string, number> = {};
+  const screenRowsMap: Record<string, Array<{ items: WireframeElement[] }>> = {};
 
-  for (var i = 0; i < screens.length; i++) {
-    var s = screens[i];
+  for (let i = 0; i < screens.length; i++) {
+    const s = screens[i];
     screenWidths[s.id] = SCREEN_WIDTHS[s.screenType || "desktop"] || SCREEN_WIDTHS.desktop;
-    var sRows = groupElementsIntoRows(s.elements);
+    const sRows = groupElementsIntoRows(s.elements);
     screenRowsMap[s.id] = sRows;
     screenHeights[s.id] = calculateScreenHeight(sRows);
   }
 
   // step 기반 좌→우 배치 (같은 step은 세로로 나열)
-  var stepGroups: Record<number, WireframeScreen[]> = {};
-  for (var si2 = 0; si2 < screens.length; si2++) {
-    var step = screens[si2].step || 1;
+  let stepGroups: Record<number, WireframeScreen[]> = {};
+  for (let si2 = 0; si2 < screens.length; si2++) {
+    const step = screens[si2].step || 1;
     if (!stepGroups[step]) stepGroups[step] = [];
     stepGroups[step].push(screens[si2]);
   }
 
-  var sortedSteps = Object.keys(stepGroups).map(Number).sort(function (a, b) { return a - b; });
+  let sortedSteps = Object.keys(stepGroups).map(Number).sort(function (a, b) { return a - b; });
 
   // AI가 모든 화면에 동일한 step을 할당한 경우 index 순으로 분배
   if (sortedSteps.length === 1) {
-    var flatScreens = stepGroups[sortedSteps[0]];
+    const flatScreens = stepGroups[sortedSteps[0]];
     stepGroups = {};
-    for (var fi = 0; fi < flatScreens.length; fi++) {
+    for (let fi = 0; fi < flatScreens.length; fi++) {
       stepGroups[fi + 1] = [flatScreens[fi]];
     }
     sortedSteps = Object.keys(stepGroups).map(Number).sort(function (a, b) { return a - b; });
   }
 
-  var screenPositions = new Map<string, { x: number; y: number }>();
-  var createdFrames = new Map<string, SceneNode>();
+  const screenPositions = new Map<string, { x: number; y: number }>();
+  const createdFrames = new Map<string, SceneNode>();
   // 화면 내 요소 레이블 → 프레임 기준 중앙 Y (flow 화살표 출발점에 사용)
-  var elementYMap: Record<string, Record<string, number>> = {};
+  const elementYMap: Record<string, Record<string, number>> = {};
 
   // MAX_STEPS_PER_ROW 단위로 줄 바꿈
-  var rowBaseY = 0;
-  for (var rowStart = 0; rowStart < sortedSteps.length; rowStart += MAX_STEPS_PER_ROW) {
-    var rowSteps = sortedSteps.slice(rowStart, rowStart + MAX_STEPS_PER_ROW);
-    var curX = 0;
-    var rowMaxH = 0;
+  let rowBaseY = 0;
+  for (let rowStart = 0; rowStart < sortedSteps.length; rowStart += MAX_STEPS_PER_ROW) {
+    const rowSteps = sortedSteps.slice(rowStart, rowStart + MAX_STEPS_PER_ROW);
+    let curX = 0;
+    let rowMaxH = 0;
 
-    for (var stepIdx = 0; stepIdx < rowSteps.length; stepIdx++) {
-      var stepNum = rowSteps[stepIdx];
-      var group = stepGroups[stepNum];
-      var maxW = 0;
-      for (var gi = 0; gi < group.length; gi++) {
-        var gw = screenWidths[group[gi].id] || 360;
+    for (let stepIdx = 0; stepIdx < rowSteps.length; stepIdx++) {
+      const stepNum = rowSteps[stepIdx];
+      const group = stepGroups[stepNum];
+      let maxW = 0;
+      for (let gi = 0; gi < group.length; gi++) {
+        const gw = screenWidths[group[gi].id] || 360;
         if (gw > maxW) maxW = gw;
       }
-      var stepY = rowBaseY;
-      var colH = 0;
-      for (var gj = 0; gj < group.length; gj++) {
+      let stepY = rowBaseY;
+      let colH = 0;
+      for (let gj = 0; gj < group.length; gj++) {
         screenPositions.set(group[gj].id, { x: curX, y: stepY });
         colH += screenHeights[group[gj].id] + (gj < group.length - 1 ? SAME_STEP_Y_GAP : 0);
         stepY += screenHeights[group[gj].id] + SAME_STEP_Y_GAP;
@@ -740,15 +740,15 @@ async function createWireframe(data: WireframeData) {
   }
 
   // 각 화면 생성
-  for (var si = 0; si < screens.length; si++) {
-    var screen = screens[si];
-    var pos = screenPositions.get(screen.id);
+  for (let si = 0; si < screens.length; si++) {
+    const screen = screens[si];
+    const pos = screenPositions.get(screen.id);
     if (!pos) continue;
-    var screenH = screenHeights[screen.id];
-    var screenW = screenWidths[screen.id] || 360;
+    const screenH = screenHeights[screen.id];
+    const screenW = screenWidths[screen.id] || 360;
 
     try {
-      var frame = figma.createFrame();
+      const frame = figma.createFrame();
       frame.name = screen.title;
       frame.resize(screenW, screenH);
       frame.x = pos.x;
@@ -760,9 +760,9 @@ async function createWireframe(data: WireframeData) {
       frame.clipsContent = true;
 
       // 프레임 위 라벨
-      var stepLabel = screen.step ? "Step " + screen.step + " · " : "";
-      var typeLabel = screen.screenType ? " [" + screen.screenType + "]" : "";
-      var titleLabel = figma.createText();
+      const stepLabel = screen.step ? "Step " + screen.step + " · " : "";
+      const typeLabel = screen.screenType ? " [" + screen.screenType + "]" : "";
+      const titleLabel = figma.createText();
       titleLabel.characters = stepLabel + screen.title + typeLabel;
       titleLabel.fontSize = 13;
       titleLabel.fontName = { family: "Inter", style: "Bold" };
@@ -774,18 +774,18 @@ async function createWireframe(data: WireframeData) {
       makeRect(frame, 0, 0, screenW, 44, { r: 0.97, g: 0.97, b: 0.97 });
       makeText(frame, SCREEN_PADDING, 15, screen.title, 13, "Medium", { r: 0.1, g: 0.1, b: 0.1 });
 
-      var curY = 44 + SCREEN_PADDING;
-      var rows = screenRowsMap[screen.id];
+      let curY = 44 + SCREEN_PADDING;
+      const rows = screenRowsMap[screen.id];
       elementYMap[screen.id] = {};
 
-      for (var ri = 0; ri < rows.length; ri++) {
-        var row = rows[ri];
-        var items = row.items;
-        var maxElemH = 0;
+      for (let ri = 0; ri < rows.length; ri++) {
+        const row = rows[ri];
+        const items = row.items;
+        let maxElemH = 0;
 
         if (items.length === 1) {
-          var isFullBleed = items[0].type === "header";
-          var elemH = renderElement(
+          const isFullBleed = items[0].type === "header";
+          const elemH = renderElement(
             frame, items[0],
             isFullBleed ? 0 : SCREEN_PADDING,
             curY,
@@ -794,12 +794,12 @@ async function createWireframe(data: WireframeData) {
           maxElemH = elemH;
           elementYMap[screen.id][items[0].label] = curY + elemH / 2;
         } else {
-          var colCount = items.length;
-          var totalGap = COL_GAP * (colCount - 1);
-          var colW = Math.floor((screenW - SCREEN_PADDING * 2 - totalGap) / colCount);
-          var colX = SCREEN_PADDING;
-          for (var ci = 0; ci < items.length; ci++) {
-            var colElemH = renderElement(frame, items[ci], colX, curY, colW);
+          const colCount = items.length;
+          const totalGap = COL_GAP * (colCount - 1);
+          const colW = Math.floor((screenW - SCREEN_PADDING * 2 - totalGap) / colCount);
+          let colX = SCREEN_PADDING;
+          for (let ci = 0; ci < items.length; ci++) {
+            const colElemH = renderElement(frame, items[ci], colX, curY, colW);
             if (colElemH > maxElemH) maxElemH = colElemH;
             elementYMap[screen.id][items[ci].label] = curY + colElemH / 2;
             colX += colW + COL_GAP;
@@ -816,38 +816,38 @@ async function createWireframe(data: WireframeData) {
   }
 
   // 흐름 화살표 생성
-  for (var fj = 0; fj < flows.length; fj++) {
-    var flow = flows[fj];
-    var fromFrame = createdFrames.get(flow.from);
-    var toFrame = createdFrames.get(flow.to);
+  for (let fj = 0; fj < flows.length; fj++) {
+    const flow = flows[fj];
+    const fromFrame = createdFrames.get(flow.from);
+    const toFrame = createdFrames.get(flow.to);
     if (!fromFrame || !toFrame) continue;
 
     try {
       if (isFigJam) {
-        var connector = figma.createConnector();
+        const connector = figma.createConnector();
         connector.connectorStart = { endpointNodeId: fromFrame.id, magnet: "RIGHT" as ConnectorMagnet };
         connector.connectorEnd = { endpointNodeId: toFrame.id, magnet: "LEFT" as ConnectorMagnet };
         connector.connectorLineType = "CURVE";
         if (flow.label) connector.text.characters = flow.label;
       } else {
-        var fromPos2 = screenPositions.get(flow.from);
-        var toPos2 = screenPositions.get(flow.to);
+        const fromPos2 = screenPositions.get(flow.from);
+        const toPos2 = screenPositions.get(flow.to);
         if (!fromPos2 || !toPos2) continue;
 
-        var fromScreenW = screenWidths[flow.from] || 360;
-        var fromX = fromPos2.x + fromScreenW;
-        var elemMap = elementYMap[flow.from];
-        var elemCenterY = (flow.fromElement && elemMap && elemMap[flow.fromElement] !== undefined)
+        const fromScreenW = screenWidths[flow.from] || 360;
+        const fromX = fromPos2.x + fromScreenW;
+        const elemMap = elementYMap[flow.from];
+        const elemCenterY = (flow.fromElement && elemMap && elemMap[flow.fromElement] !== undefined)
           ? elemMap[flow.fromElement]
           : (screenHeights[flow.from] || 300) / 2;
-        var fromY = fromPos2.y + elemCenterY;
-        var toX = toPos2.x;
-        var toY = toPos2.y + (screenHeights[flow.to] || 300) / 2;
+        const fromY = fromPos2.y + elemCenterY;
+        const toX = toPos2.x;
+        const toY = toPos2.y + (screenHeights[flow.to] || 300) / 2;
 
-        var line = figma.createLine();
-        var dx = toX - fromX;
-        var dy = toY - fromY;
-        var len = Math.sqrt(dx * dx + dy * dy);
+        const line = figma.createLine();
+        const dx = toX - fromX;
+        const dy = toY - fromY;
+        const len = Math.sqrt(dx * dx + dy * dy);
         line.resize(len, 0);
         line.x = fromX;
         line.y = fromY;
@@ -856,7 +856,7 @@ async function createWireframe(data: WireframeData) {
         line.strokeWeight = 1.5;
 
         if (flow.label) {
-          var flowLabel = figma.createText();
+          const flowLabel = figma.createText();
           flowLabel.characters = flow.label;
           flowLabel.fontSize = 10;
           flowLabel.fontName = { family: "Inter", style: "Regular" };
@@ -870,7 +870,7 @@ async function createWireframe(data: WireframeData) {
     }
   }
 
-  var allFrames = Array.from(createdFrames.values());
+  const allFrames = Array.from(createdFrames.values());
   if (allFrames.length > 0) {
     figma.viewport.scrollAndZoomIntoView(allFrames);
   }

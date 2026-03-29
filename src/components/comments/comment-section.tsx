@@ -21,8 +21,6 @@ export function CommentSection({ jobId, currentUserId }: CommentSectionProps) {
     const controller = new AbortController();
     controllerRef.current = controller;
 
-    if (isInitial) setInitialLoading(true);
-
     fetch(`/api/comments?jobId=${encodeURIComponent(jobId)}`, {
       signal: controller.signal,
     })

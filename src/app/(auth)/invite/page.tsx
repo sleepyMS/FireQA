@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,6 +24,29 @@ function InviteContent() {
   } | null>(null);
   const [error, setError] = useState("");
   const [accepting, setAccepting] = useState(false);
+
+  const handleAccept = useCallback(async () => {
+    setAccepting(true);
+    try {
+      const res = await fetch("/api/invitations/accept", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
+      if (res.ok) {
+        setStatus("accepted");
+      } else {
+        const data = await res.json();
+        setError(data.error || "초대 수락에 실패했습니다.");
+        setStatus("invalid");
+      }
+    } catch {
+      setError("네트워크 오류가 발생했습니다.");
+      setStatus("invalid");
+    } finally {
+      setAccepting(false);
+    }
+  }, [token]);
 
   useEffect(() => {
     if (!token) {
@@ -77,30 +100,7 @@ function InviteContent() {
     }
 
     verify();
-  }, [token]);
-
-  async function handleAccept() {
-    setAccepting(true);
-    try {
-      const res = await fetch("/api/invitations/accept", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token }),
-      });
-      if (res.ok) {
-        setStatus("accepted");
-      } else {
-        const data = await res.json();
-        setError(data.error || "초대 수락에 실패했습니다.");
-        setStatus("invalid");
-      }
-    } catch {
-      setError("네트워크 오류가 발생했습니다.");
-      setStatus("invalid");
-    } finally {
-      setAccepting(false);
-    }
-  }
+  }, [token, handleAccept]);
 
   const initial = info ? info.organizationName[0]?.toUpperCase() ?? "?" : "?";
 

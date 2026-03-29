@@ -19,7 +19,6 @@ const allowedOrigins = (() => {
 
 function getCorsHeaders(request: NextRequest): Record<string, string> {
   const origin = request.headers.get("origin");
-  const hasAuthHeader = request.headers.has("authorization");
   // Figma 플러그인은 샌드박스 iframe에서 Origin: null로 요청.
   // allowedDomains는 manifest.json에서 Figma가 통제하므로 null origin은 무조건 허용.
   const isAllowed =

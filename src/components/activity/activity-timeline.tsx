@@ -36,7 +36,7 @@ export function ActivityTimeline({ projectId }: ActivityTimelineProps) {
     const res = await fetch(url, { signal });
     if (!res.ok) throw new Error("활동 로그 조회 실패");
     return res.json() as Promise<{ logs: ActivityLog[]; nextCursor: string | null }>;
-  }, []);
+  }, [projectId]);
 
   useEffect(() => {
     const controller = new AbortController();

@@ -2,7 +2,6 @@ import {
   FileText,
   Upload,
   Sparkles,
-  Download,
   GitBranch,
   Puzzle,
   Key,
@@ -21,18 +20,15 @@ import {
   Smartphone,
   History,
   AlertTriangle,
-  ExternalLink,
-  Clipboard,
   Archive,
   BarChart2,
   Bell,
   Users,
   Settings,
   FileEdit,
-  ArrowRight,
   MousePointerClick,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 

@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
   }
 
-  const { limited, remaining, resetAt } = await checkRateLimit(user.organizationId);
+  const { limited, resetAt } = await checkRateLimit(user.organizationId);
   if (limited) {
     return NextResponse.json(
       { error: `시간당 생성 한도를 초과했습니다. ${resetAt.toISOString()} 이후 다시 시도하세요.` },
