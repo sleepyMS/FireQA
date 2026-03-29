@@ -7,6 +7,7 @@ import { WireframeResults } from "@/components/wireframes/wireframe-results";
 import { JobStatus } from "@/types/enums";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { CommentSection } from "@/components/comments/comment-section";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 
 export default async function WireframeResultPage({
   params,
@@ -28,6 +29,14 @@ export default async function WireframeResultPage({
 
   return (
     <div className="min-w-0 space-y-6">
+      <Breadcrumb
+        items={[
+          { label: "프로젝트", href: "/projects" },
+          { label: job.project.name, href: `/projects/${job.project.id}` },
+          { label: "와이어프레임 결과" },
+        ]}
+      />
+
       <div>
         <h2 className="text-2xl font-bold tracking-tight">
           {job.project.name} - 와이어프레임

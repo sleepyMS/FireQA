@@ -8,6 +8,7 @@ import { JobStatus } from "@/types/enums";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { CommentSection } from "@/components/comments/comment-section";
 import { ExportButton } from "@/components/ui/export-button";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 
 export default async function GenerateResultPage({
   params,
@@ -33,6 +34,14 @@ export default async function GenerateResultPage({
 
   return (
     <div className="min-w-0 space-y-6">
+      <Breadcrumb
+        items={[
+          { label: "프로젝트", href: "/projects" },
+          { label: job.project.name, href: `/projects/${job.project.id}` },
+          { label: "TC 생성 결과" },
+        ]}
+      />
+
       <div>
         <h2 className="text-2xl font-bold tracking-tight">
           {job.project.name} - TC 생성 결과

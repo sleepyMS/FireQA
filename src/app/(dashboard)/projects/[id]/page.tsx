@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { ProjectHeaderClient } from "./project-header-client";
 import { ProjectTabs } from "./project-tabs";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -91,6 +92,13 @@ export default async function ProjectDetailPage({
 
   return (
     <div className="space-y-6">
+      <Breadcrumb
+        items={[
+          { label: "프로젝트", href: "/projects" },
+          { label: project.name },
+        ]}
+      />
+
       {/* 헤더 — 클라이언트 컴포넌트 (인라인 편집, 보관, 삭제) */}
       <ProjectHeaderClient project={projectData} projectId={id} />
 

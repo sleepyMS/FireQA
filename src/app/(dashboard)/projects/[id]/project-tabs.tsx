@@ -175,7 +175,7 @@ function OverviewTab({
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {QUICK_ACTIONS.map(({ href, label, color, bg }) => (
-              <Link key={href} href={href}>
+              <Link key={href} href={`${href}?projectId=${projectId}`}>
                 <div
                   className={`flex items-center gap-2 rounded-lg border p-3 cursor-pointer hover:shadow-sm transition-shadow`}
                 >

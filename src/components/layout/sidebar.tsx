@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   LayoutDashboard,
   FolderOpen,
@@ -30,10 +30,6 @@ function buildNavItems(nav: Messages["nav"]) {
   return [
     { label: nav.dashboard, href: "/dashboard", icon: LayoutDashboard },
     { label: nav.projects, href: "/projects", icon: FolderOpen },
-    { label: nav.generate, href: "/generate", icon: FileText },
-    { label: nav.diagrams, href: "/diagrams", icon: GitBranch },
-    { label: nav.wireframes, href: "/wireframes", icon: Smartphone },
-    { label: nav.improve, href: "/improve", icon: FileEdit },
     { label: nav.history, href: "/history", icon: Clock },
     { label: nav.activity, href: "/activity", icon: Activity },
     { label: nav.analytics, href: "/analytics", icon: BarChart2 },
@@ -43,6 +39,47 @@ function buildNavItems(nav: Messages["nav"]) {
   ];
 }
 
+function buildProjectNavItems(projectId: string) {
+  return [
+    { label: "개요", href: `/projects/${projectId}?tab=overview`, icon: LayoutDashboard },
+    { label: "TC 자동 생성", href: `/generate?projectId=${projectId}`, icon: FileText },
+    { label: "다이어그램", href: `/diagrams?projectId=${projectId}`, icon: GitBranch },
+    { label: "와이어프레임", href: `/wireframes?projectId=${projectId}`, icon: Smartphone },
+    { label: "기획서 개선", href: `/improve?projectId=${projectId}`, icon: FileEdit },
+    { label: "생성 결과", href: `/projects/${projectId}?tab=jobs`, icon: Clock },
+    { label: "파일", href: `/projects/${projectId}?tab=uploads`, icon: FolderOpen },
+  ];
+}
+
+function isProjectNavActive(
+  item: { href: string; label: string },
+  pathname: string,
+  searchParams: URLSearchParams,
+  projectId: string,
+) {
+  // /projects/{id}?tab=overview → active when on project page with no tab or tab=overview
+  if (item.label === "개요") {
+    return (
+      pathname === `/projects/${projectId}` &&
+      (!searchParams.get("tab") || searchParams.get("tab") === "overview")
+    );
+  }
+  // /generate?projectId={id} → active when pathname === /generate
+  if (item.href.startsWith("/generate")) return pathname === "/generate";
+  if (item.href.startsWith("/diagrams")) return pathname === "/diagrams";
+  if (item.href.startsWith("/wireframes")) return pathname === "/wireframes";
+  if (item.href.startsWith("/improve")) return pathname === "/improve";
+  // /projects/{id}?tab=jobs
+  if (item.label === "생성 결과") {
+    return pathname === `/projects/${projectId}` && searchParams.get("tab") === "jobs";
+  }
+  // /projects/{id}?tab=uploads
+  if (item.label === "파일") {
+    return pathname === `/projects/${projectId}` && searchParams.get("tab") === "uploads";
+  }
+  return false;
+}
+
 interface SidebarProps {
   initialMemberships: { organizationId: string; name: string; slug: string; role: string }[];
   initialActiveOrgId: string | null;
@@ -50,10 +87,15 @@ interface SidebarProps {
 
 export function Sidebar({ initialMemberships, initialActiveOrgId }: SidebarProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [mobileOpen, setMobileOpen] = useState(false);
   const authUser = useUser();
   const { t } = useLocale();
   const navItems = buildNavItems(t.nav);
+
+  const projectMatch = pathname.match(/^\/projects\/([^/]+)/);
+  const currentProjectId = projectMatch?.[1] ?? searchParams.get("projectId");
+  const projectNavItems = currentProjectId ? buildProjectNavItems(currentProjectId) : [];
 
   const navContent = (
     <>
@@ -74,11 +116,11 @@ export function Sidebar({ initialMemberships, initialActiveOrgId }: SidebarProps
         <OrgSwitcher initialMemberships={initialMemberships} initialActiveOrgId={initialActiveOrgId} />
       </div>
 
-      <nav className="flex-1 space-y-1 p-3">
+      <nav className="flex-1 space-y-1 overflow-y-auto p-3">
         {navItems.map((item) => {
           const isActive =
             pathname === item.href ||
-            (item.href !== "/" && pathname.startsWith(item.href));
+            (item.href !== "/" && pathname.startsWith(item.href) && item.href !== "/projects");
           return (
             <Link
               key={item.href}
@@ -96,6 +138,35 @@ export function Sidebar({ initialMemberships, initialActiveOrgId }: SidebarProps
             </Link>
           );
         })}
+
+        {currentProjectId && (
+          <>
+            <div className="my-3 border-t pt-3">
+              <p className="mb-1 px-3 text-xs font-medium text-muted-foreground/70">
+                현재 프로젝트
+              </p>
+            </div>
+            {projectNavItems.map((item) => {
+              const isActive = isProjectNavActive(item, pathname, searchParams, currentProjectId);
+              return (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  onClick={() => setMobileOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  )}
+                >
+                  <item.icon className="h-4 w-4" />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </>
+        )}
       </nav>
 
       <div className="border-t p-4">

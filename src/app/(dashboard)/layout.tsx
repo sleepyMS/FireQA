@@ -33,6 +33,10 @@ export default async function DashboardLayout({
     role: m.role,
   }));
 
+  const activeOrgName = initialMemberships.find(
+    (m) => m.organizationId === user.organizationId
+  )?.name ?? "";
+
   return (
     <UserProvider value={user}>
       <div className="flex h-full min-h-screen">
@@ -41,7 +45,7 @@ export default async function DashboardLayout({
           initialActiveOrgId={user.organizationId}
         />
         <div className="flex min-w-0 flex-1 flex-col lg:pl-60">
-          <Header initialNotificationCount={unreadNotificationCount} />
+          <Header initialNotificationCount={unreadNotificationCount} orgName={activeOrgName} />
           <main className="min-w-0 flex-1 overflow-hidden p-6">{children}</main>
         </div>
       </div>

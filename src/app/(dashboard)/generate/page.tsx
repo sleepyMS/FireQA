@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Upload,
   FileText,
@@ -34,6 +34,7 @@ type ProjectSelection =
 
 export default function GeneratePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [projectSelection, setProjectSelection] =
     useState<ProjectSelection | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -47,6 +48,24 @@ export default function GeneratePage() {
   );
 
   const sse = useSSE("/api/generate");
+
+  // URL searchParams에 projectId가 있으면 해당 프로젝트를 자동 선택
+  useEffect(() => {
+    const initialProjectId = searchParams.get("projectId");
+    if (!initialProjectId) return;
+    fetch(`/api/projects/${initialProjectId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.project?.name) {
+          setProjectSelection({
+            type: "existing",
+            id: initialProjectId,
+            name: data.project.name,
+          });
+        }
+      })
+      .catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     fetch("/api/templates")
