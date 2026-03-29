@@ -1,5 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+// TTL 캐시를 항상 miss로 고정 — 테스트 간 캐시 오염 방지
+vi.mock("@/lib/cache/ttl-cache", () => ({
+  createTTLCache: () => ({
+    get: () => undefined,
+    set: () => {},
+    update: () => false,
+    delete: () => {},
+  }),
+}));
+
 // prisma 모킹 — DB 없이 로직만 테스트
 vi.mock("@/lib/db", () => ({
   prisma: {
