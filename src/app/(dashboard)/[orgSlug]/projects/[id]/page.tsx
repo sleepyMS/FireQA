@@ -9,7 +9,7 @@ import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Trash2, Archive } from "lucide-react";
 
 type PageProps = {
-  params: Promise<{ id: string }>;
+  params: Promise<{ orgSlug: string; id: string }>;
   searchParams: Promise<{ tab?: string }>;
 };
 
@@ -18,7 +18,7 @@ export default async function ProjectDetailPage({
   searchParams,
 }: PageProps) {
   // params·searchParams·인증을 동시에 해소하여 순차 대기 제거
-  const [{ id }, { tab: rawTab }, user] = await Promise.all([
+  const [{ orgSlug, id }, { tab: rawTab }, user] = await Promise.all([
     params,
     searchParams,
     getCurrentUser(),
@@ -95,7 +95,7 @@ export default async function ProjectDetailPage({
     <div className="space-y-6">
       <Breadcrumb
         items={[
-          { label: "프로젝트", href: "/projects" },
+          { label: "프로젝트", href: `/${orgSlug}/projects` },
           { label: project.name },
         ]}
       />

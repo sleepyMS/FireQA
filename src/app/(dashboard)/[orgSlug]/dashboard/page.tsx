@@ -9,7 +9,12 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { RecentProjectsPanel } from "@/components/projects/recent-projects-panel";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  params,
+}: {
+  params: Promise<{ orgSlug: string }>;
+}) {
+  const { orgSlug } = await params;
   const user = await getCurrentUser();
   const orgFilter = user ? { organizationId: user.organizationId } : undefined;
 
@@ -58,7 +63,7 @@ export default async function DashboardPage() {
 
       {/* Quick Actions */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Link href="/generate">
+        <Link href={`/${orgSlug}/generate`}>
           <Card className="cursor-pointer transition-shadow hover:shadow-md">
             <CardHeader className="flex flex-row items-center gap-4">
               <div className="rounded-lg bg-blue-100 p-3">
@@ -73,7 +78,7 @@ export default async function DashboardPage() {
             </CardHeader>
           </Card>
         </Link>
-        <Link href="/diagrams">
+        <Link href={`/${orgSlug}/diagrams`}>
           <Card className="cursor-pointer transition-shadow hover:shadow-md">
             <CardHeader className="flex flex-row items-center gap-4">
               <div className="rounded-lg bg-purple-100 p-3">
@@ -88,7 +93,7 @@ export default async function DashboardPage() {
             </CardHeader>
           </Card>
         </Link>
-        <Link href="/wireframes">
+        <Link href={`/${orgSlug}/wireframes`}>
           <Card className="cursor-pointer transition-shadow hover:shadow-md">
             <CardHeader className="flex flex-row items-center gap-4">
               <div className="rounded-lg bg-pink-100 p-3">
@@ -103,7 +108,7 @@ export default async function DashboardPage() {
             </CardHeader>
           </Card>
         </Link>
-        <Link href="/improve">
+        <Link href={`/${orgSlug}/improve`}>
           <Card className="cursor-pointer transition-shadow hover:shadow-md">
             <CardHeader className="flex flex-row items-center gap-4">
               <div className="rounded-lg bg-emerald-100 p-3">
@@ -166,7 +171,7 @@ export default async function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>최근 생성 이력</CardTitle>
-            <Link href="/history">
+            <Link href={`/${orgSlug}/history`}>
               <Button variant="ghost" size="sm">
                 <Clock className="mr-2 h-4 w-4" />
                 전체 보기
