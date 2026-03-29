@@ -72,12 +72,12 @@ export function ProjectCard({
     <>
       <Card
         className="cursor-pointer transition-shadow hover:shadow-md"
-        onClick={() => router.push(`/${orgSlug ?? ""}/projects/${project.id}`)}
+        onClick={() => router.push(`${orgSlug ? `/${orgSlug}` : ""}/projects/${project.id}`)}
       >
         <CardHeader>
           <CardTitle>
             <Link
-              href={`/${orgSlug ?? ""}/projects/${project.id}`}
+              href={`${orgSlug ? `/${orgSlug}` : ""}/projects/${project.id}`}
               className="hover:underline"
               // 카드 전체 클릭과 링크 충돌 방지: 링크 클릭은 버블링 차단
               onClick={(e) => e.stopPropagation()}
