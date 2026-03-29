@@ -74,7 +74,7 @@ async function main() {
     // (suffix가 붙은 -2, -3 형태도 허용)
     const isAlreadyNameBased =
       org.slug === candidateBase ||
-      /^.+-\d+$/.test(org.slug) &&
+      /^[a-z0-9]([a-z0-9-]*[a-z0-9])?-\d+$/.test(org.slug) &&
         org.slug.replace(/-\d+$/, "") === candidateBase.slice(0, 45).replace(/-+$/, "");
 
     if (isAlreadyNameBased) {
@@ -102,7 +102,7 @@ async function main() {
 main()
   .catch((err) => {
     console.error("오류 발생:", err);
-    process.exit(1);
+    process.exitCode = 1;
   })
   .finally(async () => {
     await prisma.$disconnect();
