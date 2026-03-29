@@ -207,6 +207,17 @@ export default function SettingsGeneral() {
               <p className="text-xs text-emerald-600">올바른 형식입니다</p>
             )}
           </div>
+          {/* 팀 URL — 읽기 전용으로 현재 적용된 슬러그 기준의 URL 표시 */}
+          <div className="space-y-2">
+            <Label className="text-muted-foreground">팀 URL</Label>
+            <div className="flex items-center rounded-md border bg-muted/50 px-3 py-2 text-sm text-muted-foreground select-all">
+              <span className="text-muted-foreground/60">fireqa.com/</span>
+              <span className="font-medium text-foreground">{org?.slug ?? ""}</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              슬러그를 변경하면 URL도 바뀝니다. 저장 후 적용됩니다.
+            </p>
+          </div>
           <div className="flex justify-end">
             <Button
               onClick={handleSave}
