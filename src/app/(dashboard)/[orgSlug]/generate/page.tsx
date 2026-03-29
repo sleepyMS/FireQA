@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams, useParams } from "next/navigation";
 import {
   Upload,
@@ -274,12 +275,12 @@ export default function GeneratePage() {
                   {templates.length === 0 ? (
                     <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
                       <p>저장된 템플릿이 없습니다.</p>
-                      <a
+                      <Link
                         href={`${orgSlug ? `/${orgSlug}` : ""}/templates`}
                         className="mt-1 inline-block text-xs text-primary underline"
                       >
                         템플릿 만들러 가기
-                      </a>
+                      </Link>
                     </div>
                   ) : (
                     <div className="space-y-1.5">
