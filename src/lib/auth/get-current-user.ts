@@ -11,10 +11,39 @@ export type AuthUser = {
   role: string;
 };
 
-const userCache = createTTLCache<AuthUser | null>(60_000);
+// AuthUser와 달리 멤버십 전체를 보관해 조직 전환 시 캐시 내에서 해결
+type CachedUser = {
+  id: string;
+  email: string;
+  name: string | null;
+  activeOrganizationId: string | null;
+  memberships: { organizationId: string; role: string }[];
+};
 
-export function invalidateUserCache(supabaseId: string) {
-  userCache.delete(supabaseId);
+const userDataCache = createTTLCache<CachedUser>(60_000);
+// prisma userId → supabaseId 역방향 맵: API 라우트에서 supabaseId 없이 캐시에 접근하기 위해 유지
+const prismaIdToSupabaseId = new Map<string, string>();
+
+// 조직 전환 시 activeOrganizationId만 교체 (DB 재조회 없음)
+export function updateCachedActiveOrg(userId: string, organizationId: string) {
+  const supabaseId = prismaIdToSupabaseId.get(userId);
+  if (!supabaseId) return;
+  const cached = userDataCache.get(supabaseId);
+  if (!cached) return;
+  userDataCache.set(supabaseId, { ...cached, activeOrganizationId: organizationId });
+}
+
+// 새 조직 생성 시 멤버십 추가 + activeOrganizationId 업데이트 (DB 재조회 없음)
+export function updateCachedNewOrg(userId: string, organizationId: string, role: string) {
+  const supabaseId = prismaIdToSupabaseId.get(userId);
+  if (!supabaseId) return;
+  const cached = userDataCache.get(supabaseId);
+  if (!cached) return;
+  userDataCache.set(supabaseId, {
+    ...cached,
+    activeOrganizationId: organizationId,
+    memberships: [...cached.memberships, { organizationId, role }],
+  });
 }
 
 export async function getCurrentUser(
@@ -61,16 +90,22 @@ async function authenticateByToken(token: string): Promise<AuthUser | null> {
 async function findUserBySupabaseId(
   supabaseId: string
 ): Promise<AuthUser | null> {
-  const cached = userCache.get(supabaseId);
-  if (cached !== undefined) return cached;
+  const cached = userDataCache.get(supabaseId);
+  if (cached) {
+    // 역방향 맵이 만료된 경우 복원
+    prismaIdToSupabaseId.set(cached.id, supabaseId);
+    return resolveAuthUser(cached);
+  }
 
   const user = await prisma.user.findUnique({
     where: { supabaseId },
     include: { memberships: { select: { organizationId: true, role: true } } },
   });
-  const result = user ? await resolveAuthUser(user) : null;
-  userCache.set(supabaseId, result);
-  return result;
+  if (!user) return null;
+
+  prismaIdToSupabaseId.set(user.id, supabaseId);
+  userDataCache.set(supabaseId, user);
+  return resolveAuthUser(user);
 }
 
 async function authenticateBySession(): Promise<AuthUser | null> {
@@ -107,12 +142,21 @@ async function resolveAuthUser(
   // activeOrganizationId가 stale하거나 없을 때 첫 번째 멤버십으로 폴백
   if (!membership) {
     membership = user.memberships[0];
+    const correctedOrgId = membership.organizationId;
     prisma.user
       .update({
         where: { id: user.id },
-        data: { activeOrganizationId: membership.organizationId },
+        data: { activeOrganizationId: correctedOrgId },
       })
       .catch(() => {});
+    // 캐시도 함께 교정
+    const supabaseId = prismaIdToSupabaseId.get(user.id);
+    if (supabaseId) {
+      const cachedEntry = userDataCache.get(supabaseId);
+      if (cachedEntry) {
+        userDataCache.set(supabaseId, { ...cachedEntry, activeOrganizationId: correctedOrgId });
+      }
+    }
   }
 
   return {

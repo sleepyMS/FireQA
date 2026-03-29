@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { prisma } from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { getCurrentUser, updateCachedNewOrg } from "@/lib/auth/get-current-user";
 import { generateUniqueOrgSlug } from "@/lib/auth/provision-user";
 import { UserRole } from "@/types/enums";
 
@@ -66,6 +66,9 @@ export async function POST(request: NextRequest) {
 
       return organization;
     });
+
+    // 새 조직을 캐시에 반영 (멤버십 추가 + activeOrganizationId 교체)
+    updateCachedNewOrg(user.userId, org.id, UserRole.OWNER);
 
     return NextResponse.json({ id: org.id, name: org.name, slug: org.slug });
   } catch (error) {

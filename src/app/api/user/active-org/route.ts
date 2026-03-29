@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { getCurrentUser, updateCachedActiveOrg } from "@/lib/auth/get-current-user";
 
 export async function PATCH(request: NextRequest) {
   try {
@@ -31,6 +31,9 @@ export async function PATCH(request: NextRequest) {
       where: { id: user.userId },
       data: { activeOrganizationId: organizationId },
     });
+
+    // 전환된 조직을 캐시에 반영 (DB 재조회 없이)
+    updateCachedActiveOrg(user.userId, organizationId);
 
     return NextResponse.json({ success: true });
   } catch (error) {
