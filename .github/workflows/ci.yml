@@ -11,6 +11,21 @@ jobs:
     name: Lint · Type-check · Test · Build
     runs-on: ubuntu-latest
 
+    env:
+      # 더미 값 — 실제 DB 불필요, prisma generate·tsc·build 통과용
+      DATABASE_URL: "postgresql://user:pass@localhost:5432/fireqa"
+      DIRECT_URL: "postgresql://user:pass@localhost:5432/fireqa"
+      NEXT_PUBLIC_SUPABASE_URL: "https://placeholder.supabase.co"
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "placeholder"
+      OPENAI_API_KEY: "sk-placeholder"
+      STRIPE_SECRET_KEY: "sk-placeholder"
+      STRIPE_WEBHOOK_SECRET: "whsec_placeholder"
+      STRIPE_PRO_MONTHLY_PRICE_ID: "price_placeholder"
+      STRIPE_PRO_YEARLY_PRICE_ID: "price_placeholder"
+      BREVO_API_KEY: "placeholder"
+      BREVO_SENDER_EMAIL: "noreply@example.com"
+      BREVO_SENDER_NAME: "FireQA"
+
     steps:
       - uses: actions/checkout@v4
 
@@ -40,17 +55,3 @@ jobs:
 
       - name: Build
         run: npm run build
-        env:
-          # 빌드 시 실제 DB 연결 불필요 — 더미 값으로 타입 체크/번들링만 통과
-          DATABASE_URL: "postgresql://user:pass@localhost:5432/fireqa"
-          DIRECT_URL: "postgresql://user:pass@localhost:5432/fireqa"
-          NEXT_PUBLIC_SUPABASE_URL: "https://placeholder.supabase.co"
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: "placeholder"
-          OPENAI_API_KEY: "sk-placeholder"
-          STRIPE_SECRET_KEY: "sk-placeholder"
-          STRIPE_WEBHOOK_SECRET: "whsec_placeholder"
-          STRIPE_PRO_MONTHLY_PRICE_ID: "price_placeholder"
-          STRIPE_PRO_YEARLY_PRICE_ID: "price_placeholder"
-          BREVO_API_KEY: "placeholder"
-          BREVO_SENDER_EMAIL: "noreply@example.com"
-          BREVO_SENDER_NAME: "FireQA"
