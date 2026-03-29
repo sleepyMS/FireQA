@@ -75,8 +75,14 @@ export default function SettingsGeneral() {
       });
       const data = await res.json();
       if (res.ok) {
+        // setOrg 먼저 업데이트 후 슬러그가 바뀌었으면 새 URL로 이동
         setOrg((prev) => (prev ? { ...prev, ...data } : prev));
-        toast.success("조직 정보가 저장되었습니다.");
+        if (data.slug && data.slug !== org?.slug) {
+          // 슬러그가 변경된 경우 새 URL로 리다이렉트 (toast 생략 — 페이지 이동 자체가 성공 신호)
+          router.push(`/${data.slug}/settings`);
+        } else {
+          toast.success("설정이 저장되었습니다.");
+        }
       } else {
         toast.error(data.error || "저장에 실패했습니다.");
       }
@@ -209,7 +215,7 @@ export default function SettingsGeneral() {
           </div>
           {/* 팀 URL — 읽기 전용으로 현재 적용된 슬러그 기준의 URL 표시 */}
           <div className="space-y-2">
-            <Label className="text-muted-foreground">팀 URL</Label>
+            <Label className="text-muted-foreground">현재 URL</Label>
             <div className="flex items-center rounded-md border bg-muted/50 px-3 py-2 text-sm text-muted-foreground select-all">
               <span className="text-muted-foreground/60">fireqa.com/</span>
               <span className="font-medium text-foreground">{org?.slug ?? ""}</span>
