@@ -1,8 +1,7 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
-import { LogOut, Search } from "lucide-react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { usePathname } from "next/navigation";
+import { Search } from "lucide-react";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { SearchDialog } from "@/components/layout/search-dialog";
 import { useLocale } from "@/lib/i18n/locale-provider";
@@ -26,7 +25,6 @@ function buildPageTitles(nav: Messages["nav"]): Record<string, string> {
 
 export function Header({ initialNotificationCount, orgName }: { initialNotificationCount?: number; orgName?: string }) {
   const pathname = usePathname();
-  const router = useRouter();
   const { t } = useLocale();
   const pageTitles = buildPageTitles(t.nav);
 
@@ -37,16 +35,10 @@ export function Header({ initialNotificationCount, orgName }: { initialNotificat
     )?.[1] ??
     "FireQA";
 
-  async function handleLogout() {
-    const supabase = createSupabaseBrowserClient();
-    await supabase.auth.signOut();
-    router.push("/login");
-  }
-
   return (
     <>
       <SearchDialog />
-      <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b bg-background/95 px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b bg-background/95 pl-14 pr-6 backdrop-blur supports-[backdrop-filter]:bg-background/60 lg:px-6">
         <div className="flex flex-col gap-0">
           <h1 className="text-base font-semibold leading-tight">{title}</h1>
           {orgName && (
@@ -63,13 +55,6 @@ export function Header({ initialNotificationCount, orgName }: { initialNotificat
             <kbd className="ml-1 rounded border px-1 py-0.5 text-[10px]">⌘K</kbd>
           </button>
           <NotificationBell initialCount={initialNotificationCount} />
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-          >
-            <LogOut className="h-4 w-4" />
-            {t.common.logout}
-          </button>
         </div>
       </header>
     </>
