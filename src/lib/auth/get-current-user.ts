@@ -28,22 +28,18 @@ const prismaIdToSupabaseId = new Map<string, string>();
 export function updateCachedActiveOrg(userId: string, organizationId: string) {
   const supabaseId = prismaIdToSupabaseId.get(userId);
   if (!supabaseId) return;
-  const cached = userDataCache.get(supabaseId);
-  if (!cached) return;
-  userDataCache.set(supabaseId, { ...cached, activeOrganizationId: organizationId });
+  userDataCache.update(supabaseId, (cached) => ({ ...cached, activeOrganizationId: organizationId }));
 }
 
 // 새 조직 생성 시 멤버십 추가 + activeOrganizationId 업데이트 (DB 재조회 없음)
 export function updateCachedNewOrg(userId: string, organizationId: string, role: string) {
   const supabaseId = prismaIdToSupabaseId.get(userId);
   if (!supabaseId) return;
-  const cached = userDataCache.get(supabaseId);
-  if (!cached) return;
-  userDataCache.set(supabaseId, {
+  userDataCache.update(supabaseId, (cached) => ({
     ...cached,
     activeOrganizationId: organizationId,
     memberships: [...cached.memberships, { organizationId, role }],
-  });
+  }));
 }
 
 export async function getCurrentUser(
@@ -152,10 +148,7 @@ async function resolveAuthUser(
     // 캐시도 함께 교정
     const supabaseId = prismaIdToSupabaseId.get(user.id);
     if (supabaseId) {
-      const cachedEntry = userDataCache.get(supabaseId);
-      if (cachedEntry) {
-        userDataCache.set(supabaseId, { ...cachedEntry, activeOrganizationId: correctedOrgId });
-      }
+      userDataCache.update(supabaseId, (cached) => ({ ...cached, activeOrganizationId: correctedOrgId }));
     }
   }
 
