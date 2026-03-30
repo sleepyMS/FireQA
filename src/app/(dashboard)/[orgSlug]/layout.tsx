@@ -32,7 +32,7 @@ export default async function OrgLayout({ params, children }: OrgLayoutProps) {
       select: { slug: true },
     });
     if (!activeOrg) redirect("/onboarding");
-    redirect(`/${activeOrg.slug}/dashboard`);
+    redirect(`/${encodeURIComponent(activeOrg.slug)}/dashboard`);
   }
 
   // URL의 org와 세션 org가 다르면 세션 동기화 (org 전환 감지)

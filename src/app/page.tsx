@@ -12,5 +12,6 @@ export default async function RootPage() {
   });
 
   if (!org) redirect("/onboarding");
-  redirect(`/${org.slug}/dashboard`);
+  // encodeURIComponent: DB에 잘못된 슬러그가 있어도 location 헤더 ERR_INVALID_CHAR 방지
+  redirect(`/${encodeURIComponent(org.slug)}/dashboard`);
 }

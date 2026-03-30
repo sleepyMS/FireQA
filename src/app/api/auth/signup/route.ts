@@ -32,6 +32,13 @@ export async function POST(request: NextRequest) {
 
     let finalSlug: string;
     if (orgSlug) {
+      // PATCH 엔드포인트와 동일한 포맷 검증 (비ASCII 문자 → location 헤더 ERR_INVALID_CHAR 방지)
+      if (!/^[a-z0-9-]+$/.test(orgSlug)) {
+        return NextResponse.json(
+          { error: "슬러그는 소문자, 숫자, 하이픈만 사용할 수 있습니다." },
+          { status: 400 }
+        );
+      }
       const taken = await prisma.organization.findUnique({ where: { slug: orgSlug } });
       if (taken) {
         return NextResponse.json({ error: "이미 사용 중인 슬러그입니다." }, { status: 409 });
