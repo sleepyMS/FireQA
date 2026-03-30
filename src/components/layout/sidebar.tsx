@@ -115,7 +115,7 @@ export function Sidebar({ initialMemberships, initialActiveOrgId }: SidebarProps
 
   // 렌더 시점에 캐시 갱신 — 조직별 마지막 프로젝트를 기억
   const resolvedProjectId = urlProjectId ?? contextProjectId ?? null;
-  if (resolvedProjectId && orgSlug) {
+  if (resolvedProjectId && orgSlug && lastProjectPerOrg.get(orgSlug) !== resolvedProjectId) {
     lastProjectPerOrg.set(orgSlug, resolvedProjectId);
   }
   // 다른 조직으로 전환 시 해당 조직의 캐시가 없으면 null → 프로젝트 nav 숨김

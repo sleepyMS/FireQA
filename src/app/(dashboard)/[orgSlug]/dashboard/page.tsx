@@ -3,6 +3,13 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { FileText, GitBranch, Smartphone, Clock, Plus, FileEdit, ChevronRight } from "lucide-react";
 import { STATUS_CONFIG, JOB_TYPE_LABEL, JOB_TYPE_PATH, JobType, JobStatus } from "@/types/enums";
+
+const JOB_TYPE_STYLE: Record<string, { bg: string; icon: React.ReactNode }> = {
+  [JobType.TEST_CASES]:  { bg: "bg-blue-50",    icon: <FileText   className="h-4 w-4 text-blue-600" /> },
+  [JobType.WIREFRAMES]:  { bg: "bg-pink-50",    icon: <Smartphone className="h-4 w-4 text-pink-600" /> },
+  [JobType.SPEC_IMPROVE]:{ bg: "bg-emerald-50", icon: <FileEdit   className="h-4 w-4 text-emerald-600" /> },
+  [JobType.DIAGRAMS]:    { bg: "bg-purple-50",  icon: <GitBranch  className="h-4 w-4 text-purple-600" /> },
+};
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/db";
@@ -198,21 +205,8 @@ export default async function DashboardPage({
                     href={`/${orgSlug}${JOB_TYPE_PATH[job.type] || "/generate"}/${job.id}?projectId=${job.project.id}`}
                     className="flex items-center gap-3 rounded-xl border bg-card p-3 transition-all hover:border-primary/30 hover:shadow-sm"
                   >
-                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
-                      job.type === JobType.TEST_CASES ? "bg-blue-50" :
-                      job.type === JobType.WIREFRAMES ? "bg-pink-50" :
-                      job.type === JobType.SPEC_IMPROVE ? "bg-emerald-50" :
-                      "bg-purple-50"
-                    }`}>
-                      {job.type === JobType.TEST_CASES ? (
-                        <FileText className="h-4 w-4 text-blue-600" />
-                      ) : job.type === JobType.WIREFRAMES ? (
-                        <Smartphone className="h-4 w-4 text-pink-600" />
-                      ) : job.type === JobType.SPEC_IMPROVE ? (
-                        <FileEdit className="h-4 w-4 text-emerald-600" />
-                      ) : (
-                        <GitBranch className="h-4 w-4 text-purple-600" />
-                      )}
+                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${(JOB_TYPE_STYLE[job.type] ?? JOB_TYPE_STYLE[JobType.DIAGRAMS]).bg}`}>
+                      {(JOB_TYPE_STYLE[job.type] ?? JOB_TYPE_STYLE[JobType.DIAGRAMS]).icon}
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">{job.project.name}</p>
