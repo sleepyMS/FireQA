@@ -193,7 +193,7 @@ export default function SettingsGeneral() {
             </p>
           </div>
         </div>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 py-2">
           <div className="space-y-2">
             <Label>조직 이름</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} />
@@ -275,7 +275,7 @@ export default function SettingsGeneral() {
             </p>
           </div>
         </div>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-3 py-2">
           {!generatedToken ? (
             <>
               {pluginToken?.hasToken && (

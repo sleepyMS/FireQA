@@ -103,7 +103,7 @@ export function SpecImproveResults({ jobId, markdown, summary, originalFileName 
       ) : (
         /* 단독 결과 렌더링 */
         <Card>
-          <CardContent>
+          <CardContent className="py-2">
             <MarkdownRenderer markdown={markdown} />
           </CardContent>
         </Card>
