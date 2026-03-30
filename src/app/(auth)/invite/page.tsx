@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { ROLE_LABEL } from "@/types/enums";
+import { LogIn, PartyPopper, AlertCircle } from "lucide-react";
 
 
 function InviteContent() {
@@ -131,7 +132,7 @@ function InviteContent() {
           </div>
           <CardContent className="space-y-4 pt-5">
             <div className="rounded-lg bg-blue-50 px-4 py-3 text-sm text-blue-700">
-              🔐 로그인하면 <strong>자동으로 수락</strong>됩니다. 다시 클릭할 필요 없어요.
+              <LogIn className="mr-1.5 inline h-4 w-4" />로그인하면 <strong>자동으로 수락</strong>됩니다. 다시 클릭할 필요 없어요.
             </div>
             <Link
               href={`/login?redirect=${encodeURIComponent(`/invite?token=${token}`)}`}
@@ -180,8 +181,8 @@ function InviteContent() {
 
       {status === "accepted" && (
         <CardContent className="space-y-4 py-10 text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-2xl">
-            🎉
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100">
+            <PartyPopper className="h-7 w-7 text-emerald-600" />
           </div>
           <div>
             <p className="text-base font-bold">
@@ -199,8 +200,8 @@ function InviteContent() {
 
       {status === "invalid" && (
         <CardContent className="space-y-4 py-10 text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-100 text-2xl">
-            ⏰
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-100">
+            <AlertCircle className="h-7 w-7 text-red-500" />
           </div>
           <div>
             <p className="text-sm font-semibold text-destructive">{error}</p>
