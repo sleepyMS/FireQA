@@ -428,22 +428,23 @@ export function ProjectTabs({
   projectId,
   projectName: _projectName, // eslint-disable-line @typescript-eslint/no-unused-vars
   projectStatus,
-  tab,
+  tab: initialTab,
   jobCounts,
   recentJobs,
   uploads,
 }: ProjectTabsProps) {
-  const { orgSlug } = useParams<{ orgSlug?: string }>();
-  const orgPrefix = orgSlug ? `/${orgSlug}` : "";
+  // URL searchParams 대신 client state로 관리 — 탭 전환 시 서버 재요청 없음
+  const [tab, setTab] = useState(initialTab);
 
   return (
     <div className="space-y-6">
       {/* 탭 내비게이션 */}
       <div className="flex gap-1 rounded-lg border bg-muted/50 p-1 w-fit">
         {TABS.map((t) => (
-          <Link
+          <button
             key={t.value}
-            href={`${orgPrefix}/projects/${projectId}?tab=${t.value}`}
+            type="button"
+            onClick={() => setTab(t.value)}
             className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
               tab === t.value
                 ? "bg-background text-foreground shadow-sm"
@@ -451,7 +452,7 @@ export function ProjectTabs({
             }`}
           >
             {t.label}
-          </Link>
+          </button>
         ))}
       </div>
 
