@@ -97,6 +97,12 @@ export const ActivityAction = {
   MEMBER_REMOVED: "member.removed",
   VERSION_CREATED: "version.created",
   VERSION_ACTIVATED: "version.activated",
+  // Agent 관련 액션
+  AGENT_CONNECTED: "agent.connected",
+  AGENT_DISCONNECTED: "agent.disconnected",
+  AGENT_TASK_CREATED: "agent.task_created",
+  AGENT_TASK_COMPLETED: "agent.task_completed",
+  AGENT_TASK_FAILED: "agent.task_failed",
 } as const;
 
 export type ActivityAction = (typeof ActivityAction)[keyof typeof ActivityAction];
