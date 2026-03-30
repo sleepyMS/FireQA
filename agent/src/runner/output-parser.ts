@@ -2,6 +2,7 @@ export type ParsedChunk = {
   type: "text" | "tool_use" | "tool_result" | "error";
   content: string;
   tool?: string;
+  sessionId?: string; // result 이벤트에서만 설정됨 (세션 연속성용)
 };
 
 export function parseStreamJsonLine(line: string): ParsedChunk | null {
@@ -22,7 +23,11 @@ export function parseStreamJsonLine(line: string): ParsedChunk | null {
     }
 
     if (data.type === "result") {
-      return { type: "text", content: String(data.result ?? "") };
+      return {
+        type: "text",
+        content: String(data.result ?? ""),
+        sessionId: data.session_id ?? undefined, // 다음 작업의 --resume에 사용
+      };
     }
 
     return null;

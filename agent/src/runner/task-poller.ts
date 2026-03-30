@@ -129,7 +129,12 @@ async function executeTask(
     }
 
     if (result.exitCode === 0) {
-      await api.sendResult(task.id, { output: result.fullOutput });
+      // result 청크에서 sessionId 추출 (세션 연속성: 다음 작업에서 --resume에 사용)
+      const sessionId = result.chunks
+        .filter((c) => c.sessionId)
+        .at(-1)?.sessionId;
+
+      await api.sendResult(task.id, { output: result.fullOutput }, sessionId);
       console.log(`작업 완료: ${task.id}`);
     } else {
       await api.updateTaskStatus(task.id, "failed", {
