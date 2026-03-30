@@ -2,7 +2,6 @@
 
 import { useState, Suspense } from "react";
 import { useLocale } from "@/lib/i18n/locale-provider";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import SettingsGeneral from "./settings-general";
 import SettingsMembers from "./settings-members";
 import SettingsBilling from "./settings-billing";
@@ -28,25 +27,30 @@ export function SettingsTabs({ activeTab: initialTab }: { activeTab: TabKey }) {
   ];
 
   return (
-    <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabKey)}>
-      <TabsList variant="line">
+    <>
+      <div className="flex gap-1 border-b">
         {tabs.map(({ key, label }) => (
-          <TabsTrigger key={key} value={key}>
+          <button
+            key={key}
+            type="button"
+            onClick={() => setActiveTab(key)}
+            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              activeTab === key
+                ? "border-primary text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
             {label}
-          </TabsTrigger>
+          </button>
         ))}
-      </TabsList>
+      </div>
 
-      {tabs.map(({ key }) => (
-        <TabsContent key={key} value={key}>
-          <Suspense fallback={tabFallback}>
-            {key === "general" ? <SettingsGeneral />
-              : key === "members" ? <SettingsMembers />
-              : key === "billing" ? <SettingsBilling />
-              : <SettingsWebhooks />}
-          </Suspense>
-        </TabsContent>
-      ))}
-    </Tabs>
+      <Suspense fallback={tabFallback}>
+        {activeTab === "general" ? <SettingsGeneral />
+          : activeTab === "members" ? <SettingsMembers />
+          : activeTab === "billing" ? <SettingsBilling />
+          : <SettingsWebhooks />}
+      </Suspense>
+    </>
   );
 }
