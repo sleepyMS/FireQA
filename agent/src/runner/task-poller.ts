@@ -45,6 +45,10 @@ export async function startAgent(store: ConfigStore): Promise<void> {
 
   console.log(`FireQA에 연결됨. 작업 대기 중... (${config.server})`);
 
+  // 이전 실행에서 미전송된 출력 데이터 재전송 시도
+  await api.flushPendingOutputs().catch(() => {});
+  console.log("미전송 데이터 확인 완료");
+
   const cleanup = async () => {
     console.log("\n에이전트 종료 중...");
     await api.disconnect(connection.id).catch(() => {});
