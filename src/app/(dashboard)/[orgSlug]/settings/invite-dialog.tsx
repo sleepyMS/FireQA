@@ -208,7 +208,7 @@ export default function InviteDialog({
         </div>
 
         {!inviteUrl && (
-          <SheetFooter className="px-4">
+          <SheetFooter className="flex-row px-4">
             <SheetClose render={<Button variant="outline" className="flex-1" />}>
               취소
             </SheetClose>
