@@ -1,0 +1,23 @@
+{
+  "name": "fireqa-agent",
+  "version": "0.1.0",
+  "description": "FireQA Agent CLI — connect your AI CLI to FireQA",
+  "type": "module",
+  "bin": {
+    "fireqa-agent": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli.ts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "commander": "^13.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.0",
+    "tsx": "^4.0.0",
+    "vitest": "^3.0.0",
+    "@types/node": "^22.0.0"
+  }
+}
