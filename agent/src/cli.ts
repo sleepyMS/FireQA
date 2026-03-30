@@ -13,9 +13,15 @@ program
 
 program
   .command("login")
-  .description("API Key로 FireQA에 인증")
-  .action(async () => {
-    await loginWithApiKey(store);
+  .description("FireQA에 인증 (기본: OAuth, --api-key: API Key 사용)")
+  .option("--api-key", "API Key로 직접 인증")
+  .action(async (options: { apiKey?: boolean }) => {
+    if (options.apiKey) {
+      await loginWithApiKey(store);
+    } else {
+      const { loginWithOAuth } = await import("./auth/oauth.js");
+      await loginWithOAuth(store);
+    }
   });
 
 program
