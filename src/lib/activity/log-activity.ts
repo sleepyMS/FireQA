@@ -8,6 +8,8 @@ const WEBHOOK_EVENTS = new Set<ActivityAction>([
   "generation.failed" as ActivityAction,
   "member.invited" as ActivityAction,
   "project.created" as ActivityAction,
+  "agent.task_completed" as ActivityAction,
+  "agent.task_failed" as ActivityAction,
 ]);
 
 export function logActivity(params: {
