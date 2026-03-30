@@ -17,6 +17,7 @@ export default function SignupForm() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -25,6 +26,12 @@ export default function SignupForm() {
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+
+    if (password !== passwordConfirm) {
+      setError("비밀번호가 일치하지 않습니다.");
+      return;
+    }
+
     setLoading(true);
 
     const { data, error: signUpError } = await supabase.auth.signUp({
@@ -91,6 +98,17 @@ export default function SignupForm() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="8자 이상"
               minLength={8}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="passwordConfirm">비밀번호 확인</Label>
+            <Input
+              id="passwordConfirm"
+              type="password"
+              value={passwordConfirm}
+              onChange={(e) => setPasswordConfirm(e.target.value)}
+              placeholder="비밀번호를 다시 입력하세요"
               required
             />
           </div>

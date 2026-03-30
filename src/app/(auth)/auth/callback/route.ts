@@ -10,9 +10,10 @@ import { prisma } from "@/lib/db";
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const code = searchParams.get("code");
+  const next = searchParams.get("next"); // 비밀번호 재설정 등 특수 목적지
   // redirect 목적지는 쿠키에서 읽음 (URL 쿼리 파라미터로 전달 시 Supabase 허용 목록 매칭 실패)
   const redirectCookie = request.cookies.get("auth_redirect")?.value;
-  const redirect = redirectCookie ? decodeURIComponent(redirectCookie) : "/";
+  const redirect = next ?? (redirectCookie ? decodeURIComponent(redirectCookie) : "/");
 
   if (!code) {
     return NextResponse.redirect(new URL("/login", request.url));
