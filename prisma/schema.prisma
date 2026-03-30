@@ -26,6 +26,8 @@ model Organization {
   invitations       Invitation[]
   subscription      Subscription?
   webhookEndpoints  WebhookEndpoint[]
+  agentConnections  AgentConnection[]
+  agentTasks        AgentTask[]
 }
 
 model Subscription {
@@ -65,6 +67,8 @@ model User {
   invitationsAccepted  Invitation[]      @relation("AcceptedInvite")
   resultVersions       ResultVersion[]   @relation("ResultVersionCreator")
   diagramVersions      DiagramVersion[]  @relation("DiagramVersionCreator")
+  agentConnections     AgentConnection[]
+  agentTasks           AgentTask[]       @relation("AgentTaskCreator")
 
   @@index([supabaseId])
 }
@@ -109,6 +113,7 @@ model ApiToken {
   user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   name       String    @default("Figma Plugin") // 토큰 용도 식별
   tokenHash  String    @unique // SHA-256 해시로 저장
+  keyPrefix  String    @default("")  // 식별용 앞 8자 (e.g. "fqa_a1b2")
   lastUsedAt DateTime?
   expiresAt  DateTime?
   createdAt  DateTime  @default(now())
@@ -146,6 +151,7 @@ model Project {
   deletedAt      DateTime?
   uploads        Upload[]
   jobs           GenerationJob[]
+  agentTasks     AgentTask[]
 
   @@index([organizationId, status]) // 조직별 활성/보관/삭제 프로젝트 필터링 성능 최적화
   @@index([deletedAt]) // 삭제된 프로젝트 조회 및 정리 작업 성능 최적화
@@ -315,4 +321,63 @@ model QATemplate {
   updatedAt      DateTime     @updatedAt
 
   @@index([organizationId])
+}
+
+// ─── 에이전트 ───
+
+model AgentConnection {
+  id            String   @id @default(cuid())
+  organizationId String
+  userId        String
+  name          String
+  type          String   @default("self_hosted") // "self_hosted" | "hosted"
+  status        String   @default("offline")     // "online" | "offline"
+  lastHeartbeat DateTime?
+  metadata      String   @default("{}")           // JSON: { cli, os, version }
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks         AgentTask[]
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+}
+
+model AgentTask {
+  id             String   @id @default(cuid())
+  organizationId String
+  projectId      String?
+  connectionId   String?
+  createdById    String
+
+  type           String   // "tc-generate" | "diagram-generate" | "wireframe-generate" | "improve-spec" | "custom"
+  status         String   @default("pending") // "pending" | "assigned" | "running" | "completed" | "failed" | "cancelled" | "timed_out"
+  priority       Int      @default(0)
+
+  prompt         String
+  context        String   @default("{}") // JSON
+  mcpTools       String   @default("[]") // JSON
+
+  sessionId      String?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  timeoutMs      Int      @default(300000)
+
+  result         String?  // JSON
+  outputLog      String?
+  errorMessage   String?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project        Project?         @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  connection     AgentConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  createdBy      User             @relation("AgentTaskCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status])
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([connectionId])
 }
