@@ -4,6 +4,10 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -22,10 +26,7 @@ export default function LoginForm() {
     setError("");
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
       setError(error.message);
@@ -43,82 +44,70 @@ export default function LoginForm() {
     document.cookie = `auth_redirect=${encodeURIComponent(redirect)};path=/;max-age=300;SameSite=Lax`;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
     if (error) setError(error.message);
   }
 
   return (
-    <div className="rounded-xl border bg-white p-8 shadow-sm">
-      <div className="mb-6 text-center">
-        <h1 className="text-2xl font-bold">FireQA</h1>
-        <p className="mt-1 text-sm text-gray-500">로그인하여 시작하세요</p>
-      </div>
-
-      <form onSubmit={handleLogin} className="space-y-4">
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-            이메일
-          </label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            placeholder="you@example.com"
-            required
-          />
-        </div>
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-            비밀번호
-          </label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            placeholder="••••••••"
-            required
-          />
+    <Card className="w-full max-w-sm">
+      <CardContent className="space-y-6 pt-6">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold">FireQA</h1>
+          <p className="mt-1 text-sm text-muted-foreground">로그인하여 시작하세요</p>
         </div>
 
-        {error && (
-          <p className="text-sm text-red-600">{error}</p>
-        )}
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="email">이메일</Label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">비밀번호</Label>
+            <Input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              required
+            />
+          </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-        >
-          {loading ? "로그인 중..." : "로그인"}
-        </button>
-      </form>
+          {error && <p className="text-sm text-destructive">{error}</p>}
 
-      <div className="my-4 flex items-center gap-3">
-        <div className="h-px flex-1 bg-gray-200" />
-        <span className="text-xs text-gray-400">또는</span>
-        <div className="h-px flex-1 bg-gray-200" />
-      </div>
+          <Button type="submit" disabled={loading} className="w-full">
+            {loading ? "로그인 중..." : "로그인"}
+          </Button>
+        </form>
 
-      <button
-        onClick={handleGoogleLogin}
-        className="w-full rounded-lg border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-      >
-        Google로 로그인
-      </button>
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t" />
+          </div>
+          <div className="relative flex justify-center text-xs">
+            <span className="bg-card px-2 text-muted-foreground">또는</span>
+          </div>
+        </div>
 
-      <p className="mt-4 text-center text-sm text-gray-500">
-        계정이 없으신가요?{" "}
-        <Link href="/signup" className="text-blue-600 hover:underline">
-          회원가입
-        </Link>
-      </p>
-    </div>
+        <Button variant="outline" className="w-full" onClick={handleGoogleLogin}>
+          Google로 로그인
+        </Button>
+
+        <p className="text-center text-sm text-muted-foreground">
+          계정이 없으신가요?{" "}
+          <Link href="/signup" className="text-primary hover:underline">
+            회원가입
+          </Link>
+        </p>
+      </CardContent>
+    </Card>
   );
 }
