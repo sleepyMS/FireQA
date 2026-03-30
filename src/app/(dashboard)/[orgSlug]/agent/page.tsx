@@ -84,6 +84,12 @@ export default async function AgentPage({
               <p className="text-xs text-muted-foreground">
                 에이전트가 시작되면 이 페이지에 자동으로 표시됩니다.
               </p>
+              <Link
+                href={`/${orgSlug}/agent/guide`}
+                className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+              >
+                자세한 설치 가이드 보기 →
+              </Link>
             </div>
           ) : (
             <div className="divide-y">
