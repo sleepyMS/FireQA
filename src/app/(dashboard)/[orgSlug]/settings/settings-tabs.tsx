@@ -2,6 +2,7 @@
 
 import { useState, Suspense } from "react";
 import { useLocale } from "@/lib/i18n/locale-provider";
+import { TabNav } from "@/components/ui/tab-nav";
 import SettingsGeneral from "./settings-general";
 import SettingsMembers from "./settings-members";
 import SettingsBilling from "./settings-billing";
@@ -28,22 +29,11 @@ export function SettingsTabs({ activeTab: initialTab }: { activeTab: TabKey }) {
 
   return (
     <>
-      <div className="flex gap-1 border-b">
-        {tabs.map(({ key, label }) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setActiveTab(key)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              activeTab === key
-                ? "border-primary text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <TabNav
+        tabs={tabs.map(({ key, label }) => ({ value: key, label }))}
+        value={activeTab}
+        onValueChange={setActiveTab}
+      />
 
       <Suspense fallback={tabFallback}>
         {activeTab === "general" ? <SettingsGeneral />

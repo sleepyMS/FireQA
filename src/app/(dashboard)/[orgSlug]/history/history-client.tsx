@@ -37,7 +37,7 @@ import {
 import useSWR from "swr";
 import { SWR_KEYS } from "@/lib/swr/keys";
 import { STATUS_CONFIG, JOB_TYPE_LABEL, JOB_TYPE_PATH } from "@/types/enums";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TabNav } from "@/components/ui/tab-nav";
 
 export interface Job {
   id: string;
@@ -189,15 +189,11 @@ export function HistoryClient({
         </p>
       </div>
 
-      <Tabs value={activeType} onValueChange={(v) => setActiveType(String(v))}>
-        <TabsList variant="line">
-          {filterLinks.map((f) => (
-            <TabsTrigger key={f.value} value={f.value}>
-              {f.icon}{f.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+      <TabNav
+        tabs={filterLinks.map((f) => ({ value: f.value, label: <>{f.icon}{f.label}</> }))}
+        value={activeType}
+        onValueChange={setActiveType}
+      />
 
       {jobs.length === 0 ? (
         <Card>
