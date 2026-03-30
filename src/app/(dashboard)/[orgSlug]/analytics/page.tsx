@@ -106,7 +106,7 @@ export default async function AnalyticsPage({
       </div>
 
       <Card>
-        <CardContent className="pt-4">
+        <CardContent>
           <p className="mb-3 text-sm font-semibold">일별 생성 수 (최근 30일)</p>
           <DailyChart daily={daily} />
         </CardContent>
@@ -114,7 +114,7 @@ export default async function AnalyticsPage({
 
       <div className={`grid gap-4 ${projectId ? "md:grid-cols-2" : "md:grid-cols-3"}`}>
         <Card>
-          <CardContent className="space-y-3 pt-4">
+          <CardContent className="space-y-3">
             <p className="text-sm font-semibold">타입별 생성</p>
             {byType.length === 0 ? (
               <p className="text-xs text-muted-foreground">데이터 없음</p>
@@ -128,7 +128,7 @@ export default async function AnalyticsPage({
 
         {!projectId && (
           <Card>
-            <CardContent className="space-y-3 pt-4">
+            <CardContent className="space-y-3">
               <p className="text-sm font-semibold">프로젝트별 생성 (상위 5)</p>
               {topProjects.length === 0 ? (
                 <p className="text-xs text-muted-foreground">데이터 없음</p>
@@ -142,7 +142,7 @@ export default async function AnalyticsPage({
         )}
 
         <Card>
-          <CardContent className="space-y-3 pt-4">
+          <CardContent className="space-y-3">
             <p className="text-sm font-semibold">멤버별 생성 (상위 5)</p>
             {topMembers.length === 0 ? (
               <p className="text-xs text-muted-foreground">데이터 없음</p>

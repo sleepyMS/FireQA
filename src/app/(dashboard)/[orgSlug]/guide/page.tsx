@@ -77,7 +77,7 @@ function FeatureCard({
 }) {
   return (
     <Card>
-      <CardContent className="flex items-start gap-4 pt-6">
+      <CardContent className="flex items-start gap-4">
         <div className={`rounded-lg p-2.5 ${color}`}>
           <Icon className="h-5 w-5" />
         </div>
@@ -178,7 +178,7 @@ export default function GuidePage() {
           토큰 방식이므로 브라우저 인증 없이 빠르게 연결됩니다.
         </p>
         <Card className="border-purple-200 bg-purple-50/40">
-          <CardContent className="space-y-5 pt-6">
+          <CardContent className="space-y-5">
             <div className="flex items-start gap-3">
               <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-purple-600 text-xs font-bold text-white">1</div>
               <div>
@@ -242,7 +242,7 @@ export default function GuidePage() {
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <Card>
-            <CardContent className="flex items-start gap-3 pt-4">
+            <CardContent className="flex items-start gap-3">
               <MousePointerClick className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
               <div>
                 <p className="text-sm font-medium">카드 클릭으로 이동</p>
@@ -254,7 +254,7 @@ export default function GuidePage() {
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="flex items-start gap-3 pt-4">
+            <CardContent className="flex items-start gap-3">
               <FolderOpen className="mt-0.5 h-4 w-4 shrink-0 text-orange-600" />
               <div>
                 <p className="text-sm font-medium">활성 / 보관 / 휴지통</p>
@@ -266,7 +266,7 @@ export default function GuidePage() {
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="flex items-start gap-3 pt-4">
+            <CardContent className="flex items-start gap-3">
               <GitBranch className="mt-0.5 h-4 w-4 shrink-0 text-purple-600" />
               <div>
                 <p className="text-sm font-medium">프로젝트 서브 메뉴</p>
@@ -278,7 +278,7 @@ export default function GuidePage() {
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="flex items-start gap-3 pt-4">
+            <CardContent className="flex items-start gap-3">
               <Archive className="mt-0.5 h-4 w-4 shrink-0 text-yellow-600" />
               <div>
                 <p className="text-sm font-medium">보관 프로젝트</p>
@@ -304,7 +304,7 @@ export default function GuidePage() {
           </p>
         </div>
         <Card className="border-indigo-200 bg-indigo-50/30">
-          <CardContent className="space-y-4 pt-6">
+          <CardContent className="space-y-4">
             <p className="text-sm">
               사이드바 <span className="font-medium text-foreground">템플릿</span> 메뉴에서 설정합니다. 템플릿에 포함되는 항목:
             </p>
@@ -523,7 +523,7 @@ export default function GuidePage() {
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <Card>
-            <CardContent className="flex items-start gap-3 pt-4">
+            <CardContent className="flex items-start gap-3">
               <Wand2 className="mt-0.5 h-4 w-4 shrink-0 text-purple-600" />
               <div>
                 <p className="text-sm font-medium">AI 수정 요청</p>
@@ -535,7 +535,7 @@ export default function GuidePage() {
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="flex items-start gap-3 pt-4">
+            <CardContent className="flex items-start gap-3">
               <History className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
               <div>
                 <p className="text-sm font-medium">버전 내비게이션</p>
@@ -547,7 +547,7 @@ export default function GuidePage() {
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="flex items-start gap-3 pt-4">
+            <CardContent className="flex items-start gap-3">
               <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
               <div>
                 <p className="text-sm font-medium">버전 확정</p>
@@ -559,7 +559,7 @@ export default function GuidePage() {
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="flex items-start gap-3 pt-4">
+            <CardContent className="flex items-start gap-3">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
               <div>
                 <p className="text-sm font-medium">구문 오류 자동 수정</p>
@@ -672,7 +672,7 @@ export default function GuidePage() {
         </p>
         <div className="grid gap-3 sm:grid-cols-3">
           <Card>
-            <CardContent className="flex items-start gap-3 pt-4">
+            <CardContent className="flex items-start gap-3">
               <FileText className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
               <div>
                 <p className="text-sm font-medium">필터링</p>
@@ -683,7 +683,7 @@ export default function GuidePage() {
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="flex items-start gap-3 pt-4">
+            <CardContent className="flex items-start gap-3">
               <Pencil className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
               <div>
                 <p className="text-sm font-medium">수정</p>
@@ -694,7 +694,7 @@ export default function GuidePage() {
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="flex items-start gap-3 pt-4">
+            <CardContent className="flex items-start gap-3">
               <Trash2 className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
               <div>
                 <p className="text-sm font-medium">삭제</p>
@@ -714,7 +714,7 @@ export default function GuidePage() {
         <h2 className="text-xl font-bold">설정</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           <Card>
-            <CardContent className="flex items-start gap-3 pt-4">
+            <CardContent className="flex items-start gap-3">
               <Settings className="mt-0.5 h-4 w-4 shrink-0 text-gray-600" />
               <div>
                 <p className="text-sm font-medium">조직 정보</p>
@@ -725,7 +725,7 @@ export default function GuidePage() {
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="flex items-start gap-3 pt-4">
+            <CardContent className="flex items-start gap-3">
               <Key className="mt-0.5 h-4 w-4 shrink-0 text-purple-600" />
               <div>
                 <p className="text-sm font-medium">Figma 플러그인 연동</p>
@@ -736,7 +736,7 @@ export default function GuidePage() {
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="flex items-start gap-3 pt-4">
+            <CardContent className="flex items-start gap-3">
               <Users className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
               <div>
                 <p className="text-sm font-medium">멤버 관리</p>
@@ -747,7 +747,7 @@ export default function GuidePage() {
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="flex items-start gap-3 pt-4">
+            <CardContent className="flex items-start gap-3">
               <Bell className="mt-0.5 h-4 w-4 shrink-0 text-orange-600" />
               <div>
                 <p className="text-sm font-medium">알림</p>
@@ -774,7 +774,7 @@ export default function GuidePage() {
             { ext: ".md", name: "Markdown", desc: "Notion 내보내기, 마크다운 기획서" },
           ].map((f) => (
             <Card key={f.ext}>
-              <CardContent className="pt-4">
+              <CardContent>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="font-mono">{f.ext}</Badge>
                   <span className="text-sm font-medium">{f.name}</span>
@@ -835,7 +835,7 @@ export default function GuidePage() {
             },
           ].map((item) => (
             <Card key={item.q}>
-              <CardContent className="pt-4">
+              <CardContent>
                 <p className="text-sm font-medium">{item.q}</p>
                 <p className="mt-2 text-sm text-muted-foreground">{item.a}</p>
               </CardContent>

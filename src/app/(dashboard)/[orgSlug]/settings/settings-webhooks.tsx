@@ -191,7 +191,7 @@ export default function SettingsWebhooks() {
       {/* 추가 폼 */}
       {showForm && (
         <Card>
-          <CardContent className="space-y-3 pt-4">
+          <CardContent className="space-y-3">
             <div className="space-y-1.5">
               <Label>URL</Label>
               <Input
