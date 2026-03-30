@@ -1,8 +1,3 @@
-import { Suspense } from "react";
-import SettingsGeneral from "./settings-general";
-import SettingsMembers from "./settings-members";
-import SettingsBilling from "./settings-billing";
-import SettingsWebhooks from "./settings-webhooks";
 import { SettingsTabs } from "./settings-tabs";
 
 export default async function SettingsPage({
@@ -24,25 +19,8 @@ export default async function SettingsPage({
         <p className="text-muted-foreground">조직 설정을 관리합니다.</p>
       </div>
 
+      {/* SettingsTabs가 탭 nav + 콘텐츠 렌더링 모두 담당 */}
       <SettingsTabs activeTab={activeTab} />
-
-      <Suspense
-        fallback={
-          <div className="flex justify-center py-20 text-muted-foreground">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          </div>
-        }
-      >
-        {activeTab === "general" ? (
-          <SettingsGeneral />
-        ) : activeTab === "members" ? (
-          <SettingsMembers />
-        ) : activeTab === "billing" ? (
-          <SettingsBilling />
-        ) : (
-          <SettingsWebhooks />
-        )}
-      </Suspense>
     </div>
   );
 }

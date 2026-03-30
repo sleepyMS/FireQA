@@ -1,21 +1,24 @@
 "use client";
 
-import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useState, Suspense } from "react";
 import { useLocale } from "@/lib/i18n/locale-provider";
+import SettingsGeneral from "./settings-general";
+import SettingsMembers from "./settings-members";
+import SettingsBilling from "./settings-billing";
+import SettingsWebhooks from "./settings-webhooks";
 
 type TabKey = "general" | "members" | "billing" | "webhooks";
 
-export function SettingsTabs({ activeTab }: { activeTab: TabKey }) {
-  const { t } = useLocale();
-  const { orgSlug = "" } = useParams<{ orgSlug?: string }>();
+const tabFallback = (
+  <div className="flex justify-center py-20 text-muted-foreground">
+    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+  </div>
+);
 
-  const TAB_HREFS: Record<TabKey, string> = {
-    general: `/${orgSlug}/settings`,
-    members: `/${orgSlug}/settings?tab=members`,
-    billing: `/${orgSlug}/settings?tab=billing`,
-    webhooks: `/${orgSlug}/settings?tab=webhooks`,
-  };
+// 탭 nav + 콘텐츠를 client state로 통합 — 탭 전환 시 서버 재요청 없음
+export function SettingsTabs({ activeTab: initialTab }: { activeTab: TabKey }) {
+  const { t } = useLocale();
+  const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
 
   const tabs: { key: TabKey; label: string }[] = [
     { key: "general", label: t.settings.tabs.general },
@@ -25,20 +28,30 @@ export function SettingsTabs({ activeTab }: { activeTab: TabKey }) {
   ];
 
   return (
-    <div className="flex gap-1 border-b">
-      {tabs.map(({ key, label }) => (
-        <Link
-          key={key}
-          href={TAB_HREFS[key]}
-          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-            activeTab === key
-              ? "border-primary text-foreground"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          {label}
-        </Link>
-      ))}
-    </div>
+    <>
+      <div className="flex gap-1 border-b">
+        {tabs.map(({ key, label }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setActiveTab(key)}
+            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              activeTab === key
+                ? "border-primary text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <Suspense fallback={tabFallback}>
+        {activeTab === "general" ? <SettingsGeneral />
+          : activeTab === "members" ? <SettingsMembers />
+          : activeTab === "billing" ? <SettingsBilling />
+          : <SettingsWebhooks />}
+      </Suspense>
+    </>
   );
 }

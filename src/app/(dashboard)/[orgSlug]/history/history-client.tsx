@@ -59,7 +59,7 @@ const filterLinks: { label: string; value: string; icon?: React.ReactNode }[] = 
 export function HistoryClient({
   initialJobs,
   initialHasMore,
-  type,
+  type: initialType,
   projectId,
   projectName,
 }: {
@@ -72,28 +72,31 @@ export function HistoryClient({
   const router = useRouter();
   const { orgSlug } = useParams<{ orgSlug?: string }>();
 
+  // 필터를 client state로 관리 — 변경 시 router.push 대신 SWR 재조회
+  const [activeType, setActiveType] = useState(initialType);
+
   const params = new URLSearchParams({ all: "1" });
-  if (type) params.set("type", type);
+  if (activeType) params.set("type", activeType);
   if (projectId) params.set("projectId", projectId);
   const swrKey = SWR_KEYS.jobs(params.toString());
 
   const { data, mutate } = useSWR<{ jobs: Job[]; hasMore: boolean }>(swrKey, {
-    fallbackData: { jobs: initialJobs, hasMore: initialHasMore },
+    fallbackData: activeType === initialType ? { jobs: initialJobs, hasMore: initialHasMore } : undefined,
   });
 
   const [extraJobs, setExtraJobs] = useState<Job[]>([]);
   const [hasMoreExtra, setHasMoreExtra] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  // type/projectId 변경 시 로드된 추가 페이지 초기화
-  const prevTypeRef = useRef(type);
+  // 필터 변경 시 추가 페이지 초기화
+  const prevTypeRef = useRef(activeType);
   useEffect(() => {
-    if (prevTypeRef.current !== type) {
+    if (prevTypeRef.current !== activeType) {
       setExtraJobs([]);
       setHasMoreExtra(false);
-      prevTypeRef.current = type;
+      prevTypeRef.current = activeType;
     }
-  }, [type]);
+  }, [activeType]);
 
   const jobs = [...(data?.jobs ?? initialJobs), ...extraJobs];
   const showLoadMore = extraJobs.length === 0 ? (data?.hasMore ?? initialHasMore) : hasMoreExtra;
@@ -104,7 +107,7 @@ export function HistoryClient({
     setLoadingMore(true);
     try {
       const moreParams = new URLSearchParams({ all: "1" });
-      if (type) moreParams.set("type", type);
+      if (activeType) moreParams.set("type", activeType);
       if (projectId) moreParams.set("projectId", projectId);
       moreParams.set("cursor", cursor);
       const res = await fetch(`/api/jobs?${moreParams}`);
@@ -189,13 +192,9 @@ export function HistoryClient({
         {filterLinks.map((f) => (
           <Badge
             key={f.value}
-            variant={type === f.value ? "default" : "outline"}
+            variant={activeType === f.value ? "default" : "outline"}
             className="cursor-pointer px-3 py-1"
-            onClick={() => {
-              const orgPrefix = orgSlug ? `/${orgSlug}` : "";
-              const base = f.value ? `${orgPrefix}/history?type=${f.value}` : `${orgPrefix}/history`;
-              router.push(projectId ? `${base}${f.value ? "&" : "?"}projectId=${projectId}` : base);
-            }}
+            onClick={() => setActiveType(f.value)}
           >
             {f.icon}
             {f.label}
@@ -208,8 +207,8 @@ export function HistoryClient({
           <CardContent className="flex flex-col items-center py-20 text-center text-muted-foreground">
             <Search className="mb-4 h-12 w-12 opacity-50" />
             <p>
-              {type
-                ? `${JOB_TYPE_LABEL[type] || type} 이력이 없습니다.`
+              {activeType
+                ? `${JOB_TYPE_LABEL[activeType] || activeType} 이력이 없습니다.`
                 : "아직 생성 이력이 없습니다."}
             </p>
           </CardContent>

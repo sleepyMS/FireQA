@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
+import useSWR from "swr";
+import { SWR_KEYS } from "@/lib/swr/keys";
 import Link from "next/link";
 import {
   Dialog,
@@ -224,23 +226,22 @@ const TYPE_FILTERS = [
   { label: "기획서 개선", value: JobType.SPEC_IMPROVE },
 ];
 
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
+
 function JobsTab({ projectId }: { projectId: string }) {
   const router = useRouter();
   const { orgSlug } = useParams<{ orgSlug?: string }>();
   const orgPrefix = orgSlug ? `/${orgSlug}` : "";
-  const [jobs, setJobs] = useState<Job[]>([]);
-  // loading 초기값을 true로 설정 — effect에서 setLoading(true) 호출 불필요
-  const [loading, setLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState("");
 
-  useEffect(() => {
-    const params = new URLSearchParams({ projectId, all: "1" });
-    if (typeFilter) params.set("type", typeFilter);
-    fetch(`/api/jobs?${params}`)
-      .then((r) => r.json())
-      .then((data) => setJobs(data.jobs ?? []))
-      .finally(() => setLoading(false));
-  }, [projectId, typeFilter]);
+  // SWR: 같은 필터로 재진입 시 캐시 사용 (API 재호출 없음)
+  const params = new URLSearchParams({ projectId, all: "1" });
+  if (typeFilter) params.set("type", typeFilter);
+  const { data, isLoading: loading } = useSWR<{ jobs: Job[] }>(
+    SWR_KEYS.jobs(params.toString()),
+    fetcher
+  );
+  const jobs = data?.jobs ?? [];
 
   return (
     <div className="space-y-4">
