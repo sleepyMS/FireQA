@@ -1,8 +1,8 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
-import { FileText, GitBranch, Smartphone, Clock, Plus, FileEdit } from "lucide-react";
-import { STATUS_CONFIG, JOB_TYPE_LABEL, JobType, JobStatus } from "@/types/enums";
+import { FileText, GitBranch, Smartphone, Clock, Plus, FileEdit, ChevronRight } from "lucide-react";
+import { STATUS_CONFIG, JOB_TYPE_LABEL, JOB_TYPE_PATH, JobType, JobStatus } from "@/types/enums";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/db";
@@ -169,34 +169,41 @@ export default async function DashboardPage({
 
         {/* Recent Jobs */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>최근 생성 이력</CardTitle>
-            <Link href={`/${orgSlug}/history`}>
-              <Button variant="ghost" size="sm">
-                <Clock className="mr-2 h-4 w-4" />
-                전체 보기
-              </Button>
-            </Link>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                최근 생성 이력
+              </CardTitle>
+              <Link href={`/${orgSlug}/history`}>
+                <Button variant="ghost" size="sm" className="text-xs text-muted-foreground">
+                  전체 보기
+                  <ChevronRight className="ml-1 h-3 w-3" />
+                </Button>
+              </Link>
+            </div>
           </CardHeader>
           <CardContent>
             {recentJobs.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Plus className="mb-4 h-12 w-12 text-muted-foreground/50" />
-                <p className="text-sm text-muted-foreground">
-                  아직 생성 이력이 없습니다.
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  TC 생성 또는 다이어그램 생성을 시작해보세요.
-                </p>
+              <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+                <Plus className="mb-3 h-10 w-10 opacity-40" />
+                <p className="text-sm">아직 생성 이력이 없습니다.</p>
+                <p className="mt-1 text-xs">TC 생성 또는 다이어그램 생성을 시작해보세요.</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {recentJobs.map((job) => (
-                  <div
+                  <Link
                     key={job.id}
-                    className="flex items-center justify-between rounded-lg border p-3"
+                    href={`/${orgSlug}${JOB_TYPE_PATH[job.type] || "/generate"}/${job.id}`}
+                    className="flex items-center gap-3 rounded-xl border bg-card p-3 transition-all hover:border-primary/30 hover:shadow-sm"
                   >
-                    <div className="flex items-center gap-3">
+                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+                      job.type === JobType.TEST_CASES ? "bg-blue-50" :
+                      job.type === JobType.WIREFRAMES ? "bg-pink-50" :
+                      job.type === JobType.SPEC_IMPROVE ? "bg-emerald-50" :
+                      "bg-purple-50"
+                    }`}>
                       {job.type === JobType.TEST_CASES ? (
                         <FileText className="h-4 w-4 text-blue-600" />
                       ) : job.type === JobType.WIREFRAMES ? (
@@ -206,28 +213,21 @@ export default async function DashboardPage({
                       ) : (
                         <GitBranch className="h-4 w-4 text-purple-600" />
                       )}
-                      <div>
-                        <p className="text-sm font-medium">
-                          {job.project.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {job.upload.fileName} &middot;{" "}
-                          {JOB_TYPE_LABEL[job.type] || job.type}
-                        </p>
-                      </div>
                     </div>
-                    <span
-                      className={`text-xs font-medium ${
-                        job.status === JobStatus.COMPLETED
-                          ? "text-green-600"
-                          : job.status === JobStatus.FAILED
-                            ? "text-red-600"
-                            : "text-yellow-600"
-                      }`}
-                    >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{job.project.name}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {job.upload.fileName} &middot; {JOB_TYPE_LABEL[job.type] || job.type}
+                      </p>
+                    </div>
+                    <span className={`shrink-0 text-xs font-medium ${
+                      job.status === JobStatus.COMPLETED ? "text-green-600" :
+                      job.status === JobStatus.FAILED ? "text-red-600" :
+                      "text-yellow-600"
+                    }`}>
                       {STATUS_CONFIG[job.status]?.label || job.status}
                     </span>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}
