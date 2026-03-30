@@ -27,6 +27,7 @@ import { OrgSwitcher } from "@/components/layout/org-switcher";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import type { Messages } from "@/lib/i18n/messages";
 import { useUser } from "@/lib/auth/user-provider";
+import { useCurrentProject } from "@/lib/current-project-context";
 
 // 조직별 마지막으로 방문한 프로젝트 ID를 렌더 간에 유지하는 모듈 레벨 캐시
 // React state/effect 없이 사용해 set-state-in-effect lint 규칙을 회피
@@ -106,17 +107,19 @@ export function Sidebar({ initialMemberships, initialActiveOrgId }: SidebarProps
     router.push("/login");
   }
   const navItems = buildNavItems(t.nav, orgSlug);
+  const { projectId: contextProjectId } = useCurrentProject();
 
   // /{orgSlug}/projects/{id} 패턴에서 projectId 추출
   const projectMatch = pathname.match(/^\/[^/]+\/projects\/([^/?]+)/);
   const urlProjectId = projectMatch?.[1] ?? searchParams.get("projectId");
 
   // 렌더 시점에 캐시 갱신 — 조직별 마지막 프로젝트를 기억
-  if (urlProjectId && orgSlug) {
-    lastProjectPerOrg.set(orgSlug, urlProjectId);
+  const resolvedProjectId = urlProjectId ?? contextProjectId ?? null;
+  if (resolvedProjectId && orgSlug) {
+    lastProjectPerOrg.set(orgSlug, resolvedProjectId);
   }
   // 다른 조직으로 전환 시 해당 조직의 캐시가 없으면 null → 프로젝트 nav 숨김
-  const currentProjectId = urlProjectId ?? lastProjectPerOrg.get(orgSlug) ?? null;
+  const currentProjectId = resolvedProjectId ?? lastProjectPerOrg.get(orgSlug) ?? null;
   const projectNavItems = currentProjectId ? buildProjectNavItems(currentProjectId, orgSlug) : [];
 
   const navContent = (

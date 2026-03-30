@@ -3,6 +3,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { UserProvider } from "@/lib/auth/user-provider";
+import { CurrentProjectProvider } from "@/lib/current-project-context";
 import { prisma } from "@/lib/db";
 
 export default async function DashboardLayout({
@@ -38,6 +39,7 @@ export default async function DashboardLayout({
   )?.name ?? "";
 
   return (
+    <CurrentProjectProvider>
     <UserProvider value={user}>
       <div className="flex h-full min-h-screen">
         <Sidebar
@@ -50,5 +52,6 @@ export default async function DashboardLayout({
         </div>
       </div>
     </UserProvider>
+    </CurrentProjectProvider>
   );
 }

@@ -9,6 +9,7 @@ import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { CommentSection } from "@/components/comments/comment-section";
 import { ExportButton } from "@/components/ui/export-button";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
+import { SetCurrentProject } from "@/components/set-current-project";
 
 export default async function GenerateResultPage({
   params,
@@ -34,6 +35,7 @@ export default async function GenerateResultPage({
 
   return (
     <div className="min-w-0 space-y-6">
+      <SetCurrentProject projectId={job.project.id} />
       <Breadcrumb
         items={[
           { label: "프로젝트", href: `/${orgSlug}/projects` },
