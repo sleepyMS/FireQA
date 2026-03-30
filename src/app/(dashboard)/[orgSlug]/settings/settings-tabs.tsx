@@ -2,6 +2,7 @@
 
 import { useState, Suspense } from "react";
 import { useLocale } from "@/lib/i18n/locale-provider";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import SettingsGeneral from "./settings-general";
 import SettingsMembers from "./settings-members";
 import SettingsBilling from "./settings-billing";
@@ -15,7 +16,6 @@ const tabFallback = (
   </div>
 );
 
-// 탭 nav + 콘텐츠를 client state로 통합 — 탭 전환 시 서버 재요청 없음
 export function SettingsTabs({ activeTab: initialTab }: { activeTab: TabKey }) {
   const { t } = useLocale();
   const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
@@ -28,30 +28,25 @@ export function SettingsTabs({ activeTab: initialTab }: { activeTab: TabKey }) {
   ];
 
   return (
-    <>
-      <div className="flex gap-1 border-b">
+    <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabKey)}>
+      <TabsList variant="line">
         {tabs.map(({ key, label }) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setActiveTab(key)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              activeTab === key
-                ? "border-primary text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
+          <TabsTrigger key={key} value={key}>
             {label}
-          </button>
+          </TabsTrigger>
         ))}
-      </div>
+      </TabsList>
 
-      <Suspense fallback={tabFallback}>
-        {activeTab === "general" ? <SettingsGeneral />
-          : activeTab === "members" ? <SettingsMembers />
-          : activeTab === "billing" ? <SettingsBilling />
-          : <SettingsWebhooks />}
-      </Suspense>
-    </>
+      {tabs.map(({ key }) => (
+        <TabsContent key={key} value={key}>
+          <Suspense fallback={tabFallback}>
+            {key === "general" ? <SettingsGeneral />
+              : key === "members" ? <SettingsMembers />
+              : key === "billing" ? <SettingsBilling />
+              : <SettingsWebhooks />}
+          </Suspense>
+        </TabsContent>
+      ))}
+    </Tabs>
   );
 }

@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import useSWR from "swr";
 import { SWR_KEYS } from "@/lib/swr/keys";
 import Link from "next/link";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -434,40 +435,30 @@ export function ProjectTabs({
   recentJobs,
   uploads,
 }: ProjectTabsProps) {
-  // URL searchParams 대신 client state로 관리 — 탭 전환 시 서버 재요청 없음
-  const [tab, setTab] = useState(initialTab);
-
   return (
-    <div className="space-y-6">
-      {/* 탭 내비게이션 */}
-      <div className="flex gap-1 rounded-lg border bg-muted/50 p-1 w-fit">
+    <Tabs defaultValue={initialTab}>
+      <TabsList>
         {TABS.map((t) => (
-          <button
-            key={t.value}
-            type="button"
-            onClick={() => setTab(t.value)}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-              tab === t.value
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
+          <TabsTrigger key={t.value} value={t.value}>
             {t.label}
-          </button>
+          </TabsTrigger>
         ))}
-      </div>
+      </TabsList>
 
-      {/* 탭 콘텐츠 */}
-      {tab === "overview" && (
+      <TabsContent value="overview">
         <OverviewTab
           projectId={projectId}
           projectStatus={projectStatus}
           jobCounts={jobCounts}
           recentJobs={recentJobs}
         />
-      )}
-      {tab === "jobs" && <JobsTab projectId={projectId} />}
-      {tab === "uploads" && <UploadsTab uploads={uploads} />}
-    </div>
+      </TabsContent>
+      <TabsContent value="jobs">
+        <JobsTab projectId={projectId} />
+      </TabsContent>
+      <TabsContent value="uploads">
+        <UploadsTab uploads={uploads} />
+      </TabsContent>
+    </Tabs>
   );
 }
