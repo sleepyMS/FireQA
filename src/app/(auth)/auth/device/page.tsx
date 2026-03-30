@@ -8,6 +8,7 @@ function DeviceAuthContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const code = searchParams.get("code");
+  const isAgent = searchParams.get("source") === "agent";
 
   const [status, setStatus] = useState<"loading" | "confirm" | "success" | "error">(() =>
     !code ? "error" : "loading"
@@ -23,8 +24,11 @@ function DeviceAuthContent() {
     const supabase = createSupabaseBrowserClient();
     supabase.auth.getUser().then(({ data }) => {
       if (!data.user) {
+        const redirectTarget = isAgent
+          ? `/auth/device?code=${code}&source=agent`
+          : `/auth/device?code=${code}`;
         router.replace(
-          `/login?redirect=${encodeURIComponent(`/auth/device?code=${code}`)}`
+          `/login?redirect=${encodeURIComponent(redirectTarget)}`
         );
         return;
       }
@@ -72,7 +76,7 @@ function DeviceAuthContent() {
     <div className="rounded-xl border bg-white p-8 shadow-sm text-center">
       <div className="mb-6">
         <h1 className="text-2xl font-bold">FireQA</h1>
-        <p className="mt-1 text-sm text-gray-500">Figma 플러그인 연결</p>
+        <p className="mt-1 text-sm text-gray-500">{isAgent ? "에이전트 연결" : "Figma 플러그인 연결"}</p>
       </div>
 
       {status === "loading" && (
@@ -82,7 +86,9 @@ function DeviceAuthContent() {
       {status === "confirm" && (
         <div className="space-y-4">
           <p className="text-sm text-gray-700">
-            Figma 플러그인에서 FireQA 계정 연결을 요청했습니다.
+            {isAgent
+              ? "fireqa-agent CLI에서 FireQA 계정 연결을 요청했습니다."
+              : "Figma 플러그인에서 FireQA 계정 연결을 요청했습니다."}
           </p>
           {currentUser && (
             <p className="text-xs text-gray-500">
@@ -97,7 +103,7 @@ function DeviceAuthContent() {
             onClick={handleApprove}
             className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
           >
-            플러그인 연결 승인
+            {isAgent ? "에이전트 연결 승인" : "플러그인 연결 승인"}
           </button>
           <p className="text-xs text-gray-400">
             본인이 요청하지 않았다면 이 페이지를 닫으세요.
@@ -113,7 +119,11 @@ function DeviceAuthContent() {
             </svg>
           </div>
           <p className="text-base font-semibold text-gray-900">연결 완료!</p>
-          <p className="text-sm text-gray-500">Figma 플러그인으로 돌아가세요.<br />이 페이지를 닫아도 됩니다.</p>
+          <p className="text-sm text-gray-500">
+            {isAgent
+              ? <>터미널로 돌아가세요.<br />이 페이지를 닫아도 됩니다.</>
+              : <>Figma 플러그인으로 돌아가세요.<br />이 페이지를 닫아도 됩니다.</>}
+          </p>
         </div>
       )}
 
