@@ -26,6 +26,8 @@ export function invitationEmailHtml({
     </a>
   </p>
   <p style="color:#6b7280;font-size:13px;">이 링크는 ${expiresStr}까지 유효합니다.</p>
+  <p style="color:#6b7280;font-size:13px;">버튼이 동작하지 않으면 아래 링크를 브라우저에 직접 붙여넣으세요.</p>
+  <p style="font-size:12px;word-break:break-all;"><a href="${inviteUrl}" style="color:#6366f1;">${inviteUrl}</a></p>
   <p style="color:#6b7280;font-size:13px;">초대를 원하지 않으면 이 이메일을 무시하세요.</p>
 </body>
 </html>`;

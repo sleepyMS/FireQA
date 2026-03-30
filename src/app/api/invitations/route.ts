@@ -111,13 +111,13 @@ export async function POST(request: NextRequest) {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
   const inviteUrl = `${baseUrl}/invite?token=${rawToken}`;
 
-  // 이메일 지정 초대 시 Brevo로 초대 메일 발송 (fire-and-forget)
+  // 이메일 지정 초대 시 Brevo로 초대 메일 발송
   if (email) {
     const org = await prisma.organization.findUnique({
       where: { id: user.organizationId },
       select: { name: true },
     });
-    sendEmail({
+    await sendEmail({
       to: { email },
       subject: `[FireQA] ${org?.name ?? "팀"}에 초대되었습니다`,
       htmlContent: invitationEmailHtml({
