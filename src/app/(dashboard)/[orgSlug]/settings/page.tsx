@@ -10,6 +10,7 @@ export default async function SettingsPage({
     tab === "members" ? "members"
     : tab === "billing" ? "billing"
     : tab === "webhooks" ? "webhooks"
+    : tab === "api-keys" ? "api-keys"
     : "general";
 
   return (

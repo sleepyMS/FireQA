@@ -7,8 +7,9 @@ import SettingsGeneral from "./settings-general";
 import SettingsMembers from "./settings-members";
 import SettingsBilling from "./settings-billing";
 import SettingsWebhooks from "./settings-webhooks";
+import SettingsApiKeys from "./settings-api-keys";
 
-type TabKey = "general" | "members" | "billing" | "webhooks";
+type TabKey = "general" | "members" | "billing" | "webhooks" | "api-keys";
 
 const tabFallback = (
   <div className="flex justify-center py-20 text-muted-foreground">
@@ -25,6 +26,7 @@ export function SettingsTabs({ activeTab: initialTab }: { activeTab: TabKey }) {
     { key: "members", label: t.settings.tabs.members },
     { key: "billing", label: t.settings.tabs.billing },
     { key: "webhooks", label: t.settings.tabs.webhooks },
+    { key: "api-keys", label: "API 키" },
   ];
 
   return (
@@ -39,7 +41,8 @@ export function SettingsTabs({ activeTab: initialTab }: { activeTab: TabKey }) {
         {activeTab === "general" ? <SettingsGeneral />
           : activeTab === "members" ? <SettingsMembers />
           : activeTab === "billing" ? <SettingsBilling />
-          : <SettingsWebhooks />}
+          : activeTab === "webhooks" ? <SettingsWebhooks />
+          : <SettingsApiKeys />}
       </Suspense>
     </>
   );
