@@ -136,7 +136,7 @@ export function HistoryClient({
   const [deleting, setDeleting] = useState(false);
 
   const handleNavigate = (job: Job) => {
-    router.push(`${orgSlug ? `/${orgSlug}` : ""}${JOB_TYPE_PATH[job.type] || "/generate"}/${job.id}`);
+    router.push(`${orgSlug ? `/${orgSlug}` : ""}${JOB_TYPE_PATH[job.type] || "/generate"}/${job.id}?projectId=${job.project.id}`);
   };
 
   const openEdit = (job: Job) => {

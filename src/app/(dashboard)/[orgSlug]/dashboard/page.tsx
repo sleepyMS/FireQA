@@ -32,7 +32,7 @@ export default async function DashboardPage({
         type: true,
         status: true,
         createdAt: true,
-        project: { select: { name: true } },
+        project: { select: { id: true, name: true } },
         upload: { select: { fileName: true } },
       },
     }),
@@ -195,7 +195,7 @@ export default async function DashboardPage({
                 {recentJobs.map((job) => (
                   <Link
                     key={job.id}
-                    href={`/${orgSlug}${JOB_TYPE_PATH[job.type] || "/generate"}/${job.id}`}
+                    href={`/${orgSlug}${JOB_TYPE_PATH[job.type] || "/generate"}/${job.id}?projectId=${job.project.id}`}
                     className="flex items-center gap-3 rounded-xl border bg-card p-3 transition-all hover:border-primary/30 hover:shadow-sm"
                   >
                     <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
