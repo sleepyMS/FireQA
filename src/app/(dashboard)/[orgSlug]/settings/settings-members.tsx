@@ -351,18 +351,15 @@ export default function SettingsMembers() {
         <h3 className="mb-3 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
           대기 중인 초대
         </h3>
-        <Card>
-          {invitations.length === 0 ? (
-            <CardContent className="py-6 text-center text-sm text-muted-foreground">
-              대기 중인 초대가 없습니다
-            </CardContent>
-          ) : (
-            <div className="divide-y">
-              {invitations.map((inv) => (
-                <div
-                  key={inv.id}
-                  className="flex items-center gap-3 px-4 py-3"
-                >
+        {invitations.length === 0 ? (
+          <p className="text-sm text-muted-foreground">대기 중인 초대가 없습니다</p>
+        ) : (
+          <div className="rounded-lg border bg-muted/30 p-2 space-y-1">
+            {invitations.map((inv) => (
+              <div
+                key={inv.id}
+                className="flex items-center gap-3 rounded-md bg-card px-4 py-3"
+              >
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
                     <Mail className="h-4 w-4" />
                   </div>
@@ -401,7 +398,6 @@ export default function SettingsMembers() {
               ))}
             </div>
           )}
-        </Card>
       </div>
 
       <Dialog
