@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import useSWR from "swr";
-import { Terminal, Clock, Wifi, WifiOff } from "lucide-react";
+import { Terminal, Clock, Wifi, WifiOff, Cloud, Server, Activity } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -25,6 +25,19 @@ type DashboardData = {
   tasks: AgentTaskView[];
 };
 
+// Phase 4.5: 호스티드 워커 통계
+type HostedWorkersData = {
+  workers: {
+    idle: number;
+    busy: number;
+    starting: number;
+    stopping: number;
+    error: number;
+  };
+  queueDepth: number;
+  avgProcessingTimeMs: number;
+};
+
 export function AgentDashboardClient({ orgSlug, initialConnections, initialTasks }: Props) {
   const { data } = useSWR<DashboardData>(
     SWR_KEYS.agentDashboard,
@@ -32,8 +45,19 @@ export function AgentDashboardClient({ orgSlug, initialConnections, initialTasks
     { fallbackData: { connections: initialConnections, tasks: initialTasks }, refreshInterval: 10_000 }
   );
 
+  // Phase 4.5: 호스티드 워커 상태 조회
+  const { data: workersData } = useSWR<HostedWorkersData>(
+    SWR_KEYS.hostedWorkers,
+    fetcher,
+    { refreshInterval: 15_000 }
+  );
+
   const connections = data?.connections ?? initialConnections;
   const recentTasks = data?.tasks ?? initialTasks;
+  const workers = workersData?.workers;
+  const totalWorkers = workers
+    ? workers.idle + workers.busy + workers.starting + workers.stopping + workers.error
+    : 0;
 
   return (
     <div className="space-y-6">
@@ -117,6 +141,72 @@ export function AgentDashboardClient({ orgSlug, initialConnections, initialTasks
                   </div>
                 );
               })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Phase 4.5: 호스티드 워커 통계 카드 */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Cloud className="h-4 w-4 text-muted-foreground" />
+            호스티드 워커
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {!workersData ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">
+              호스티드 워커 정보를 불러오는 중...
+            </p>
+          ) : totalWorkers === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">
+              현재 가동 중인 호스티드 워커가 없습니다.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {/* 상태별 워커 수 */}
+              <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
+                {([
+                  { key: "idle", label: "대기", color: "text-green-500" },
+                  { key: "busy", label: "작업 중", color: "text-blue-500" },
+                  { key: "starting", label: "시작 중", color: "text-amber-500" },
+                  { key: "stopping", label: "종료 중", color: "text-muted-foreground" },
+                  { key: "error", label: "오류", color: "text-destructive" },
+                ] as const).map(({ key, label, color }) => (
+                  <div key={key} className="rounded-lg border p-3 text-center">
+                    <Server className={`mx-auto h-4 w-4 ${color}`} />
+                    <p className="mt-1 text-lg font-bold tabular-nums">
+                      {workers?.[key] ?? 0}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{label}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* 큐 깊이 & 평균 처리 시간 */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center gap-3 rounded-lg border p-3">
+                  <Activity className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium tabular-nums">
+                      {workersData.queueDepth}
+                    </p>
+                    <p className="text-xs text-muted-foreground">큐 깊이</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 rounded-lg border p-3">
+                  <Clock className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium tabular-nums">
+                      {workersData.avgProcessingTimeMs > 0
+                        ? `${(workersData.avgProcessingTimeMs / 1000).toFixed(1)}s`
+                        : "-"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">평균 처리 시간</p>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </CardContent>

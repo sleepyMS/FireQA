@@ -9,8 +9,11 @@ export default async function SettingsPage({
   const activeTab =
     tab === "members" ? "members"
     : tab === "billing" ? "billing"
+    : tab === "credits" ? "credits"
     : tab === "webhooks" ? "webhooks"
     : tab === "api-keys" ? "api-keys"
+    : tab === "anthropic-key" ? "anthropic-key"
+    : tab === "agent" ? "agent"
     : "general";
 
   return (

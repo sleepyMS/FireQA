@@ -1,17 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { verifyCronSecret } from "@/lib/auth/verify-cron-secret";
 
-// Vercel Cron — runs every minute
-// Secured via CRON_SECRET env var (set in Vercel dashboard)
-export async function GET(request: Request) {
-  // Verify cron secret if set
-  const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret) {
-    const auth = request.headers.get("authorization");
-    if (auth !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-  }
+export async function GET(request: NextRequest) {
+  const denied = verifyCronSecret(request);
+  if (denied) return denied;
 
   const now = new Date();
 

@@ -19,6 +19,19 @@ function getBackoffDelay(consecutiveFailures: number): number {
   return delay + Math.random() * 1000; // jitter
 }
 
+let _agentVersion = "";
+function getAgentVersion(): string {
+  if (_agentVersion) return _agentVersion;
+  try {
+    const pkgPath = new URL("../../package.json", import.meta.url);
+    const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
+    _agentVersion = pkg.version ?? "0.1.0";
+  } catch {
+    _agentVersion = "0.1.0";
+  }
+  return _agentVersion;
+}
+
 function checkCliInstalled(cli: string): boolean {
   try {
     execSync(`which ${cli}`, { stdio: "ignore" });
@@ -42,23 +55,22 @@ export async function startAgent(store: ConfigStore): Promise<void> {
     process.exit(1);
   }
 
+  // hosted 모드: 서버 컨테이너에서 실행, 짧은 polling/heartbeat 간격
+  if (config.mode === "hosted") {
+    await startHostedWorker(config);
+    return;
+  }
+
   const api = new ApiClient(config);
 
   const agentName = `${process.env.USER ?? "agent"}@${os.hostname()}`;
   let connection: { id: string };
-  let agentVersion = "0.1.0";
-  try {
-    const pkgPath = new URL("../../package.json", import.meta.url);
-    const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
-    agentVersion = pkg.version ?? agentVersion;
-  } catch { /* fallback */ }
-
   try {
     connection = await api.registerConnection(agentName, {
       cli: config.cli,
       os: process.platform,
       nodeVersion: process.version,
-      version: agentVersion,
+      version: getAgentVersion(),
     });
   } catch (err) {
     console.error(`에이전트 등록 실패: ${err instanceof Error ? err.message : err}`);
@@ -244,6 +256,88 @@ async function executeTask(
     clearTimeout(timeout);
     clearInterval(flushInterval);
     runningTasks.delete(task.id);
+  }
+}
+
+async function startHostedWorker(config: AgentConfig): Promise<void> {
+  const api = new ApiClient(config);
+
+  await api.flushPendingOutputs().catch(() => {});
+
+  let connection: { id: string };
+  try {
+    connection = await api.registerConnection("hosted-worker", {
+      cli: config.cli,
+      os: process.platform,
+      nodeVersion: process.version,
+      version: getAgentVersion(),
+      mode: "hosted",
+    });
+  } catch (err) {
+    console.error(`호스티드 워커 등록 실패: ${err instanceof Error ? err.message : err}`);
+    process.exit(1);
+  }
+
+  console.log(`호스티드 워커 연결됨 (${config.server})`);
+
+  const cleanup = async () => {
+    await api.disconnect(connection.id).catch(() => {});
+    process.exit(0);
+  };
+  process.on("SIGINT", cleanup);
+  process.on("SIGTERM", cleanup);
+
+  // hosted 모드: 5초 heartbeat
+  let heartbeatFailures = 0;
+  const heartbeatTimer = setInterval(async () => {
+    try {
+      const res = await api.heartbeat(connection.id);
+      heartbeatFailures = 0;
+      if (res.cancelledTaskIds?.length > 0) {
+        for (const taskId of res.cancelledTaskIds) {
+          const controller = runningTasks.get(taskId);
+          if (controller) {
+            controller.abort("cancelled");
+            console.log(`작업 취소 신호: ${taskId}`);
+          }
+        }
+      }
+    } catch {
+      heartbeatFailures++;
+      if (heartbeatFailures > 5) {
+        console.error("heartbeat 연속 실패. 워커 종료.");
+        clearInterval(heartbeatTimer);
+        process.exit(1);
+      }
+    }
+  }, 5_000);
+
+  // hosted 모드: 1초 간격 polling, 연속 실행
+  while (true) {
+    try {
+      const task = await api.getNextTask(connection.id) as {
+        id: string;
+        type: string;
+        prompt: string;
+        context: Record<string, unknown>;
+        mcpTools: string[];
+        sessionId: string | null;
+        timeoutMs: number;
+      } | null;
+
+      if (task) {
+        console.log(`작업 수령: [${task.type}] ${task.prompt.slice(0, 50)}...`);
+        await executeTask(config, api, task);
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message.includes("401")) {
+        console.error("인증 실패. 워커 종료.");
+        clearInterval(heartbeatTimer);
+        process.exit(1);
+      }
+    }
+
+    await sleep(1000);
   }
 }
 

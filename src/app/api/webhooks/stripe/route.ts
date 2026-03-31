@@ -97,6 +97,21 @@ export async function POST(request: NextRequest) {
       case "customer.subscription.deleted":
         await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
         break;
+      case "checkout.session.completed": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        if (session.metadata?.type === "credit_purchase") {
+          const orgId = session.metadata.organizationId;
+          const credits = parseInt(session.metadata.credits ?? "0", 10);
+          if (orgId && credits > 0) {
+            const { addCredits } = await import("@/lib/billing/credits");
+            await addCredits(orgId, credits, {
+              type: "purchase",
+              description: `${credits} 크레딧 구매`,
+            });
+          }
+        }
+        break;
+      }
       default:
         break;
     }

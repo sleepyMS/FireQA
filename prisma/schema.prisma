@@ -26,8 +26,11 @@ model Organization {
   invitations       Invitation[]
   subscription      Subscription?
   webhookEndpoints  WebhookEndpoint[]
-  agentConnections  AgentConnection[]
-  agentTasks        AgentTask[]
+  agentConnections     AgentConnection[]
+  agentTasks           AgentTask[]
+  creditBalance        CreditBalance?
+  creditTransactions   CreditTransaction[]
+  userApiKeys          UserApiKey[]
 }
 
 model Subscription {
@@ -369,6 +372,11 @@ model AgentTask {
   outputLog      String?
   errorMessage   String?
 
+  mode           String   @default("self_hosted") // "self_hosted" | "hosted"
+  creditsUsed    Int?
+  useOwnApiKey   Boolean  @default(false)
+  flyMachineId   String?
+
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -380,4 +388,73 @@ model AgentTask {
   @@index([organizationId, status])
   @@index([organizationId, createdAt(sort: Desc)])
   @@index([connectionId])
+}
+
+// ─── 크레딧 & 호스티드 워커 ───
+
+model CreditBalance {
+  id             String       @id @default(cuid())
+  organizationId String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  balance        Int          @default(0)
+  monthlyQuota   Int          @default(0)
+  quotaResetAt   DateTime?
+  updatedAt      DateTime     @updatedAt
+}
+
+model CreditTransaction {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  amount         Int          // 양수: 충전, 음수: 차감
+  type           String       // "plan_grant" | "purchase" | "task_debit" | "refund" | "monthly_reset"
+  taskId         String?
+  description    String?
+  balanceAfter   Int
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([taskId])
+}
+
+model CreditPackage {
+  id            String   @id @default(cuid())
+  name          String
+  credits       Int
+  priceInCents  Int
+  stripePriceId String   @unique
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+}
+
+model HostedWorker {
+  id              String    @id @default(cuid())
+  flyMachineId    String    @unique
+  flyAppName      String
+  status          String    @default("idle") // "idle" | "busy" | "starting" | "stopping" | "dead"
+  currentTaskId   String?   @unique
+  region          String    @default("nrt")
+  lastHealthCheck DateTime?
+  startedAt       DateTime  @default(now())
+  stoppedAt       DateTime?
+  metadata        String    @default("{}")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([status])
+}
+
+model UserApiKey {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  provider       String       @default("anthropic")
+  encryptedKey   String
+  keyPrefix      String
+  createdById    String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([organizationId, provider])
+  @@index([organizationId])
 }

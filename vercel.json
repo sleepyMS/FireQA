@@ -3,6 +3,14 @@
     {
       "path": "/api/cron/agent-health",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/worker-health",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/credit-reset",
+      "schedule": "0 0 1 * *"
     }
   ]
 }

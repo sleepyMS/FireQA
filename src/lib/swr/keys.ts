@@ -9,4 +9,8 @@ export const SWR_KEYS = {
   agentTasks: (params: string) => `/api/tasks?${params}`,
   agentDashboard: "/api/agent/dashboard",
   agentStatus: "/api/agent/status",
+  // Phase 4.5: 호스티드 에이전트 관련 키
+  billingCredits: "/api/billing/credits",
+  anthropicKey: "/api/settings/anthropic-key",
+  hostedWorkers: "/api/admin/workers",
 } as const;

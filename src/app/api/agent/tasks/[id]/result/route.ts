@@ -53,6 +53,15 @@ export async function POST(
       metadata: { taskId: id, type: task.type },
     });
 
+    // hosted 모드 작업 완료 시 워커 해제
+    if (task.mode === "hosted" && task.flyMachineId) {
+      const { WorkerOrchestrator } = await import("@/lib/flyio/orchestrator");
+      const orchestrator = new WorkerOrchestrator();
+      await orchestrator.releaseWorker(task.flyMachineId).catch((err) => {
+        console.error("워커 해제 실패:", err);
+      });
+    }
+
     return NextResponse.json({ status: updated.status });
   } catch (error) {
     console.error("결과 전송 오류:", error);

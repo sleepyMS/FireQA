@@ -1,0 +1,12 @@
+app = "fireqa-workers"
+primary_region = "nrt"
+
+[build]
+  dockerfile = "Dockerfile"
+  # Docker 빌드 컨텍스트는 프로젝트 루트 (agent/ 디렉토리 포함)
+
+[deploy]
+  strategy = "immediate"
+
+# Machines API로 관리하므로 서비스/HTTP 포트 불필요
+# 워커는 outbound HTTP만 사용 (FireQA API 호출)

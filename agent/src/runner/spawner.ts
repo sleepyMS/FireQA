@@ -15,6 +15,7 @@ export async function spawnCli(
     mcpTools?: string[];
     onChunk?: (chunk: ParsedChunk) => void;
     signal?: AbortSignal;
+    env?: Record<string, string>;
   }
 ): Promise<SpawnResult> {
   const args = [
@@ -33,7 +34,7 @@ export async function spawnCli(
   return new Promise((resolve, reject) => {
     const child: ChildProcess = spawn(cli, args, {
       stdio: ["pipe", "pipe", "pipe"],
-      env: process.env,
+      env: { ...process.env, ...(options?.env ?? {}) },
     });
 
     const chunks: ParsedChunk[] = [];

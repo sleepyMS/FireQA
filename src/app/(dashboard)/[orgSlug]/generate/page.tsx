@@ -3,17 +3,24 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams, useParams } from "next/navigation";
+import useSWR from "swr";
 import {
   Upload,
   FileText,
   Sparkles,
   LayoutTemplate,
   Bot,
+  Cloud,
+  Monitor,
+  Coins,
+  KeyRound,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { SWR_KEYS } from "@/lib/swr/keys";
+import { fetcher } from "@/lib/swr/fetcher";
 import { Dropzone } from "@/components/upload/dropzone";
 import { cn } from "@/lib/utils";
 import { useSSE } from "@/hooks/use-sse";
@@ -54,6 +61,20 @@ export default function GeneratePage() {
   const sse = useSSE("/api/generate");
   const [agentMode, setAgentMode] = useState(false);
   const [agentSubmitting, setAgentSubmitting] = useState(false);
+
+  // Phase 4.5: 호스티드 vs 로컬 에이전트 실행 모드
+  type AgentExecMode = "local" | "hosted";
+  const [agentExecMode, setAgentExecMode] = useState<AgentExecMode>("local");
+
+  // 호스티드 모드 선택 시에만 크레딧 잔액 및 Anthropic 키 정보 조회
+  const { data: creditData } = useSWR<{ balance: number; monthlyQuota: number }>(
+    agentMode && agentExecMode === "hosted" ? SWR_KEYS.billingCredits : null,
+    fetcher,
+  );
+  const { data: keyData } = useSWR<{ hasKey: boolean; keyPrefix: string | null }>(
+    agentMode && agentExecMode === "hosted" ? SWR_KEYS.anthropicKey : null,
+    fetcher,
+  );
 
   // URL searchParams에 projectId가 있으면 해당 프로젝트를 자동 선택
   useEffect(() => {
@@ -139,6 +160,8 @@ export default function GeneratePage() {
           projectId,
           prompt,
           context,
+          // Phase 4.5: 호스티드 모드일 때 mode 전달
+          ...(agentExecMode === "hosted" && { mode: "hosted" }),
         }),
       });
       const data = await res.json();
@@ -398,6 +421,90 @@ export default function GeneratePage() {
             </button>
           </div>
 
+          {/* Phase 4.5: 에이전트 실행 모드 선택 (에이전트 모드가 켜진 경우) */}
+          {agentMode && (
+            <Card>
+              <CardContent className="space-y-3 pt-4">
+                <p className="text-sm font-medium">에이전트 실행 위치</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setAgentExecMode("hosted")}
+                    className={cn(
+                      "flex items-center gap-2 rounded-lg border-2 p-3 text-left text-sm transition-all",
+                      agentExecMode === "hosted"
+                        ? "border-primary bg-primary/5"
+                        : "border-transparent bg-muted/50 hover:bg-muted"
+                    )}
+                  >
+                    <Cloud
+                      className={cn(
+                        "h-5 w-5 shrink-0",
+                        agentExecMode === "hosted" ? "text-primary" : "text-muted-foreground"
+                      )}
+                    />
+                    <div>
+                      <p className="font-medium">호스티드 (클라우드)</p>
+                      <p className="text-xs text-muted-foreground">
+                        서버에서 자동 실행
+                      </p>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAgentExecMode("local")}
+                    className={cn(
+                      "flex items-center gap-2 rounded-lg border-2 p-3 text-left text-sm transition-all",
+                      agentExecMode === "local"
+                        ? "border-primary bg-primary/5"
+                        : "border-transparent bg-muted/50 hover:bg-muted"
+                    )}
+                  >
+                    <Monitor
+                      className={cn(
+                        "h-5 w-5 shrink-0",
+                        agentExecMode === "local" ? "text-primary" : "text-muted-foreground"
+                      )}
+                    />
+                    <div>
+                      <p className="font-medium">로컬 에이전트</p>
+                      <p className="text-xs text-muted-foreground">
+                        내 PC의 CLI로 실행
+                      </p>
+                    </div>
+                  </button>
+                </div>
+
+                {/* 호스티드 선택 시 크레딧 잔액 및 자체 키 안내 */}
+                {agentExecMode === "hosted" && (
+                  <div className="space-y-2 rounded-lg border bg-muted/30 p-3">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-1.5 text-muted-foreground">
+                        <Coins className="h-3.5 w-3.5" />
+                        크레딧 잔액
+                      </span>
+                      <span className="font-medium">
+                        {creditData?.balance != null
+                          ? `${creditData.balance.toLocaleString()} / ${creditData.monthlyQuota.toLocaleString()}`
+                          : "로딩 중..."}
+                      </span>
+                    </div>
+                    {keyData?.hasKey && (
+                      <div className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
+                        <KeyRound className="h-3 w-3" />
+                        자체 키 사용 (크레딧 무료)
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* NOTE: diagrams/page.tsx, wireframes/page.tsx, improve/page.tsx에도 동일한
+              에이전트 실행 모드 선택 UI 패턴을 적용해야 함.
+              agentExecMode state + SWR(billingCredits, anthropicKey) + mode 선택 카드 + handleAgentGenerate에 mode 전달. */}
+
           {agentMode ? (
             <Button
               className="w-full"
@@ -406,7 +513,11 @@ export default function GeneratePage() {
               onClick={handleAgentGenerate}
             >
               <Bot className="mr-2 h-4 w-4" />
-              {agentSubmitting ? "에이전트에 전송 중..." : "에이전트로 TC 생성하기"}
+              {agentSubmitting
+                ? "에이전트에 전송 중..."
+                : agentExecMode === "hosted"
+                  ? "호스티드 에이전트로 TC 생성하기"
+                  : "로컬 에이전트로 TC 생성하기"}
             </Button>
           ) : (
             <Button
