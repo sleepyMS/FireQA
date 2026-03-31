@@ -106,6 +106,7 @@ export async function GET(request: NextRequest) {
       select: {
         id: true, type: true, status: true, prompt: true, projectId: true,
         connectionId: true, startedAt: true, completedAt: true, errorMessage: true, createdAt: true,
+        project: { select: { id: true, name: true } },
       },
     });
 

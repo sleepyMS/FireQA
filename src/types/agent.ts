@@ -90,3 +90,28 @@ export type AgentTaskContext = {
   figmaFileKey?: string;
   [key: string]: unknown;
 };
+
+// ─── Client-side view-model types (API 응답 직렬화 형태) ───
+
+export type AgentConnectionView = {
+  id: string;
+  name: string;
+  type: string;
+  status: string;
+  lastHeartbeat: string | null;
+  metadata: { cli?: string; os?: string; version?: string };
+  runningTasks: number;
+};
+
+export type AgentTaskView = {
+  id: string;
+  type: string;
+  status: string;
+  prompt: string;
+  projectId: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  errorMessage: string | null;
+  createdAt: string;
+  project?: { id: string; name: string } | null;
+};

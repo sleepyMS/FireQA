@@ -29,6 +29,8 @@ import { useLocale } from "@/lib/i18n/locale-provider";
 import type { Messages } from "@/lib/i18n/messages";
 import { useUser } from "@/lib/auth/user-provider";
 import { useCurrentProject } from "@/lib/current-project-context";
+import useSWR from "swr";
+import { SWR_KEYS } from "@/lib/swr/keys";
 
 // 조직별 마지막으로 방문한 프로젝트 ID를 렌더 간에 유지하는 모듈 레벨 캐시
 // React state/effect 없이 사용해 set-state-in-effect lint 규칙을 회피
@@ -111,6 +113,15 @@ export function Sidebar({ initialMemberships, initialActiveOrgId }: SidebarProps
   const navItems = buildNavItems(t.nav, orgSlug);
   const { projectId: contextProjectId } = useCurrentProject();
 
+  // 에이전트 페이지에서는 30초 polling, 그 외에는 캐시만 사용 (불필요한 API 호출 방지)
+  const isAgentPage = pathname.includes("/agent");
+  const { data: agentStatus } = useSWR<{ onlineCount: number }>(
+    orgSlug ? SWR_KEYS.agentStatus : null,
+    (url: string) => fetch(url).then((r) => r.json()),
+    { refreshInterval: isAgentPage ? 30_000 : 0 }
+  );
+  const agentOnline = (agentStatus?.onlineCount ?? 0) > 0;
+
   // /{orgSlug}/projects/{id} 패턴에서 projectId 추출
   const projectMatch = pathname.match(/^\/[^/]+\/projects\/([^/?]+)/);
   const urlProjectId = projectMatch?.[1] ?? searchParams.get("projectId");
@@ -164,6 +175,9 @@ export function Sidebar({ initialMemberships, initialActiveOrgId }: SidebarProps
             >
               <item.icon className="h-4 w-4" />
               {item.label}
+              {item.label === "에이전트" && agentOnline && (
+                <span className="ml-auto h-2 w-2 rounded-full bg-green-500" />
+              )}
             </Link>
           );
         })}

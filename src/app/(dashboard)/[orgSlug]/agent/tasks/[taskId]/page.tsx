@@ -15,6 +15,7 @@ import {
 import type { AgentOutputChunk } from "@/types/agent";
 import { AgentTaskLogViewer } from "./log-viewer";
 import { CancelButton } from "./cancel-button";
+import { TaskResultPreview } from "@/components/agent/task-result-preview";
 
 // ─── Server Component ───
 
@@ -52,16 +53,6 @@ export default async function AgentTaskDetailPage({
     }
   }
 
-  // result JSON 파싱
-  let parsedResult: unknown = null;
-  if (task.result) {
-    try {
-      parsedResult = JSON.parse(task.result);
-    } catch {
-      // 파싱 실패 시 null 유지
-    }
-  }
-
   const statusConfig = AGENT_TASK_STATUS_CONFIG[task.status];
   const typeLabel = AGENT_TASK_TYPE_LABEL[task.type] ?? task.type;
 
@@ -73,9 +64,22 @@ export default async function AgentTaskDetailPage({
   const isActive = ACTIVE_STATUSES.includes(task.status);
 
   const createdAtStr = task.createdAt.toISOString().slice(0, 16).replace("T", " ");
+  const startedAtStr = task.startedAt
+    ? task.startedAt.toISOString().slice(0, 16).replace("T", " ")
+    : null;
   const completedAtStr = task.completedAt
     ? task.completedAt.toISOString().slice(0, 16).replace("T", " ")
     : null;
+
+  // 소요 시간 계산
+  let durationStr: string | null = null;
+  if (task.startedAt && task.completedAt) {
+    const durationMs = task.completedAt.getTime() - task.startedAt.getTime();
+    const totalSeconds = Math.floor(durationMs / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    durationStr = minutes > 0 ? `${minutes}분 ${seconds}초` : `${seconds}초`;
+  }
 
   return (
     <div className="space-y-6">
@@ -147,11 +151,21 @@ export default async function AgentTaskDetailPage({
               <InfoRow label="생성">
                 <span className="tabular-nums text-muted-foreground">{createdAtStr}</span>
               </InfoRow>
+              {startedAtStr && (
+                <InfoRow label="시작">
+                  <span className="tabular-nums text-muted-foreground">{startedAtStr}</span>
+                </InfoRow>
+              )}
               <InfoRow label="완료">
                 <span className="tabular-nums text-muted-foreground">
                   {completedAtStr ?? "-"}
                 </span>
               </InfoRow>
+              {durationStr && (
+                <InfoRow label="소요 시간">
+                  <span className="tabular-nums font-medium">{durationStr}</span>
+                </InfoRow>
+              )}
 
               {task.errorMessage && (
                 <div className="pt-1">
@@ -175,15 +189,18 @@ export default async function AgentTaskDetailPage({
           </Card>
 
           {/* 결과 카드 */}
-          {parsedResult !== null && (
+          {task.result && (
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">결과</CardTitle>
               </CardHeader>
               <CardContent>
-                <pre className="whitespace-pre-wrap break-words text-xs font-mono bg-muted rounded-md p-3 max-h-64 overflow-y-auto leading-relaxed">
-                  {JSON.stringify(parsedResult, null, 2)}
-                </pre>
+                <TaskResultPreview
+                  taskType={task.type}
+                  taskId={task.id}
+                  projectName={task.project?.name ?? ""}
+                  rawResult={task.result}
+                />
               </CardContent>
             </Card>
           )}

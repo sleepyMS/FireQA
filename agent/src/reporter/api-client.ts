@@ -1,4 +1,5 @@
 import fs from "fs";
+import fsp from "fs/promises";
 import path from "path";
 import os from "os";
 import type { AgentConfig } from "../config/store.js";
@@ -129,24 +130,38 @@ export class ApiClient {
 
   // 에이전트 시작 시 미전송 파일을 재전송
   async flushPendingOutputs(): Promise<void> {
-    if (!fs.existsSync(PENDING_DIR)) return;
+    let entries: string[];
+    try {
+      entries = (await fsp.readdir(PENDING_DIR)).filter((f) => f.endsWith(".json"));
+    } catch {
+      return; // 디렉토리 없으면 종료
+    }
 
-    const files = fs.readdirSync(PENDING_DIR).filter((f) => f.endsWith(".json"));
-    for (const file of files) {
+    const EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
+    const now = Date.now();
+
+    for (const file of entries) {
       const filePath = path.join(PENDING_DIR, file);
       try {
-        const data = JSON.parse(fs.readFileSync(filePath, "utf-8")) as {
+        const raw = await fsp.readFile(filePath, "utf-8");
+        const data = JSON.parse(raw) as {
           taskId: string;
           chunks: unknown[];
+          timestamp?: number;
         };
+
+        if (data.timestamp && now - data.timestamp > EXPIRY_MS) {
+          await fsp.unlink(filePath);
+          continue;
+        }
+
         const res = await fetch(`${this.baseUrl}/api/agent/tasks/${data.taskId}/output`, {
           method: "POST",
           headers: this.headers(),
           body: JSON.stringify({ chunks: data.chunks }),
         });
         if (res.ok || res.status === 404) {
-          // 전송 성공 또는 작업이 이미 없음 — 파일 삭제
-          fs.unlinkSync(filePath);
+          await fsp.unlink(filePath);
         }
       } catch {
         // 실패 시 다음 시작 때 재시도
