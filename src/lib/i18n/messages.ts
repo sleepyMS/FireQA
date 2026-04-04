@@ -46,4 +46,35 @@ export interface Messages {
       en: string;
     };
   };
+  generation: {
+    stages: {
+      connecting: string;
+      parsing: string;
+      preparing: string;
+      generating: string;
+      sanitizing: string;
+      saving: string;
+      fixing: string;
+      improving: string;
+    };
+    elapsed: string;
+    kbReceived: string;
+    chunk: string;
+    pageTitle: string;
+    pageDescription: string;
+    streamingDescription: string;
+    step1: string;
+    step2: string;
+    step3: string;
+    modeAuto: string;
+    modeAutoDesc: string;
+    modeTemplate: string;
+    modeTemplateDesc: string;
+    noTemplates: string;
+    goCreateTemplate: string;
+    generateAuto: string;
+    generateTemplate: string;
+    docPreviewTitle: string;
+    docPreviewEmpty: string;
+  };
 }
