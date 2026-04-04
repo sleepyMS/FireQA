@@ -15,6 +15,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 interface ProjectHeaderProps {
   project: {
@@ -31,11 +32,12 @@ interface ProjectHeaderProps {
 }
 
 function StatusBadge({ status }: { status: string }) {
+  const { t } = useLocale();
   if (status === "archived")
-    return <Badge variant="secondary">보관됨</Badge>;
+    return <Badge variant="secondary">{t.projects.statusArchived}</Badge>;
   if (status === "deleted")
-    return <Badge variant="destructive">삭제됨</Badge>;
-  return <Badge variant="default">활성</Badge>;
+    return <Badge variant="destructive">{t.projects.statusDeleted}</Badge>;
+  return <Badge variant="default">{t.projects.statusActive}</Badge>;
 }
 
 export function ProjectHeader({
@@ -50,6 +52,7 @@ export function ProjectHeader({
     project.description ?? ""
   );
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const { t } = useLocale();
 
   const handleSave = () => {
     if (!editName.trim()) return;
@@ -84,18 +87,18 @@ export function ProjectHeader({
             <Textarea
               value={editDescription}
               onChange={(e) => setEditDescription(e.target.value)}
-              placeholder="프로젝트 설명 (선택)"
+              placeholder={t.projects.descriptionPlaceholder}
               rows={2}
               className="resize-none"
             />
             <div className="flex gap-2">
               <Button size="sm" onClick={handleSave} disabled={!editName.trim()}>
                 <Check className="mr-1 h-3 w-3" />
-                저장
+                {t.common.save}
               </Button>
               <Button size="sm" variant="outline" onClick={handleCancel}>
                 <X className="mr-1 h-3 w-3" />
-                취소
+                {t.common.cancel}
               </Button>
             </div>
           </div>
@@ -113,7 +116,7 @@ export function ProjectHeader({
                 disabled={project.status === "deleted"}
               >
                 <Pencil className="h-4 w-4" />
-                <span className="sr-only">프로젝트 편집</span>
+                <span className="sr-only">{t.projects.editProjectSr}</span>
               </Button>
               <StatusBadge status={project.status} />
             </div>
@@ -123,7 +126,7 @@ export function ProjectHeader({
               </p>
             ) : (
               <p className="text-sm text-muted-foreground italic">
-                설명 없음
+                {t.projects.noDescription}
               </p>
             )}
           </>
@@ -137,12 +140,12 @@ export function ProjectHeader({
             {project.status === "archived" ? (
               <>
                 <ArchiveRestore className="mr-1 h-4 w-4" />
-                보관 해제
+                {t.projects.unarchive}
               </>
             ) : (
               <>
                 <Archive className="mr-1 h-4 w-4" />
-                보관
+                {t.projects.archive}
               </>
             )}
           </Button>
@@ -152,7 +155,7 @@ export function ProjectHeader({
             onClick={() => setDeleteDialogOpen(true)}
           >
             <Trash2 className="mr-1 h-4 w-4" />
-            삭제
+            {t.common.delete}
           </Button>
         </div>
       )}
@@ -164,14 +167,13 @@ export function ProjectHeader({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>프로젝트 삭제</DialogTitle>
+            <DialogTitle>{t.projects.deleteProjectTitle}</DialogTitle>
             <DialogDescription>
-              &quot;{project.name}&quot; 프로젝트를 삭제하시겠습니까? 삭제된
-              프로젝트는 휴지통에서 복구할 수 있습니다.
+              {t.projects.deleteProjectConfirm.replace("{name}", project.name)}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>취소</DialogClose>
+            <DialogClose render={<Button variant="outline" />}>{t.common.cancel}</DialogClose>
             <Button
               variant="destructive"
               onClick={() => {
@@ -179,7 +181,7 @@ export function ProjectHeader({
                 onDelete();
               }}
             >
-              삭제
+              {t.common.delete}
             </Button>
           </DialogFooter>
         </DialogContent>
