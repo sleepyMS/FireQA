@@ -43,41 +43,43 @@ function buildNavItems(nav: Messages["nav"], orgSlug: string) {
   ];
 }
 
-function buildProjectNavItems(projectId: string, orgSlug: string) {
+type ProjectNavItemKey = "overview" | "generate" | "diagrams" | "wireframes" | "improve" | "history" | "activity" | "analytics" | "files";
+
+function buildProjectNavItems(nav: Messages["nav"], projectId: string, orgSlug: string) {
   return [
-    { label: "개요", href: `/${orgSlug}/projects/${projectId}?tab=overview`, icon: LayoutDashboard },
-    { label: "TC 자동 생성", href: `/${orgSlug}/generate?projectId=${projectId}`, icon: FileText },
-    { label: "다이어그램", href: `/${orgSlug}/diagrams?projectId=${projectId}`, icon: GitBranch },
-    { label: "와이어프레임", href: `/${orgSlug}/wireframes?projectId=${projectId}`, icon: Smartphone },
-    { label: "기획서 개선", href: `/${orgSlug}/improve?projectId=${projectId}`, icon: FileEdit },
-    { label: "생성 이력", href: `/${orgSlug}/history?projectId=${projectId}`, icon: Clock },
-    { label: "활동 로그", href: `/${orgSlug}/activity?projectId=${projectId}`, icon: Activity },
-    { label: "분석", href: `/${orgSlug}/analytics?projectId=${projectId}`, icon: BarChart2 },
-    { label: "파일", href: `/${orgSlug}/projects/${projectId}?tab=uploads`, icon: FolderOpen },
+    { key: "overview" as ProjectNavItemKey, label: nav.overview, href: `/${orgSlug}/projects/${projectId}?tab=overview`, icon: LayoutDashboard },
+    { key: "generate" as ProjectNavItemKey, label: nav.generate, href: `/${orgSlug}/generate?projectId=${projectId}`, icon: FileText },
+    { key: "diagrams" as ProjectNavItemKey, label: nav.diagrams, href: `/${orgSlug}/diagrams?projectId=${projectId}`, icon: GitBranch },
+    { key: "wireframes" as ProjectNavItemKey, label: nav.wireframes, href: `/${orgSlug}/wireframes?projectId=${projectId}`, icon: Smartphone },
+    { key: "improve" as ProjectNavItemKey, label: nav.improve, href: `/${orgSlug}/improve?projectId=${projectId}`, icon: FileEdit },
+    { key: "history" as ProjectNavItemKey, label: nav.history, href: `/${orgSlug}/history?projectId=${projectId}`, icon: Clock },
+    { key: "activity" as ProjectNavItemKey, label: nav.activity, href: `/${orgSlug}/activity?projectId=${projectId}`, icon: Activity },
+    { key: "analytics" as ProjectNavItemKey, label: nav.analytics, href: `/${orgSlug}/analytics?projectId=${projectId}`, icon: BarChart2 },
+    { key: "files" as ProjectNavItemKey, label: nav.files, href: `/${orgSlug}/projects/${projectId}?tab=uploads`, icon: FolderOpen },
   ];
 }
 
 function isProjectNavActive(
-  item: { href: string; label: string },
+  item: { key: ProjectNavItemKey; href: string },
   pathname: string,
   searchParams: URLSearchParams,
   projectId: string,
   orgSlug: string,
 ) {
-  if (item.label === "개요") {
+  if (item.key === "overview") {
     return (
       pathname === `/${orgSlug}/projects/${projectId}` &&
       (!searchParams.get("tab") || searchParams.get("tab") === "overview")
     );
   }
-  if (item.href.includes("/generate")) return pathname === `/${orgSlug}/generate`;
-  if (item.href.includes("/diagrams")) return pathname === `/${orgSlug}/diagrams`;
-  if (item.href.includes("/wireframes")) return pathname === `/${orgSlug}/wireframes`;
-  if (item.href.includes("/improve")) return pathname === `/${orgSlug}/improve`;
-  if (item.label === "생성 이력") return pathname === `/${orgSlug}/history`;
-  if (item.label === "활동 로그") return pathname === `/${orgSlug}/activity`;
-  if (item.label === "분석") return pathname === `/${orgSlug}/analytics`;
-  if (item.label === "파일") {
+  if (item.key === "generate") return pathname === `/${orgSlug}/generate`;
+  if (item.key === "diagrams") return pathname === `/${orgSlug}/diagrams`;
+  if (item.key === "wireframes") return pathname === `/${orgSlug}/wireframes`;
+  if (item.key === "improve") return pathname === `/${orgSlug}/improve`;
+  if (item.key === "history") return pathname === `/${orgSlug}/history`;
+  if (item.key === "activity") return pathname === `/${orgSlug}/activity`;
+  if (item.key === "analytics") return pathname === `/${orgSlug}/analytics`;
+  if (item.key === "files") {
     return (
       pathname === `/${orgSlug}/projects/${projectId}` &&
       searchParams.get("tab") === "uploads"
@@ -120,7 +122,7 @@ export function Sidebar({ initialMemberships, initialActiveOrgId }: SidebarProps
   }
   // 다른 조직으로 전환 시 해당 조직의 캐시가 없으면 null → 프로젝트 nav 숨김
   const currentProjectId = resolvedProjectId ?? lastProjectPerOrg.get(orgSlug) ?? null;
-  const projectNavItems = currentProjectId ? buildProjectNavItems(currentProjectId, orgSlug) : [];
+  const projectNavItems = currentProjectId ? buildProjectNavItems(t.nav, currentProjectId, orgSlug) : [];
 
   const navContent = (
     <>
@@ -129,7 +131,7 @@ export function Sidebar({ initialMemberships, initialActiveOrgId }: SidebarProps
           <Flame className="h-6 w-6 text-orange-500" />
           <span className="text-lg font-bold">FireQA</span>
         </div>
-        <button className="lg:hidden" onClick={() => setMobileOpen(false)}>
+        <button className="lg:hidden" aria-label={t.nav.closeMenu} onClick={() => setMobileOpen(false)}>
           <X className="h-5 w-5" />
         </button>
       </div>
@@ -170,7 +172,7 @@ export function Sidebar({ initialMemberships, initialActiveOrgId }: SidebarProps
           <>
             <div className="my-3 border-t pt-3">
               <p className="mb-1 px-3 text-xs font-medium text-muted-foreground/70">
-                현재 프로젝트
+                {t.nav.currentProject}
               </p>
             </div>
             {projectNavItems.map((item) => {
@@ -179,7 +181,7 @@ export function Sidebar({ initialMemberships, initialActiveOrgId }: SidebarProps
               );
               return (
                 <Link
-                  key={item.label}
+                  key={item.key}
                   href={item.href}
                   onClick={() => setMobileOpen(false)}
                   className={cn(
@@ -227,6 +229,7 @@ export function Sidebar({ initialMemberships, initialActiveOrgId }: SidebarProps
     <>
       <button
         className="fixed left-4 top-3 z-50 rounded-md p-2 lg:hidden"
+        aria-label={t.nav.mainMenu}
         onClick={() => setMobileOpen(true)}
       >
         <Menu className="h-5 w-5" />

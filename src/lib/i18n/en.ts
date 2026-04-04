@@ -14,6 +14,12 @@ export const en: Messages = {
     templates: "Templates",
     guide: "Guide",
     settings: "Settings",
+    agent: "Agent",
+    overview: "Overview",
+    files: "Files",
+    closeMenu: "Close menu",
+    mainMenu: "Main menu",
+    currentProject: "Current Project",
   },
   common: {
     save: "Save",

@@ -14,6 +14,12 @@ export interface Messages {
     templates: string;
     guide: string;
     settings: string;
+    agent: string;
+    overview: string;
+    files: string;
+    closeMenu: string;
+    mainMenu: string;
+    currentProject: string;
   };
   common: {
     save: string;
