@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams, useParams } from "next/navigation";
 import {
   Smartphone,
@@ -8,9 +8,7 @@ import {
   Sparkles,
   Shuffle,
   FileText,
-  Bot,
 } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dropzone } from "@/components/upload/dropzone";
@@ -20,53 +18,33 @@ import { GenerationProgress } from "@/components/generation-progress";
 import { GenerationError } from "@/components/generation-error";
 import { RecentJobsPanel } from "@/components/recent-jobs-panel";
 import { ProjectSelector } from "@/components/projects/project-selector";
-import { AIModelSelector } from "@/components/ai-model-selector";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
-const SCREEN_TYPE_OPTIONS = [
-  {
-    value: "auto",
-    label: "AI 자동 판단",
-    description: "AI가 문서를 분석해 화면별 타입 결정",
-    icon: Sparkles,
-  },
-  {
-    value: "mobile",
-    label: "모바일",
-    description: "전체 화면을 모바일(360px)로 생성",
-    icon: Smartphone,
-  },
-  {
-    value: "desktop",
-    label: "데스크톱",
-    description: "전체 화면을 데스크톱(800px)로 생성",
-    icon: Monitor,
-  },
-  {
-    value: "mixed",
-    label: "혼합",
-    description: "모바일과 데스크톱을 AI가 혼합 배치",
-    icon: Shuffle,
-  },
-] as const;
+const SCREEN_TYPE_VALUES = ["auto", "mobile", "desktop", "mixed"] as const;
+type ScreenTypeValue = typeof SCREEN_TYPE_VALUES[number];
+
+const SCREEN_TYPE_ICONS: Record<ScreenTypeValue, React.ComponentType<{ className?: string }>> = {
+  auto: Sparkles,
+  mobile: Smartphone,
+  desktop: Monitor,
+  mixed: Shuffle,
+};
 
 type ProjectSelection =
   | { type: "existing"; id: string; name: string }
   | { type: "new"; name: string };
 
 export default function WireframesPage() {
+  const { t } = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { orgSlug } = useParams<{ orgSlug?: string }>();
   const [projectSelection, setProjectSelection] =
     useState<ProjectSelection | null>(null);
   const [file, setFile] = useState<File | null>(null);
-  const [parsedPreview, setParsedPreview] = useState<string | null>(null);
   const [screenTypeMode, setScreenTypeMode] = useState<string>("auto");
 
   const sse = useSSE("/api/wireframes");
-  const [aiModel, setAiModel] = useState("openai");
-  const [agentMode, setAgentMode] = useState(false);
-  const [agentSubmitting, setAgentSubmitting] = useState(false);
 
   // URL searchParams에 projectId가 있으면 해당 프로젝트를 자동 선택
   useEffect(() => {
@@ -93,56 +71,8 @@ export default function WireframesPage() {
     }
   }, [sse.result, sse.jobId, router, orgSlug]);
 
-  const handleFileSelected = async (selectedFile: File) => {
+  const handleFileSelected = (selectedFile: File) => {
     setFile(selectedFile);
-    const formData = new FormData();
-    formData.append("file", selectedFile);
-    try {
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
-      if (data.parsedText) {
-        setParsedPreview(
-          data.parsedText.length > 2000
-            ? data.parsedText.slice(0, 2000) + "..."
-            : data.parsedText
-        );
-      }
-    } catch {
-      console.error("파일 파싱 실패");
-    }
-  };
-
-  const handleAgentGenerate = async () => {
-    if (!projectSelection || !parsedPreview) return;
-    setAgentSubmitting(true);
-    try {
-      const projectId =
-        projectSelection.type === "existing" ? projectSelection.id : undefined;
-      const prompt = `다음 기획서를 바탕으로 와이어프레임을 생성해주세요:\n\n${parsedPreview}`;
-      const res = await fetch("/api/tasks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "wireframe-generate",
-          projectId,
-          prompt,
-          context: {},
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.error || "에이전트 작업 생성에 실패했습니다.");
-        return;
-      }
-      router.push(`/${orgSlug}/agent/tasks/${data.id}`);
-    } catch {
-      toast.error("네트워크 오류가 발생했습니다.");
-    } finally {
-      setAgentSubmitting(false);
-    }
   };
 
   const handleGenerate = () => {
@@ -157,24 +87,39 @@ export default function WireframesPage() {
       formData.append("projectName", projectSelection.name);
     }
     formData.append("screenTypeMode", screenTypeMode);
-    if (aiModel !== "openai") {
-      formData.append("provider", aiModel);
-    }
 
     sse.start(formData);
   };
+
+  const screenTypeOptions = useMemo(
+    () =>
+      SCREEN_TYPE_VALUES.map((value) => ({
+        value,
+        label: t.wireframes.screenTypes[value],
+        description: t.wireframes.screenTypes[`${value}Desc` as `${ScreenTypeValue}Desc`],
+        Icon: SCREEN_TYPE_ICONS[value],
+      })),
+    [t],
+  );
 
   // 스트리밍 중이면 진행상태 표시
   if (sse.isStreaming) {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">와이어프레임 생성</h2>
+          <h2 className="text-2xl font-bold tracking-tight">{t.wireframes.pageTitle}</h2>
           <p className="text-muted-foreground">
-            {projectSelection?.name} — AI가 와이어프레임을 생성하고 있습니다.
+            {projectSelection?.name} — {t.wireframes.streaming}
           </p>
         </div>
-        <GenerationProgress sse={sse} onCancel={sse.cancel} />
+        <GenerationProgress
+          stage={sse.stage}
+          message={sse.message}
+          progress={sse.progress}
+          chunkInfo={sse.chunkInfo}
+          charsReceived={sse.charsReceived}
+          onCancel={sse.cancel}
+        />
       </div>
     );
   }
@@ -183,7 +128,7 @@ export default function WireframesPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">와이어프레임 생성</h2>
+          <h2 className="text-2xl font-bold tracking-tight">{t.wireframes.pageTitle}</h2>
         </div>
         <GenerationError error={sse.error} />
       </div>
@@ -193,18 +138,15 @@ export default function WireframesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">와이어프레임 생성</h2>
-        <p className="text-muted-foreground">
-          기획 문서를 업로드하면 AI가 화면 구성과 흐름을 설계하여 Figma에서
-          와이어프레임으로 생성합니다.
-        </p>
+        <h2 className="text-2xl font-bold tracking-tight">{t.wireframes.pageTitle}</h2>
+        <p className="text-muted-foreground">{t.wireframes.pageDescription}</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">1. 프로젝트 이름</CardTitle>
+              <CardTitle className="text-base">{t.wireframes.step1}</CardTitle>
             </CardHeader>
             <CardContent>
               <ProjectSelector
@@ -217,7 +159,7 @@ export default function WireframesPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">2. 기획 문서 업로드</CardTitle>
+              <CardTitle className="text-base">{t.wireframes.step2}</CardTitle>
             </CardHeader>
             <CardContent>
               <Dropzone onFileSelected={handleFileSelected} />
@@ -232,11 +174,11 @@ export default function WireframesPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">3. 화면 타입</CardTitle>
+              <CardTitle className="text-base">{t.wireframes.step3}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-2">
-                {SCREEN_TYPE_OPTIONS.map((opt) => {
+                {screenTypeOptions.map((opt) => {
                   const isSelected = screenTypeMode === opt.value;
                   return (
                     <button
@@ -250,7 +192,7 @@ export default function WireframesPage() {
                           : "border-transparent bg-muted/50 hover:bg-muted"
                       )}
                     >
-                      <opt.icon
+                      <opt.Icon
                         className={cn(
                           "h-5 w-5 shrink-0",
                           isSelected ? "text-primary" : "text-muted-foreground"
@@ -269,62 +211,15 @@ export default function WireframesPage() {
             </CardContent>
           </Card>
 
-          {/* AI 모델 선택 */}
-          <AIModelSelector
-            value={aiModel}
-            onChange={setAiModel}
-            disabled={sse.isStreaming}
-          />
-
-          {/* 에이전트 모드 토글 */}
-          <div className="flex items-center justify-between rounded-lg border p-3">
-            <div className="flex items-center gap-2">
-              <Bot className="h-4 w-4 text-muted-foreground" />
-              <div>
-                <p className="text-sm font-medium">에이전트 모드</p>
-                <p className="text-xs text-muted-foreground">로컬 Claude Code CLI로 작업 위임</p>
-              </div>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={agentMode}
-              onClick={() => setAgentMode((v) => !v)}
-              className={cn(
-                "relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors",
-                agentMode ? "bg-primary" : "bg-input"
-              )}
-            >
-              <span
-                className={cn(
-                  "pointer-events-none block h-4 w-4 rounded-full bg-white shadow-lg transition-transform",
-                  agentMode ? "translate-x-4" : "translate-x-0"
-                )}
-              />
-            </button>
-          </div>
-
-          {agentMode ? (
-            <Button
-              className="w-full"
-              size="lg"
-              disabled={!file || !projectSelection || !parsedPreview || agentSubmitting}
-              onClick={handleAgentGenerate}
-            >
-              <Bot className="mr-2 h-4 w-4" />
-              {agentSubmitting ? "에이전트에 전송 중..." : "에이전트로 와이어프레임 생성하기"}
-            </Button>
-          ) : (
-            <Button
-              className="w-full"
-              size="lg"
-              disabled={!file || !projectSelection || sse.isStreaming}
-              onClick={handleGenerate}
-            >
-              <Smartphone className="mr-2 h-4 w-4" />
-              와이어프레임 생성하기
-            </Button>
-          )}
+          <Button
+            className="w-full"
+            size="lg"
+            disabled={!file || !projectSelection || sse.isStreaming}
+            onClick={handleGenerate}
+          >
+            <Smartphone className="mr-2 h-4 w-4" />
+            {t.wireframes.generate}
+          </Button>
         </div>
 
         <RecentJobsPanel type="wireframes" />

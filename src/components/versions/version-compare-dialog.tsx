@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { TestCase, TestSheet } from "@/types/test-case";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 // ─── 타입 ───
 
@@ -58,26 +59,11 @@ interface SheetDiff {
   stats: { added: number; removed: number; modified: number; unchanged: number };
 }
 
-const CHANGE_TYPE_LABEL: Record<string, string> = {
-  initial: "초기 생성",
-  "ai-improve": "AI 개선",
-  "ai-fix": "AI 수정",
-  "manual-edit": "수동 편집",
-  revert: "복원",
-};
-
 const STATUS_COLORS: Record<DiffStatus, string> = {
   unchanged: "",
   added: "bg-green-50 dark:bg-green-950/30",
   removed: "bg-red-50 dark:bg-red-950/30",
   modified: "bg-yellow-50 dark:bg-yellow-950/30",
-};
-
-const STATUS_BADGE: Record<DiffStatus, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  unchanged: { label: "동일", variant: "secondary" },
-  added: { label: "추가", variant: "default" },
-  removed: { label: "삭제", variant: "destructive" },
-  modified: { label: "변경", variant: "outline" },
 };
 
 // ─── Diff 로직 ───
@@ -140,20 +126,31 @@ function isTestCaseChanged(a: TestCase, b: TestCase): boolean {
 // ─── 메인 컴포넌트 ───
 
 interface VersionCompareDialogProps {
+  jobId: string;
   versions: VersionInfo[];
   currentVersionId?: string;
 }
 
 export function VersionCompareDialog({
+  jobId: _jobId,
   versions,
   currentVersionId,
 }: VersionCompareDialogProps) {
+  const { t } = useLocale();
   const [open, setOpen] = useState(false);
   const [sourceId, setSourceId] = useState("");
   const [targetId, setTargetId] = useState("");
   const [loading, setLoading] = useState(false);
   const [compareData, setCompareData] = useState<CompareResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const changeTypeLabel: Record<string, string> = {
+    initial: t.versions.changeType.initial,
+    "ai-improve": t.versions.changeType.aiImprove,
+    "ai-fix": t.versions.changeType.aiFix,
+    "manual-edit": t.versions.changeType.manualEdit,
+    revert: t.versions.changeType.revert,
+  };
 
   // 초기 선택: 현재 활성 버전과 바로 이전 버전
   useEffect(() => {
@@ -186,12 +183,12 @@ export function VersionCompareDialog({
       );
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.message || "비교 데이터를 불러올 수 없습니다.");
+        throw new Error(data.message || "Failed to load comparison data.");
       }
       const data: CompareResult = await res.json();
       setCompareData(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "오류가 발생했습니다.");
+      setError(err instanceof Error ? err.message : "An error occurred.");
     } finally {
       setLoading(false);
     }
@@ -237,19 +234,19 @@ export function VersionCompareDialog({
         render={
           <Button variant="outline" size="sm" className="text-xs">
             <ArrowRightLeft className="mr-1 h-3.5 w-3.5" />
-            버전 비교
+            {t.versions.compare}
           </Button>
         }
       />
       <DialogContent className="sm:max-w-4xl max-h-[85vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>버전 비교</DialogTitle>
+          <DialogTitle>{t.versions.compareTitle}</DialogTitle>
         </DialogHeader>
 
         {/* 버전 선택 */}
         <div className="flex items-center gap-3 border-b pb-3">
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground whitespace-nowrap">기준:</span>
+            <span className="text-xs text-muted-foreground whitespace-nowrap">{t.versions.baseLabel}:</span>
             <select
               className="h-8 rounded-md border bg-transparent px-2 text-sm"
               value={sourceId}
@@ -257,8 +254,8 @@ export function VersionCompareDialog({
             >
               {versions.map((v) => (
                 <option key={v.id} value={v.id} disabled={v.id === targetId}>
-                  v{v.version} — {CHANGE_TYPE_LABEL[v.changeType] ?? v.changeType}
-                  {v.isActive ? " (현재)" : ""}
+                  v{v.version} — {changeTypeLabel[v.changeType] ?? v.changeType}
+                  {v.isActive ? ` ${t.versions.current}` : ""}
                 </option>
               ))}
             </select>
@@ -267,7 +264,7 @@ export function VersionCompareDialog({
           <ArrowRightLeft className="h-4 w-4 text-muted-foreground shrink-0" />
 
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground whitespace-nowrap">비교:</span>
+            <span className="text-xs text-muted-foreground whitespace-nowrap">{t.versions.compareLabel}:</span>
             <select
               className="h-8 rounded-md border bg-transparent px-2 text-sm"
               value={targetId}
@@ -275,15 +272,15 @@ export function VersionCompareDialog({
             >
               {versions.map((v) => (
                 <option key={v.id} value={v.id} disabled={v.id === sourceId}>
-                  v{v.version} — {CHANGE_TYPE_LABEL[v.changeType] ?? v.changeType}
-                  {v.isActive ? " (현재)" : ""}
+                  v{v.version} — {changeTypeLabel[v.changeType] ?? v.changeType}
+                  {v.isActive ? ` ${t.versions.current}` : ""}
                 </option>
               ))}
             </select>
           </div>
 
           {sourceId === targetId && (
-            <span className="text-xs text-amber-600">같은 버전은 비교할 수 없습니다.</span>
+            <span className="text-xs text-amber-600">{t.versions.sameVersionError}</span>
           )}
         </div>
 
@@ -292,7 +289,7 @@ export function VersionCompareDialog({
           {loading && (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              <span className="ml-2 text-sm text-muted-foreground">비교 중...</span>
+              <span className="ml-2 text-sm text-muted-foreground">{t.versions.comparing}</span>
             </div>
           )}
 
@@ -307,16 +304,22 @@ export function VersionCompareDialog({
               {/* 요약 통계 */}
               <div className="flex items-center gap-2">
                 {totalStats.added > 0 && (
-                  <Badge className="bg-green-600 text-xs">+{totalStats.added} 추가</Badge>
+                  <Badge className="bg-green-600 text-xs">
+                    {t.versions.stats.added.replace("{count}", String(totalStats.added))}
+                  </Badge>
                 )}
                 {totalStats.removed > 0 && (
-                  <Badge variant="destructive" className="text-xs">-{totalStats.removed} 삭제</Badge>
+                  <Badge variant="destructive" className="text-xs">
+                    {t.versions.stats.removed.replace("{count}", String(totalStats.removed))}
+                  </Badge>
                 )}
                 {totalStats.modified > 0 && (
-                  <Badge className="bg-yellow-600 text-xs">{totalStats.modified} 변경</Badge>
+                  <Badge className="bg-yellow-600 text-xs">
+                    {t.versions.stats.changed.replace("{count}", String(totalStats.modified))}
+                  </Badge>
                 )}
                 <Badge variant="secondary" className="text-xs">
-                  {totalStats.unchanged} 동일
+                  {t.versions.stats.same.replace("{count}", String(totalStats.unchanged))}
                 </Badge>
               </div>
 
@@ -332,7 +335,7 @@ export function VersionCompareDialog({
 
               {sheetDiffs.length === 0 && (
                 <p className="py-8 text-center text-sm text-muted-foreground">
-                  비교할 테스트케이스 데이터가 없습니다.
+                  {t.versions.noData}
                 </p>
               )}
             </div>
@@ -354,6 +357,7 @@ function SheetDiffView({
   sourceVersion: number;
   targetVersion: number;
 }) {
+  const { t } = useLocale();
   const [showUnchanged, setShowUnchanged] = useState(false);
   const visibleRows = showUnchanged
     ? sheetDiff.rows
@@ -379,31 +383,36 @@ function SheetDiffView({
             className="text-xs text-muted-foreground hover:text-foreground"
             onClick={() => setShowUnchanged(!showUnchanged)}
           >
-            {showUnchanged ? "변경된 항목만 보기" : `동일 항목 ${sheetDiff.stats.unchanged}개 표시`}
+            {showUnchanged
+              ? t.versions.showChangedOnly
+              : t.versions.showUnchanged.replace("{count}", String(sheetDiff.stats.unchanged))}
           </button>
         )}
       </div>
 
       {visibleRows.length === 0 ? (
-        <p className="py-4 text-center text-xs text-muted-foreground">변경사항 없음</p>
+        <p className="py-4 text-center text-xs text-muted-foreground">{t.versions.noChanges}</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[900px] border-collapse text-xs">
             <thead>
               <tr className="border-b bg-muted/20">
-                <th className="w-[60px] px-2 py-1.5 text-left font-medium text-muted-foreground">상태</th>
+                <th className="w-[60px] px-2 py-1.5 text-left font-medium text-muted-foreground">{t.versions.statusLabel}</th>
                 <th className="w-[70px] px-2 py-1.5 text-left font-medium text-muted-foreground">TC ID</th>
                 <th className="px-2 py-1.5 text-left font-medium text-muted-foreground">
-                  v{sourceVersion} (기준)
+                  v{sourceVersion} ({t.versions.baseLabel})
                 </th>
                 <th className="px-2 py-1.5 text-left font-medium text-muted-foreground">
-                  v{targetVersion} (비교)
+                  v{targetVersion} ({t.versions.compareLabel})
                 </th>
               </tr>
             </thead>
             <tbody>
               {visibleRows.map((row, i) => (
-                <DiffRowView key={row.source?.tcId ?? row.target?.tcId ?? i} row={row} />
+                <DiffRowView
+                  key={row.source?.tcId ?? row.target?.tcId ?? i}
+                  row={row}
+                />
               ))}
             </tbody>
           </table>
@@ -416,8 +425,15 @@ function SheetDiffView({
 // ─── Diff 행 ───
 
 function DiffRowView({ row }: { row: DiffRow }) {
+  const { t } = useLocale();
   const { status, source, target } = row;
-  const badgeInfo = STATUS_BADGE[status];
+  const statusBadge: Record<DiffStatus, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+    unchanged: { label: t.versions.diff.same, variant: "secondary" },
+    added: { label: t.versions.diff.added, variant: "default" },
+    removed: { label: t.versions.diff.removed, variant: "destructive" },
+    modified: { label: t.versions.diff.changed, variant: "outline" },
+  };
+  const badgeInfo = statusBadge[status];
   const tcId = source?.tcId ?? target?.tcId ?? "";
 
   return (
@@ -444,19 +460,10 @@ function DiffRowView({ row }: { row: DiffRow }) {
 
 // ─── TC 셀 내용 (필드별 차이 하이라이팅) ───
 
-const DISPLAY_FIELDS: { key: keyof TestCase; label: string }[] = [
-  { key: "name", label: "TC명" },
-  { key: "depth1", label: "1Depth" },
-  { key: "depth2", label: "2Depth" },
-  { key: "depth3", label: "3Depth" },
-  { key: "precondition", label: "사전조건" },
-  { key: "procedure", label: "절차" },
-  { key: "expectedResult", label: "기대결과" },
-];
-
 function TCCellContent({
   tc,
   other,
+  side: _side,
   status,
 }: {
   tc: TestCase;
@@ -464,9 +471,19 @@ function TCCellContent({
   side: "source" | "target";
   status: DiffStatus;
 }) {
+  const { t } = useLocale();
+  const displayFields: { key: keyof TestCase; label: string }[] = [
+    { key: "name", label: t.versions.columns.name },
+    { key: "depth1", label: t.versions.columns.depth1 },
+    { key: "depth2", label: t.versions.columns.depth2 },
+    { key: "depth3", label: t.versions.columns.depth3 },
+    { key: "precondition", label: t.versions.columns.precondition },
+    { key: "procedure", label: t.versions.columns.procedure },
+    { key: "expectedResult", label: t.versions.columns.expected },
+  ];
   return (
     <div className="space-y-0.5">
-      {DISPLAY_FIELDS.map(({ key, label }) => {
+      {displayFields.map(({ key, label }) => {
         const value = tc[key];
         const otherValue = other?.[key];
         const fieldChanged = status === "modified" && other && value !== otherValue;
