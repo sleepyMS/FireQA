@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { SLUG_REGEX, deriveOrgSlug } from "@/lib/slug";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 const spinner = (
   <Card className="w-full max-w-sm">
@@ -33,6 +34,7 @@ function OnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/";
+  const { t } = useLocale();
 
   const [orgName, setOrgName] = useState("");
   const [orgSlug, setOrgSlug] = useState("");
@@ -82,7 +84,7 @@ function OnboardingContent() {
       const supabase = createSupabaseBrowserClient();
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) {
-        toast.error("로그인이 필요합니다.");
+        toast.error(t.onboarding.loginRequired);
         router.push("/login");
         return;
       }
@@ -103,10 +105,10 @@ function OnboardingContent() {
         router.push(redirect);
       } else {
         const data = await res.json();
-        toast.error(data.error || "팀 생성에 실패했습니다.");
+        toast.error(data.error || t.onboarding.createTeamFailed);
       }
     } catch {
-      toast.error("네트워크 오류가 발생했습니다.");
+      toast.error(t.onboarding.networkError);
     } finally {
       setSubmitting(false);
     }
@@ -118,33 +120,33 @@ function OnboardingContent() {
     <Card className="w-full max-w-sm">
       <CardContent className="space-y-6 pt-6">
         <div className="text-center">
-          <p className="text-xl font-bold">거의 다 됐어요!</p>
+          <p className="text-xl font-bold">{t.onboarding.title}</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            팀 이름을 정하면 바로 시작할 수 있습니다
+            {t.onboarding.subtitle}
           </p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">이름</Label>
+            <Label htmlFor="name">{t.onboarding.nameLabel}</Label>
             <Input
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="홍길동"
+              placeholder={t.onboarding.namePlaceholder}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="orgName">팀 이름 *</Label>
+            <Label htmlFor="orgName">{t.onboarding.orgNameLabel}</Label>
             <Input
               id="orgName"
               value={orgName}
               onChange={(e) => handleOrgNameChange(e.target.value)}
-              placeholder="예: 파이브스팟 QA팀"
+              placeholder={t.onboarding.orgNamePlaceholder}
               required
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="orgSlug">팀 URL 슬러그 *</Label>
+            <Label htmlFor="orgSlug">{t.onboarding.orgSlugLabel}</Label>
             <div className="flex items-center rounded-md border bg-muted/50 focus-within:ring-2 focus-within:ring-ring">
               <span className="pl-3 text-sm text-muted-foreground select-none shrink-0">
                 fireqa.com/
@@ -159,16 +161,16 @@ function OnboardingContent() {
             </div>
             {slugEmpty && (
               <p className="text-xs text-amber-600">
-                한글 팀 이름은 슬러그를 직접 입력해주세요 (예: my-team)
+                {t.onboarding.slugHintKorean}
               </p>
             )}
             {orgSlug && !slugValid && (
               <p className="text-xs text-destructive">
-                소문자, 숫자, 하이픈만 사용 가능하며 하이픈으로 시작·끝날 수 없습니다
+                {t.onboarding.slugInvalid}
               </p>
             )}
             {orgSlug && slugValid && (
-              <p className="text-xs text-emerald-600">올바른 형식입니다</p>
+              <p className="text-xs text-emerald-600">{t.onboarding.slugValid}</p>
             )}
           </div>
           <Button
@@ -176,7 +178,7 @@ function OnboardingContent() {
             className="w-full"
             disabled={!canSubmit}
           >
-            {submitting ? "생성 중..." : "시작하기 →"}
+            {submitting ? t.onboarding.submitting : t.onboarding.start}
           </Button>
         </form>
 
@@ -185,7 +187,7 @@ function OnboardingContent() {
             <div className="w-full border-t" />
           </div>
           <div className="relative flex justify-center text-xs">
-            <span className="bg-card px-2 text-muted-foreground">또는</span>
+            <span className="bg-card px-2 text-muted-foreground">{t.onboarding.or}</span>
           </div>
         </div>
 
@@ -195,16 +197,16 @@ function OnboardingContent() {
             onClick={() => setShowInvite(true)}
             className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            초대 코드로 기존 팀 참여하기
+            {t.onboarding.joinByInvite}
           </button>
         ) : (
           <div className="space-y-2">
-            <Label htmlFor="inviteToken">초대 코드 또는 초대 링크</Label>
+            <Label htmlFor="inviteToken">{t.onboarding.inviteTokenLabel}</Label>
             <Input
               id="inviteToken"
               value={inviteToken}
               onChange={(e) => setInviteToken(e.target.value)}
-              placeholder="초대 링크를 붙여넣으세요"
+              placeholder={t.onboarding.inviteTokenPlaceholder}
             />
             <Link
               href={inviteToken.trim() ? `/invite?token=${extractToken(inviteToken.trim())}` : "#"}
@@ -216,7 +218,7 @@ function OnboardingContent() {
                 className="w-full"
                 disabled={!inviteToken.trim()}
               >
-                초대 수락하기 →
+                {t.onboarding.acceptInvite}
               </Button>
             </Link>
           </div>
