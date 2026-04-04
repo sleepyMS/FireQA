@@ -13,6 +13,7 @@ import {
 } from "@/types/agent";
 import { SWR_KEYS } from "@/lib/swr/keys";
 import { fetcher } from "@/lib/swr/fetcher";
+import { useDynamicRefresh } from "@/hooks/use-dynamic-refresh";
 
 interface Props {
   orgSlug: string;
@@ -39,17 +40,36 @@ type HostedWorkersData = {
 };
 
 export function AgentDashboardClient({ orgSlug, initialConnections, initialTasks }: Props) {
+  const dashRefresh = useDynamicRefresh<DashboardData>({
+    activeInterval: 10_000,
+    idleInterval: 30_000,
+    fingerprint: (d) =>
+      `${d.connections.length}:${d.connections.map((c) => c.id + c.status).join(",")}|${d.tasks.length}:${d.tasks[0]?.id ?? ""}:${d.tasks[0]?.status ?? ""}`,
+  });
   const { data } = useSWR<DashboardData>(
     SWR_KEYS.agentDashboard,
     fetcher,
-    { fallbackData: { connections: initialConnections, tasks: initialTasks }, refreshInterval: 10_000 }
+    {
+      fallbackData: { connections: initialConnections, tasks: initialTasks },
+      refreshInterval: dashRefresh.refreshInterval,
+      onSuccess: dashRefresh.onSuccess,
+    }
   );
 
   // Phase 4.5: 호스티드 워커 상태 조회
+  const workersRefresh = useDynamicRefresh<HostedWorkersData>({
+    activeInterval: 15_000,
+    idleInterval: 60_000,
+    fingerprint: (d) =>
+      `${d.workers.idle},${d.workers.busy},${d.workers.starting},${d.workers.stopping},${d.workers.error}|${d.queueDepth}|${d.avgProcessingTimeMs}`,
+  });
   const { data: workersData } = useSWR<HostedWorkersData>(
     SWR_KEYS.hostedWorkers,
     fetcher,
-    { refreshInterval: 15_000 }
+    {
+      refreshInterval: workersRefresh.refreshInterval,
+      onSuccess: workersRefresh.onSuccess,
+    }
   );
 
   const connections = data?.connections ?? initialConnections;

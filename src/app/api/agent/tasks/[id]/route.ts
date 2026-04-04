@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { AgentTaskStatus } from "@/types/agent";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/agent/tasks/id" });
 
 const CANCELLABLE_STATUSES = [
   AgentTaskStatus.PENDING,
@@ -47,7 +50,7 @@ export async function DELETE(
 
     return NextResponse.json({ status: updated.status });
   } catch (error) {
-    console.error("작업 취소 오류:", error);
+    logger.error("작업 취소 오류", { error });
     return NextResponse.json(
       { error: "작업 취소에 실패했습니다." },
       { status: 500 }

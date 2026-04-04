@@ -5,7 +5,7 @@ import { checkRateLimit } from "@/lib/rate-limit/check-rate-limit";
 import { logActivity } from "@/lib/activity/log-activity";
 import { JobType, ActivityAction } from "@/types/enums";
 import { Stage } from "@/types/sse";
-import { createSSEStream } from "@/lib/sse/create-sse-stream";
+import { createSSEStream, sendStage } from "@/lib/sse/create-sse-stream";
 import { streamOpenAIWithSchema } from "@/lib/sse/stream-openai";
 import {
   DIAGRAM_SYSTEM_PROMPT,
@@ -49,8 +49,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const STAGE_TOTAL = 5; // parsing → preparing → generating → sanitizing → saving
+
   return createSSEStream(async (writer) => {
-    writer.send({ type: "stage", stage: Stage.PARSING, message: "문서를 파싱하고 있습니다...", progress: 10 });
+    sendStage(writer, { stage: Stage.PARSING, message: "문서를 파싱하고 있습니다...", progress: 10, stageIndex: 1, stageTotal: STAGE_TOTAL });
 
     const { jobId, parsedText } = await createGenerationJob(file, projectInput, JobType.DIAGRAMS, {
       userId: user.userId,
@@ -59,12 +61,14 @@ export async function POST(request: NextRequest) {
     writer.send({ type: "job_created", jobId });
 
     try {
+      sendStage(writer, { stage: Stage.PREPARING, message: "프롬프트를 준비하고 있습니다...", progress: 25, stageIndex: 2, stageTotal: STAGE_TOTAL });
+
       let input = parsedText;
       if (estimateTokens(parsedText) > 100000) {
         input = parsedText.slice(0, 60000);
       }
 
-      writer.send({ type: "stage", stage: Stage.GENERATING, message: "AI가 다이어그램을 생성하고 있습니다...", progress: 30 });
+      sendStage(writer, { stage: Stage.GENERATING, message: "AI가 다이어그램을 생성하고 있습니다...", progress: 35, stageIndex: 3, stageTotal: STAGE_TOTAL });
 
       const { result: raw, tokenUsage } = await streamOpenAIWithSchema<DiagramGenerationResult>({
         systemPrompt: DIAGRAM_SYSTEM_PROMPT,
@@ -72,9 +76,10 @@ export async function POST(request: NextRequest) {
         jsonSchema: diagramJsonSchema,
         writer,
         signal: request.signal,
+        progressRange: { min: 35, max: 80 },
       });
 
-      writer.send({ type: "stage", stage: Stage.SANITIZING, message: "다이어그램을 정리하고 있습니다...", progress: 85 });
+      sendStage(writer, { stage: Stage.SANITIZING, message: "다이어그램을 정리하고 있습니다...", progress: 85, stageIndex: 4, stageTotal: STAGE_TOTAL });
 
       // Mermaid 코드 후처리
       const result: DiagramGenerationResult = {
@@ -84,7 +89,7 @@ export async function POST(request: NextRequest) {
         })),
       };
 
-      writer.send({ type: "stage", stage: Stage.SAVING, message: "결과를 저장하고 있습니다...", progress: 95 });
+      sendStage(writer, { stage: Stage.SAVING, message: "결과를 저장하고 있습니다...", progress: 95, stageIndex: 5, stageTotal: STAGE_TOTAL });
       await completeJob(jobId, result, tokenUsage, user.userId);
       logActivity({ organizationId: user.organizationId, actorId: user.userId, action: ActivityAction.GENERATION_COMPLETED, jobId, metadata: { type: "diagrams" } });
 

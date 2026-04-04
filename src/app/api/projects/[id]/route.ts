@@ -5,6 +5,9 @@ import { requireRole } from "@/lib/auth/require-role";
 import { UserRole, ActivityAction } from "@/types/enums";
 import { getOrgProject } from "@/lib/projects/get-org-project";
 import { logActivity } from "@/lib/activity/log-activity";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/projects/id" });
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -20,7 +23,16 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 
     const project = await prisma.project.findUnique({
       where: { id },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        archivedAt: true,
+        deletedAt: true,
+        organizationId: true,
         _count: { select: { jobs: true, uploads: true } },
         jobs: {
           orderBy: { createdAt: "desc" },
@@ -52,7 +64,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
       recentJobs: project.jobs,
     });
   } catch (error) {
-    console.error("프로젝트 상세 조회 오류:", error);
+    logger.error("프로젝트 상세 조회 오류", { error });
     return NextResponse.json({ error: "조회에 실패했습니다." }, { status: 500 });
   }
 }
@@ -110,7 +122,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
       updatedAt: updated.updatedAt,
     });
   } catch (error) {
-    console.error("프로젝트 수정 오류:", error);
+    logger.error("프로젝트 수정 오류", { error });
     return NextResponse.json({ error: "수정에 실패했습니다." }, { status: 500 });
   }
 }
@@ -142,7 +154,7 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("프로젝트 삭제 오류:", error);
+    logger.error("프로젝트 삭제 오류", { error });
     return NextResponse.json({ error: "삭제에 실패했습니다." }, { status: 500 });
   }
 }

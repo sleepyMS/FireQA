@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Trash2, Plus, Copy, Check } from "lucide-react";
+import { Trash2, Plus, Copy, Check, ChevronDown, ChevronUp, Send, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,11 +18,34 @@ interface Endpoint {
   createdAt: string;
 }
 
+interface Delivery {
+  id: string;
+  event: string;
+  responseStatus: number | null;
+  success: boolean;
+  attempts: number;
+  createdAt: string;
+}
+
 const ALL_EVENTS = [
   { value: "generation.completed", label: "생성 완료" },
   { value: "generation.failed", label: "생성 실패" },
   { value: "member.invited", label: "멤버 초대" },
+  { value: "member.role_changed", label: "역할 변경" },
+  { value: "member.removed", label: "멤버 제거" },
   { value: "project.created", label: "프로젝트 생성" },
+  { value: "project.updated", label: "프로젝트 수정" },
+  { value: "project.archived", label: "프로젝트 보관" },
+  { value: "project.unarchived", label: "프로젝트 보관 해제" },
+  { value: "project.deleted", label: "프로젝트 삭제" },
+  { value: "project.restored", label: "프로젝트 복구" },
+  { value: "version.created", label: "버전 생성" },
+  { value: "version.activated", label: "버전 활성화" },
+  { value: "agent.task_completed", label: "에이전트 작업 완료" },
+  { value: "agent.task_failed", label: "에이전트 작업 실패" },
+  { value: "test_run.started", label: "테스트 실행 시작" },
+  { value: "test_run.completed", label: "테스트 실행 완료" },
+  { value: "test_run.aborted", label: "테스트 실행 중단" },
 ];
 
 function SecretBox({ secret }: { secret: string }) {
@@ -49,11 +72,85 @@ function SecretBox({ secret }: { secret: string }) {
   );
 }
 
+function DeliveryHistory({ endpointId }: { endpointId: string }) {
+  const [deliveries, setDeliveries] = useState<Delivery[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`/api/webhook-endpoints/${endpointId}/deliveries`)
+      .then((r) => r.json())
+      .then((d) => setDeliveries(d.deliveries ?? []))
+      .catch(() => toast.error("전달 이력을 불러오지 못했습니다."))
+      .finally(() => setLoading(false));
+  }, [endpointId]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-4">
+        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (deliveries.length === 0) {
+    return (
+      <p className="py-3 text-center text-xs text-muted-foreground">
+        전달 이력이 없습니다
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-2 space-y-1">
+      <p className="text-xs font-medium text-muted-foreground">최근 전달 이력</p>
+      <div className="max-h-48 overflow-y-auto rounded-md border">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b bg-muted/50">
+              <th className="px-2 py-1.5 text-left font-medium">이벤트</th>
+              <th className="px-2 py-1.5 text-left font-medium">상태</th>
+              <th className="px-2 py-1.5 text-left font-medium">시도</th>
+              <th className="px-2 py-1.5 text-left font-medium">시간</th>
+            </tr>
+          </thead>
+          <tbody>
+            {deliveries.map((d) => (
+              <tr key={d.id} className="border-b last:border-0">
+                <td className="px-2 py-1.5 font-mono">{d.event}</td>
+                <td className="px-2 py-1.5">
+                  <Badge
+                    variant={d.success ? "default" : "destructive"}
+                    className="text-[10px] px-1.5 py-0"
+                  >
+                    {d.success ? "성공" : "실패"}
+                    {d.responseStatus ? ` (${d.responseStatus})` : ""}
+                  </Badge>
+                </td>
+                <td className="px-2 py-1.5">{d.attempts}</td>
+                <td className="px-2 py-1.5 text-muted-foreground">
+                  {new Date(d.createdAt).toLocaleString("ko-KR", {
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export default function SettingsWebhooks() {
   const [endpoints, setEndpoints] = useState<Endpoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [newSecret, setNewSecret] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [testingId, setTestingId] = useState<string | null>(null);
 
   const [url, setUrl] = useState("");
   const [description, setDescription] = useState("");
@@ -123,6 +220,30 @@ export default function SettingsWebhooks() {
     }
   }
 
+  async function handleTest(ep: Endpoint) {
+    setTestingId(ep.id);
+    try {
+      const res = await fetch(`/api/webhook-endpoints/${ep.id}/test`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`테스트 전송 성공 (${data.statusCode})`);
+      } else {
+        toast.error(`테스트 전송 실패: ${data.error || "알 수 없는 오류"}`);
+      }
+      // 이력 패널이 열려있으면 새로고침하기 위해 닫았다 다시 열기
+      if (expandedId === ep.id) {
+        setExpandedId(null);
+        setTimeout(() => setExpandedId(ep.id), 50);
+      }
+    } catch {
+      toast.error("네트워크 오류가 발생했습니다.");
+    } finally {
+      setTestingId(null);
+    }
+  }
+
   if (loading) {
     return (
       <Card>
@@ -170,8 +291,32 @@ export default function SettingsWebhooks() {
                   </div>
                 </div>
                 <div className="flex shrink-0 gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleTest(ep)}
+                    disabled={testingId === ep.id}
+                  >
+                    {testingId === ep.id ? (
+                      <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Send className="mr-1 h-3.5 w-3.5" />
+                    )}
+                    테스트
+                  </Button>
                   <Button variant="outline" size="sm" onClick={() => handleToggle(ep)}>
                     {ep.isActive ? "비활성화" : "활성화"}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setExpandedId(expandedId === ep.id ? null : ep.id)}
+                  >
+                    {expandedId === ep.id ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
                   </Button>
                   <Button
                     variant="ghost"
@@ -183,6 +328,7 @@ export default function SettingsWebhooks() {
                   </Button>
                 </div>
               </div>
+              {expandedId === ep.id && <DeliveryHistory endpointId={ep.id} />}
             </CardContent>
           </Card>
         ))

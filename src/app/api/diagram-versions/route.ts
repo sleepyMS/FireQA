@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/diagram-versions" });
 
 // GET /api/diagram-versions?jobId=xxx&title=yyy — 버전 목록 조회
 export async function GET(request: NextRequest) {
@@ -22,6 +25,7 @@ export async function GET(request: NextRequest) {
 
     const job = await prisma.generationJob.findFirst({
       where: { id: jobId, project: { organizationId: user.organizationId } },
+      select: { id: true },
     });
     if (!job) {
       return NextResponse.json({ error: "작업을 찾을 수 없습니다." }, { status: 404 });
@@ -34,7 +38,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ versions });
   } catch (error) {
-    console.error("버전 조회 오류:", error);
+    logger.error("버전 조회 오류", { error });
     return NextResponse.json(
       { error: "버전 조회에 실패했습니다." },
       { status: 500 }
@@ -97,6 +101,7 @@ export async function POST(request: NextRequest) {
       const latestResultVersion = await prisma.resultVersion.findFirst({
         where: { jobId },
         orderBy: { version: "desc" },
+        select: { version: true },
       });
       const nextResultVersion = (latestResultVersion?.version ?? 0) + 1;
       await prisma.resultVersion.updateMany({ where: { jobId, isActive: true }, data: { isActive: false } });
@@ -115,7 +120,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ version });
   } catch (error) {
-    console.error("버전 생성 오류:", error);
+    logger.error("버전 생성 오류", { error });
     return NextResponse.json(
       { error: "버전 생성에 실패했습니다." },
       { status: 500 }
@@ -142,6 +147,7 @@ export async function PATCH(request: NextRequest) {
 
     const jobCheck = await prisma.generationJob.findFirst({
       where: { id: jobId, project: { organizationId: user.organizationId } },
+      select: { id: true, result: true },
     });
     if (!jobCheck) {
       return NextResponse.json({ error: "작업을 찾을 수 없습니다." }, { status: 404 });
@@ -166,7 +172,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ confirmed });
   } catch (error) {
-    console.error("버전 확정 오류:", error);
+    logger.error("버전 확정 오류", { error });
     return NextResponse.json(
       { error: "버전 확정에 실패했습니다." },
       { status: 500 }

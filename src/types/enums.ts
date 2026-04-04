@@ -83,6 +83,25 @@ export const NotificationType = {
 
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];
 
+export const TestRunStatus = {
+  IN_PROGRESS: "in_progress",
+  COMPLETED: "completed",
+  ABORTED: "aborted",
+} as const;
+
+export type TestRunStatus = (typeof TestRunStatus)[keyof typeof TestRunStatus];
+
+export const TestExecutionStatus = {
+  PENDING: "pending",
+  PASSED: "passed",
+  FAILED: "failed",
+  SKIPPED: "skipped",
+  BLOCKED: "blocked",
+} as const;
+
+export type TestExecutionStatus =
+  (typeof TestExecutionStatus)[keyof typeof TestExecutionStatus];
+
 export const ActivityAction = {
   GENERATION_COMPLETED: "generation.completed",
   GENERATION_FAILED: "generation.failed",
@@ -103,6 +122,11 @@ export const ActivityAction = {
   AGENT_TASK_CREATED: "agent.task_created",
   AGENT_TASK_COMPLETED: "agent.task_completed",
   AGENT_TASK_FAILED: "agent.task_failed",
+  // 테스트 실행 관련 액션
+  TEST_RUN_STARTED: "test_run.started",
+  TEST_RUN_COMPLETED: "test_run.completed",
+  TEST_RUN_ABORTED: "test_run.aborted",
+  TEST_EXECUTION_UPDATED: "test_execution.updated",
 } as const;
 
 export type ActivityAction = (typeof ActivityAction)[keyof typeof ActivityAction];

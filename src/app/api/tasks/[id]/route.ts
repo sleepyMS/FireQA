@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { AgentTaskStatus } from "@/types/agent";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/tasks/id" });
 
 // GET — 작업 상세
 export async function GET(
@@ -32,7 +35,7 @@ export async function GET(
       result: task.result ? JSON.parse(task.result) : null,
     });
   } catch (error) {
-    console.error("작업 상세 조회 오류:", error);
+    logger.error("작업 상세 조회 오류", { error });
     return NextResponse.json({ error: "조회에 실패했습니다." }, { status: 500 });
   }
 }
@@ -50,7 +53,10 @@ export async function DELETE(
 
     const { id } = await params;
 
-    const task = await prisma.agentTask.findUnique({ where: { id } });
+    const task = await prisma.agentTask.findUnique({
+      where: { id },
+      select: { organizationId: true, status: true },
+    });
     if (!task || task.organizationId !== user.organizationId) {
       return NextResponse.json({ error: "작업을 찾을 수 없습니다." }, { status: 404 });
     }
@@ -67,7 +73,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("작업 취소 오류:", error);
+    logger.error("작업 취소 오류", { error });
     return NextResponse.json({ error: "취소에 실패했습니다." }, { status: 500 });
   }
 }

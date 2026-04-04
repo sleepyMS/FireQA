@@ -4,6 +4,9 @@ import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { logActivity } from "@/lib/activity/log-activity";
 import { ActivityAction } from "@/types/enums";
 import { AgentTaskStatus } from "@/types/agent";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/agent/tasks/result" });
 
 export async function POST(
   request: NextRequest,
@@ -58,13 +61,13 @@ export async function POST(
       const { WorkerOrchestrator } = await import("@/lib/flyio/orchestrator");
       const orchestrator = new WorkerOrchestrator();
       await orchestrator.releaseWorker(task.flyMachineId).catch((err) => {
-        console.error("워커 해제 실패:", err);
+        logger.error("워커 해제 실패", { error: err });
       });
     }
 
     return NextResponse.json({ status: updated.status });
   } catch (error) {
-    console.error("결과 전송 오류:", error);
+    logger.error("결과 전송 오류", { error });
     return NextResponse.json(
       { error: "결과 전송에 실패했습니다." },
       { status: 500 }

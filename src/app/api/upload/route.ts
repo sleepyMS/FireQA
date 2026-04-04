@@ -4,6 +4,9 @@ import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { getOrgPlan } from "@/lib/billing/get-org-plan";
 import { getPlanLimits } from "@/lib/billing/plan-limits";
 import { PLAN_LABEL } from "@/types/enums";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/upload" });
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,7 +40,7 @@ export async function POST(request: NextRequest) {
       metadata: parsed.metadata,
     });
   } catch (error) {
-    console.error("업로드 오류:", error);
+    logger.error("업로드 오류", { error });
     return NextResponse.json(
       { error: "파일 파싱에 실패했습니다." },
       { status: 500 }

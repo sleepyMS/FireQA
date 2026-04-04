@@ -1,34 +1,41 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth/get-current-user";
+import {
+  withApiHandler,
+  ApiError,
+  getUploadSchema,
+  type GetUploadQuery,
+} from "@/lib/api";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const user = await getCurrentUser(request);
-  if (!user) return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
+// GET /api/uploads/[id] — 업로드 파일 텍스트 조회 또는 다운로드
+export const GET = withApiHandler<unknown, GetUploadQuery>(
+  async ({ user, query, params }) => {
+    const { id } = params;
+    const download = query.download === "1";
 
-  const { id } = await params;
-  const download = request.nextUrl.searchParams.get("download") === "1";
-
-  const upload = await prisma.upload.findFirst({
-    where: { id, organizationId: user.organizationId },
-    select: { fileName: true, parsedText: true },
-  });
-
-  if (!upload) return NextResponse.json({ error: "파일을 찾을 수 없습니다." }, { status: 404 });
-  if (!upload.parsedText) return NextResponse.json({ error: "저장된 텍스트가 없습니다." }, { status: 404 });
-
-  if (download) {
-    const baseName = upload.fileName.replace(/\.[^.]+$/, "");
-    return new NextResponse(upload.parsedText, {
-      headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-        "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(baseName + ".txt")}`,
-      },
+    const upload = await prisma.upload.findFirst({
+      where: { id, organizationId: user.organizationId },
+      select: { fileName: true, parsedText: true },
     });
-  }
 
-  return NextResponse.json({ fileName: upload.fileName, text: upload.parsedText });
-}
+    if (!upload) {
+      throw ApiError.notFound("파일");
+    }
+    if (!upload.parsedText) {
+      throw ApiError.notFound("저장된 텍스트");
+    }
+
+    if (download) {
+      const baseName = upload.fileName.replace(/\.[^.]+$/, "");
+      return new NextResponse(upload.parsedText, {
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(baseName + ".txt")}`,
+        },
+      });
+    }
+
+    return { fileName: upload.fileName, text: upload.parsedText };
+  },
+  { querySchema: getUploadSchema },
+);

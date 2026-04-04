@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/search" });
 
 const MAX_RESULTS = 5;
 
@@ -80,7 +83,7 @@ export async function GET(request: NextRequest) {
       })),
     });
   } catch (error) {
-    console.error("검색 오류:", error);
+    logger.error("검색 오류", { error });
     return NextResponse.json({ error: "검색에 실패했습니다." }, { status: 500 });
   }
 }

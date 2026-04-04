@@ -7,6 +7,9 @@ import { AgentTaskType, AgentTaskStatus } from "@/types/agent";
 import { deductCredits, addCredits, hasEnoughCredits } from "@/lib/billing/credits";
 import { getTaskCreditCost } from "@/lib/billing/credit-pricing";
 import { WorkerOrchestrator } from "@/lib/flyio/orchestrator";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/tasks" });
 
 const VALID_TYPES = new Set(Object.values(AgentTaskType));
 
@@ -154,7 +157,7 @@ export async function POST(request: NextRequest) {
         description: "작업 생성 중 오류 발생 환불",
       }).catch(() => {});
     }
-    console.error("작업 생성 오류:", error);
+    logger.error("작업 생성 오류", { error });
     return NextResponse.json({ error: "작업 생성에 실패했습니다." }, { status: 500 });
   }
 }
@@ -192,7 +195,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ tasks });
   } catch (error) {
-    console.error("작업 목록 조회 오류:", error);
+    logger.error("작업 목록 조회 오류", { error });
     return NextResponse.json({ error: "목록 조회에 실패했습니다." }, { status: 500 });
   }
 }

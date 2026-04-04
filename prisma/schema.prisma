@@ -31,6 +31,8 @@ model Organization {
   creditBalance        CreditBalance?
   creditTransactions   CreditTransaction[]
   userApiKeys          UserApiKey[]
+  testRuns             TestRun[]
+  testExecutions       TestExecution[]
 }
 
 model Subscription {
@@ -72,6 +74,7 @@ model User {
   diagramVersions      DiagramVersion[]  @relation("DiagramVersionCreator")
   agentConnections     AgentConnection[]
   agentTasks           AgentTask[]       @relation("AgentTaskCreator")
+  testRuns             TestRun[]         @relation("TestRunCreator")
 
   @@index([supabaseId])
 }
@@ -155,6 +158,7 @@ model Project {
   uploads        Upload[]
   jobs           GenerationJob[]
   agentTasks     AgentTask[]
+  testRuns       TestRun[]
 
   @@index([organizationId, status]) // 조직별 활성/보관/삭제 프로젝트 필터링 성능 최적화
   @@index([deletedAt]) // 삭제된 프로젝트 조회 및 정리 작업 성능 최적화
@@ -196,6 +200,7 @@ model GenerationJob {
 
   resultVersions  ResultVersion[]
   diagramVersions DiagramVersion[]
+  testRuns        TestRun[]
 
   @@index([userId])
   @@index([userId, createdAt(sort: Desc)])
@@ -306,7 +311,25 @@ model WebhookEndpoint {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
+  deliveries       WebhookDelivery[]
+
   @@index([organizationId])
+}
+
+model WebhookDelivery {
+  id             String          @id @default(cuid())
+  endpointId     String
+  endpoint       WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  event          String
+  requestBody    String
+  responseStatus Int?
+  responseBody   String?
+  success        Boolean
+  attempts       Int             @default(1)
+  lastAttemptAt  DateTime        @default(now())
+  createdAt      DateTime        @default(now())
+
+  @@index([endpointId, createdAt])
 }
 
 model QATemplate {
@@ -369,8 +392,9 @@ model AgentTask {
   timeoutMs      Int      @default(300000)
 
   result         String?  // JSON
-  outputLog      String?
-  errorMessage   String?
+  outputLog        String?
+  outputChunkCount Int      @default(0)
+  errorMessage     String?
 
   mode           String   @default("self_hosted") // "self_hosted" | "hosted"
   creditsUsed    Int?
@@ -457,4 +481,63 @@ model UserApiKey {
 
   @@unique([organizationId, provider])
   @@index([organizationId])
+}
+
+// ─── 테스트 실행/추적 ───
+
+model TestRun {
+  id              String        @id @default(cuid())
+  generationJobId String
+  generationJob   GenerationJob @relation(fields: [generationJobId], references: [id], onDelete: Cascade)
+
+  projectId      String
+  project        Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdById    String?
+  createdBy      User?         @relation("TestRunCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  testCasesSnapshot String     // JSON: 실행 시점의 TC 스냅샷
+
+  status         String        @default("in_progress") // "in_progress" | "completed" | "aborted"
+
+  startedAt      DateTime      @default(now())
+  completedAt    DateTime?
+  abortedAt      DateTime?
+
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  executions     TestExecution[]
+
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([projectId, createdAt(sort: Desc)])
+  @@index([generationJobId])
+  @@index([status])
+}
+
+model TestExecution {
+  id             String       @id @default(cuid())
+
+  testRunId      String
+  testRun        TestRun      @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  tcId           String       // TC 식별자 (snapshot의 tcId 값)
+
+  status         String       @default("pending") // "pending" | "passed" | "failed" | "skipped" | "blocked"
+
+  note           String?      // 사용자 메모/실패 원인
+  screenshotPath String?      // Phase 4 이후 지원
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([testRunId, tcId])
+  @@index([testRunId, status])
+  @@index([organizationId, tcId])
 }

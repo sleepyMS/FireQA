@@ -1,5 +1,9 @@
 // Brevo Transactional Email API — BREVO_API_KEY 미설정 시 무시 (구조만)
 
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "email" });
+
 interface SendEmailOptions {
   to: { email: string; name?: string };
   subject: string;
@@ -29,6 +33,6 @@ export async function sendEmail(options: SendEmailOptions): Promise<void> {
 
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    console.error("Brevo 이메일 발송 실패:", res.status, body);
+    logger.error("Brevo 이메일 발송 실패", { status: res.status, body });
   }
 }

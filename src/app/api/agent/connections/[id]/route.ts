@@ -4,6 +4,9 @@ import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { logActivity } from "@/lib/activity/log-activity";
 import { ActivityAction } from "@/types/enums";
 import { AgentConnectionStatus } from "@/types/agent";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/agent/connections/id" });
 
 // PUT — heartbeat + 상태 업데이트
 export async function PUT(
@@ -46,7 +49,7 @@ export async function PUT(
       cancelledTaskIds: cancelledTasks.map((t) => t.id),
     });
   } catch (error) {
-    console.error("heartbeat 오류:", error);
+    logger.error("heartbeat 오류", { error });
     return NextResponse.json({ error: "heartbeat 실패" }, { status: 500 });
   }
 }
@@ -83,7 +86,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("에이전트 해제 오류:", error);
+    logger.error("에이전트 해제 오류", { error });
     return NextResponse.json({ error: "해제에 실패했습니다." }, { status: 500 });
   }
 }

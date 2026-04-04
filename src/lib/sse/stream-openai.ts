@@ -7,6 +7,8 @@ interface StreamOpenAIOptions {
   jsonSchema: { name: string; strict: boolean; schema: Record<string, unknown> };
   writer: SSEWriter;
   signal?: AbortSignal;
+  /** AI 생성 단계 진행률 범위 (기본값 40~90) */
+  progressRange?: { min: number; max: number };
 }
 
 /**
@@ -16,7 +18,11 @@ interface StreamOpenAIOptions {
 export async function streamOpenAIWithSchema<T>(
   opts: StreamOpenAIOptions
 ): Promise<{ result: T; tokenUsage: number }> {
-  const { systemPrompt, userPrompt, jsonSchema, writer, signal } = opts;
+  const { systemPrompt, userPrompt, jsonSchema, writer, signal, progressRange } = opts;
+  const pMin = progressRange?.min ?? 40;
+  const pMax = progressRange?.max ?? 90;
+  // 일반적인 응답 크기 추정 (10KB) — 진행률 추정에 사용
+  const ESTIMATED_RESPONSE_SIZE = 10_000;
 
   const stream = await openai.chat.completions.create({
     model: MODEL,
@@ -49,7 +55,10 @@ export async function streamOpenAIWithSchema<T>(
 
       const now = Date.now();
       if (now - lastEmitTime >= THROTTLE_MS) {
-        writer.send({ type: "progress", charsReceived: accumulated.length });
+        // chars 기반 진행률 추정 (asymptotic — 100%에 수렴하지만 도달하지 않음)
+        const ratio = Math.min(accumulated.length / ESTIMATED_RESPONSE_SIZE, 0.95);
+        const estimatedProgress = Math.round(pMin + (pMax - pMin) * ratio);
+        writer.send({ type: "progress", charsReceived: accumulated.length, estimatedProgress });
         lastEmitTime = now;
       }
     }

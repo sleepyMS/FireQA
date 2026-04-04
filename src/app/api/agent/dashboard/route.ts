@@ -1,15 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { withApiHandler } from "@/lib/api";
 
 // GET — 대시보드용 connections + tasks를 단일 응답으로 반환 (HTTP 라운드트립 절감)
-export async function GET(request: NextRequest) {
-  try {
-    const user = await getCurrentUser(request);
-    if (!user) {
-      return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
-    }
-
+export const GET = withApiHandler(
+  async ({ user }) => {
     const organizationId = user.organizationId;
 
     const [connections, tasks] = await Promise.all([
@@ -48,7 +42,7 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
-    return NextResponse.json({
+    return {
       connections: connections.map((c) => ({
         id: c.id,
         name: c.name,
@@ -59,9 +53,6 @@ export async function GET(request: NextRequest) {
         runningTasks: c._count.tasks,
       })),
       tasks,
-    });
-  } catch (error) {
-    console.error("대시보드 데이터 조회 오류:", error);
-    return NextResponse.json({ error: "조회에 실패했습니다." }, { status: 500 });
-  }
-}
+    };
+  },
+);

@@ -4,6 +4,9 @@ import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { logActivity } from "@/lib/activity/log-activity";
 import { ActivityAction } from "@/types/enums";
 import { AgentConnectionStatus } from "@/types/agent";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/agent/connections" });
 
 const MIN_AGENT_VERSION = "0.1.0";
 
@@ -64,7 +67,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("에이전트 등록 오류:", error);
+    logger.error("에이전트 등록 오류", { error });
     return NextResponse.json({ error: "에이전트 등록에 실패했습니다." }, { status: 500 });
   }
 }
@@ -100,7 +103,7 @@ export async function GET(request: NextRequest) {
       })),
     });
   } catch (error) {
-    console.error("에이전트 목록 조회 오류:", error);
+    logger.error("에이전트 목록 조회 오류", { error });
     return NextResponse.json({ error: "목록 조회에 실패했습니다." }, { status: 500 });
   }
 }

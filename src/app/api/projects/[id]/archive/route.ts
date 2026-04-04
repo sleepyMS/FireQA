@@ -4,6 +4,9 @@ import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { getOrgProject } from "@/lib/projects/get-org-project";
 import { logActivity } from "@/lib/activity/log-activity";
 import { ActivityAction } from "@/types/enums";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/projects/archive" });
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -45,7 +48,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
       archivedAt: updated.archivedAt,
     });
   } catch (error) {
-    console.error("프로젝트 보관 처리 오류:", error);
+    logger.error("프로젝트 보관 처리 오류", { error });
     return NextResponse.json({ error: "보관 처리에 실패했습니다." }, { status: 500 });
   }
 }

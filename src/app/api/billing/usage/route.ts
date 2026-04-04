@@ -1,21 +1,27 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { prisma } from "@/lib/db";
 import { getPlanLimits } from "@/lib/billing/plan-limits";
+import { withApiHandler, ApiError } from "@/lib/api";
 
-export async function GET(request: NextRequest) {
-  try {
-    const user = await getCurrentUser(request);
-    if (!user) {
-      return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
-    }
-
+// GET /api/billing/usage — 사용량 조회
+export const GET = withApiHandler(
+  async ({ user }) => {
     const windowStart = new Date(Date.now() - 60 * 60 * 1000);
 
     const [org, generationsThisHour, projectCount, memberCount] = await Promise.all([
       prisma.organization.findUnique({
         where: { id: user.organizationId },
-        include: { subscription: true },
+        select: {
+          id: true,
+          plan: true,
+          subscription: {
+            select: {
+              plan: true,
+              status: true,
+              currentPeriodEnd: true,
+              cancelAtPeriodEnd: true,
+            },
+          },
+        },
       }),
       prisma.generationJob.count({
         where: {
@@ -32,13 +38,13 @@ export async function GET(request: NextRequest) {
     ]);
 
     if (!org) {
-      return NextResponse.json({ error: "조직을 찾을 수 없습니다." }, { status: 404 });
+      throw ApiError.notFound("조직");
     }
 
     const plan = org.subscription?.plan ?? org.plan;
     const limits = getPlanLimits(plan);
 
-    return NextResponse.json({
+    return {
       plan,
       subscription: org.subscription
         ? {
@@ -58,9 +64,6 @@ export async function GET(request: NextRequest) {
         membersMax: limits.membersMax === Infinity ? null : limits.membersMax,
         uploadsMaxMb: limits.uploadsMaxMb,
       },
-    });
-  } catch (error) {
-    console.error("사용량 조회 오류:", error);
-    return NextResponse.json({ error: "사용량 조회에 실패했습니다." }, { status: 500 });
-  }
-}
+    };
+  },
+);

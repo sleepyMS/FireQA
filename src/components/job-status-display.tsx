@@ -17,16 +17,23 @@ export function JobStatusDisplay({
 }: JobStatusDisplayProps) {
   const router = useRouter();
 
-  // PROCESSING 상태일 때 5초마다 자동 새로고침
-  // (사용자가 직접 URL로 접근했을 때를 위한 폴백)
+  // PROCESSING 상태일 때 적응형 간격 자동 새로고침
+  // 초기 5초 → 최대 15초까지 점진적 증가 (사용자가 직접 URL로 접근했을 때를 위한 폴백)
   useEffect(() => {
     if (status !== JobStatus.PROCESSING) return;
 
-    const interval = setInterval(() => {
-      router.refresh();
-    }, 5000);
+    let delay = 5_000;
+    const MAX_DELAY = 15_000;
+    let timer: ReturnType<typeof setTimeout>;
 
-    return () => clearInterval(interval);
+    function tick() {
+      router.refresh();
+      delay = Math.min(delay + 2_000, MAX_DELAY);
+      timer = setTimeout(tick, delay);
+    }
+    timer = setTimeout(tick, delay);
+
+    return () => clearTimeout(timer);
   }, [status, router]);
 
   if (status === JobStatus.PROCESSING) {

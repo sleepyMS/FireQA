@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/settings/api-keys/id" });
 
 export async function DELETE(
   request: NextRequest,
@@ -23,7 +26,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("API Key 삭제 오류:", error);
+    logger.error("API Key 삭제 오류", { error });
     return NextResponse.json({ error: "삭제에 실패했습니다." }, { status: 500 });
   }
 }

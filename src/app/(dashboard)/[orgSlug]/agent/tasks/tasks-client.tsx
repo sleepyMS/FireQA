@@ -15,6 +15,7 @@ import {
 import { SWR_KEYS } from "@/lib/swr/keys";
 import { fetcher } from "@/lib/swr/fetcher";
 import { TabNav } from "@/components/ui/tab-nav";
+import { useDynamicRefresh } from "@/hooks/use-dynamic-refresh";
 
 const statusTabs: { value: string; label: string }[] = [
   { value: "", label: "전체" },
@@ -38,10 +39,17 @@ export function TasksClient({ orgSlug, initialTasks }: Props) {
   if (activeStatus) params.set("status", activeStatus);
   const swrKey = SWR_KEYS.agentTasks(params.toString());
 
+  const tasksRefresh = useDynamicRefresh<{ tasks: AgentTaskView[] }>({
+    activeInterval: 10_000,
+    idleInterval: 30_000,
+    fingerprint: (d) =>
+      `${d.tasks.length}:${d.tasks.map((t) => t.id + t.status).join(",")}`,
+  });
   const { data } = useSWR<{ tasks: AgentTaskView[] }>(swrKey, fetcher, {
     // 초기 상태(전체)일 때만 서버 데이터를 fallback으로 사용
     fallbackData: activeStatus === "" ? { tasks: initialTasks } : undefined,
-    refreshInterval: 10_000,
+    refreshInterval: tasksRefresh.refreshInterval,
+    onSuccess: tasksRefresh.onSuccess,
   });
 
   const tasks = data?.tasks ?? [];

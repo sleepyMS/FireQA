@@ -1,9 +1,17 @@
-import type { SSEEvent } from "@/types/sse";
+import type { SSEEvent, Stage } from "@/types/sse";
 
 export interface SSEWriter {
   send(event: SSEEvent): void;
   close(): void;
   readonly closed: boolean;
+}
+
+/** 스테이지 진행 이벤트를 전송하는 헬퍼 */
+export function sendStage(
+  writer: SSEWriter,
+  opts: { stage: Stage; message: string; progress: number; stageIndex: number; stageTotal: number },
+) {
+  writer.send({ type: "stage", ...opts });
 }
 
 /**

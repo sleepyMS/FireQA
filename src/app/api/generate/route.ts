@@ -6,7 +6,7 @@ import { checkRateLimit } from "@/lib/rate-limit/check-rate-limit";
 import { logActivity } from "@/lib/activity/log-activity";
 import { JobType, ActivityAction } from "@/types/enums";
 import { Stage } from "@/types/sse";
-import { createSSEStream } from "@/lib/sse/create-sse-stream";
+import { createSSEStream, sendStage } from "@/lib/sse/create-sse-stream";
 import { streamOpenAIWithSchema } from "@/lib/sse/stream-openai";
 import { streamOpenAIChunked } from "@/lib/sse/stream-openai-chunked-tc";
 import {
@@ -51,8 +51,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const STAGE_TOTAL = 4; // parsing → preparing → generating → saving
+
   return createSSEStream(async (writer) => {
-    writer.send({ type: "stage", stage: Stage.PARSING, message: "문서를 파싱하고 있습니다...", progress: 10 });
+    sendStage(writer, { stage: Stage.PARSING, message: "문서를 파싱하고 있습니다...", progress: 10, stageIndex: 1, stageTotal: STAGE_TOTAL });
 
     let templateGuideline: string | undefined;
     if (templateId) {
@@ -71,19 +73,20 @@ export async function POST(request: NextRequest) {
     writer.send({ type: "job_created", jobId });
 
     try {
+      sendStage(writer, { stage: Stage.PREPARING, message: "프롬프트를 준비하고 있습니다...", progress: 25, stageIndex: 2, stageTotal: STAGE_TOTAL });
+
       const systemPrompt = templateGuideline
         ? TEST_CASE_SYSTEM_PROMPT + templateGuideline
         : TEST_CASE_SYSTEM_PROMPT;
 
       const chunks = splitDocument(parsedText);
 
-      writer.send({
-        type: "stage",
+      sendStage(writer, {
         stage: Stage.GENERATING,
         message: chunks.length > 1
           ? `AI가 TC를 생성하고 있습니다... (${chunks.length}개 청크)`
           : "AI가 TC를 생성하고 있습니다...",
-        progress: 20,
+        progress: 40, stageIndex: 3, stageTotal: STAGE_TOTAL,
       });
 
       let result: TestCaseGenerationResult;
@@ -96,6 +99,7 @@ export async function POST(request: NextRequest) {
           jsonSchema: testCaseJsonSchema,
           writer,
           signal: request.signal,
+          progressRange: { min: 40, max: 90 },
         });
         result = res.result;
         tokenUsage = res.tokenUsage;
@@ -112,7 +116,7 @@ export async function POST(request: NextRequest) {
         tokenUsage = res.totalTokens;
       }
 
-      writer.send({ type: "stage", stage: Stage.SAVING, message: "결과를 저장하고 있습니다...", progress: 95 });
+      sendStage(writer, { stage: Stage.SAVING, message: "결과를 저장하고 있습니다...", progress: 95, stageIndex: 4, stageTotal: STAGE_TOTAL });
       await completeJob(jobId, result, tokenUsage, user.userId);
       logActivity({ organizationId: user.organizationId, actorId: user.userId, action: ActivityAction.GENERATION_COMPLETED, jobId, metadata: { type: "test-cases" } });
 

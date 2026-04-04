@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { stripe } from "@/lib/billing/stripe";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/billing/credits/purchase" });
 
 // POST — 크레딧 팩 구매 (Stripe Checkout Session 생성)
 export async function POST(request: NextRequest) {
@@ -53,7 +56,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ url: session.url });
   } catch (error) {
-    console.error("크레딧 구매 세션 생성 오류:", error);
+    logger.error("크레딧 구매 세션 생성 오류", { error });
     return NextResponse.json({ error: "결제 세션 생성에 실패했습니다." }, { status: 500 });
   }
 }

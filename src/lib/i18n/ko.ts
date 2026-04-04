@@ -13,6 +13,7 @@ export const ko: Messages = {
     analytics: "분석",
     templates: "템플릿",
     guide: "사용법",
+    testRuns: "테스트 실행",
     settings: "설정",
   },
   common: {

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/templates" });
 
 // GET /api/templates - 템플릿 목록
 export async function GET(request: NextRequest) {
@@ -21,7 +24,7 @@ export async function GET(request: NextRequest) {
     });
     return NextResponse.json({ templates });
   } catch (error) {
-    console.error("템플릿 조회 오류:", error);
+    logger.error("템플릿 조회 오류", { error });
     return NextResponse.json(
       { error: "템플릿 조회에 실패했습니다." },
       { status: 500 }
@@ -61,7 +64,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ template });
   } catch (error) {
-    console.error("템플릿 생성 오류:", error);
+    logger.error("템플릿 생성 오류", { error });
     return NextResponse.json(
       { error: "템플릿 생성에 실패했습니다." },
       { status: 500 }
@@ -87,7 +90,7 @@ export async function DELETE(request: NextRequest) {
     await prisma.qATemplate.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("템플릿 삭제 오류:", error);
+    logger.error("템플릿 삭제 오류", { error });
     return NextResponse.json(
       { error: "템플릿 삭제에 실패했습니다." },
       { status: 500 }

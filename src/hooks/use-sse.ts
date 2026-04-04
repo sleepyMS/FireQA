@@ -8,6 +8,8 @@ interface UseSSEState<T> {
   stage: string;
   message: string;
   progress: number;
+  stageIndex: number;
+  stageTotal: number;
   chunkInfo: { index: number; total: number } | null;
   charsReceived: number;
   jobId: string | null;
@@ -20,6 +22,8 @@ const INITIAL_STATE: UseSSEState<unknown> = {
   stage: "",
   message: "",
   progress: 0,
+  stageIndex: 0,
+  stageTotal: 0,
   chunkInfo: null,
   charsReceived: 0,
   jobId: null,
@@ -54,6 +58,8 @@ export function useSSE<T>(url: string) {
         stage: "connecting",
         message: "연결 중...",
         progress: 0,
+        stageIndex: 0,
+        stageTotal: 0,
         chunkInfo: null,
         charsReceived: 0,
         jobId: null,
@@ -104,7 +110,14 @@ export function useSSE<T>(url: string) {
             setState((prev) =>
               prev.stage === event.stage && prev.progress === (event.progress ?? prev.progress)
                 ? prev
-                : { ...prev, stage: event.stage, message: event.message, progress: event.progress ?? prev.progress }
+                : {
+                    ...prev,
+                    stage: event.stage,
+                    message: event.message,
+                    progress: event.progress ?? prev.progress,
+                    stageIndex: event.stageIndex ?? prev.stageIndex,
+                    stageTotal: event.stageTotal ?? prev.stageTotal,
+                  }
             );
             break;
           case "chunk_progress":
@@ -118,7 +131,11 @@ export function useSSE<T>(url: string) {
             setState((prev) =>
               prev.charsReceived === event.charsReceived
                 ? prev
-                : { ...prev, charsReceived: event.charsReceived }
+                : {
+                    ...prev,
+                    charsReceived: event.charsReceived,
+                    progress: event.estimatedProgress ?? prev.progress,
+                  }
             );
             break;
           case "complete":

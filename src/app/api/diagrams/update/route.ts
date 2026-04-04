@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/diagrams/update" });
 
 // PATCH /api/diagrams/update - 특정 다이어그램의 mermaidCode를 업데이트
 export async function PATCH(request: NextRequest) {
@@ -45,7 +48,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("다이어그램 업데이트 오류:", error);
+    logger.error("다이어그램 업데이트 오류", { error });
     return NextResponse.json(
       { error: "업데이트에 실패했습니다." },
       { status: 500 }

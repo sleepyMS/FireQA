@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, History, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { VersionCompareDialog } from "./version-compare-dialog";
 
 interface ResultVersionInfo {
   id: string;
@@ -151,6 +152,12 @@ export function VersionBar({ jobId, onVersionChange }: VersionBarProps) {
         {current?.isActive && (
           <Badge className="ml-2 bg-green-600 text-xs">현재 버전</Badge>
         )}
+
+        <VersionCompareDialog
+          jobId={jobId}
+          versions={versions}
+          currentVersionId={current?.id}
+        />
       </div>
     </div>
   );

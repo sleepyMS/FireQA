@@ -13,6 +13,7 @@ export const en: Messages = {
     analytics: "Analytics",
     templates: "Templates",
     guide: "Guide",
+    testRuns: "Test Runs",
     settings: "Settings",
   },
   common: {

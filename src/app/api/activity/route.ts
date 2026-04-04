@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/activity" });
 
 // GET /api/activity — 조직 활동 로그 목록 (커서 페이지네이션)
 export async function GET(request: NextRequest) {
@@ -86,7 +89,7 @@ export async function GET(request: NextRequest) {
       nextCursor,
     });
   } catch (error) {
-    console.error("활동 로그 조회 오류:", error);
+    logger.error("활동 로그 조회 오류", { error });
     return NextResponse.json({ error: "활동 로그 조회에 실패했습니다." }, { status: 500 });
   }
 }

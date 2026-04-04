@@ -13,6 +13,7 @@ export interface Messages {
     analytics: string;
     templates: string;
     guide: string;
+    testRuns: string;
     settings: string;
   };
   common: {

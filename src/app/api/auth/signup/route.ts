@@ -4,6 +4,9 @@ import { prisma } from "@/lib/db";
 import { provisionUserAndOrg, generateUniqueOrgSlug } from "@/lib/auth/provision-user";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { UserRole } from "@/types/enums";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/auth/signup" });
 
 export async function POST(request: NextRequest) {
   try {
@@ -77,7 +80,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("회원가입 오류:", error);
+    logger.error("회원가입 오류", { error });
     return NextResponse.json(
       { error: "회원가입에 실패했습니다." },
       { status: 500 }

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { AgentTaskStatus } from "@/types/agent";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/agent/tasks/status" });
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
   [AgentTaskStatus.ASSIGNED]: [AgentTaskStatus.RUNNING, AgentTaskStatus.FAILED],
@@ -63,7 +66,7 @@ export async function PUT(
 
     return NextResponse.json({ status: updated.status });
   } catch (error) {
-    console.error("상태 변경 오류:", error);
+    logger.error("상태 변경 오류", { error });
     return NextResponse.json(
       { error: "상태 변경에 실패했습니다." },
       { status: 500 }

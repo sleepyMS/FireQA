@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/comments/resolve" });
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -52,7 +55,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       updatedAt: updated.updatedAt.toISOString(),
     });
   } catch (error) {
-    console.error("코멘트 해결 처리 오류:", error);
+    logger.error("코멘트 해결 처리 오류", { error });
     return NextResponse.json({ error: "코멘트 해결 처리에 실패했습니다." }, { status: 500 });
   }
 }

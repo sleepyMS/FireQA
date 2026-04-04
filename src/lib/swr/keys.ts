@@ -13,4 +13,6 @@ export const SWR_KEYS = {
   billingCredits: "/api/billing/credits",
   anthropicKey: "/api/settings/anthropic-key",
   hostedWorkers: "/api/admin/workers",
+  testRuns: (params: string) => `/api/test-runs?${params}`,
+  testRunDetail: (id: string) => `/api/test-runs/${id}`,
 } as const;

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { AgentTaskStatus } from "@/types/agent";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/agent/tasks/next" });
 
 export async function GET(request: NextRequest) {
   try {
@@ -64,7 +67,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("작업 수령 오류:", error);
+    logger.error("작업 수령 오류", { error });
     return NextResponse.json(
       { error: "작업 수령에 실패했습니다." },
       { status: 500 }

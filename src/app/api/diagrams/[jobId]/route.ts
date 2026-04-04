@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/diagrams/job" });
 
 // GET /api/diagrams/[jobId] - FigJam 플러그인이 호출하여 다이어그램 데이터를 가져감
 export async function GET(
@@ -17,7 +20,13 @@ export async function GET(
 
     const job = await prisma.generationJob.findUnique({
       where: { id: jobId },
-      include: { project: true },
+      select: {
+        id: true,
+        type: true,
+        status: true,
+        result: true,
+        project: { select: { organizationId: true, name: true } },
+      },
     });
 
     if (!job) {
@@ -58,7 +67,7 @@ export async function GET(
       diagrams: result.diagrams,
     });
   } catch (error) {
-    console.error("다이어그램 데이터 조회 오류:", error);
+    logger.error("다이어그램 데이터 조회 오류", { error });
     return NextResponse.json(
       { error: "데이터 조회에 실패했습니다." },
       { status: 500 }

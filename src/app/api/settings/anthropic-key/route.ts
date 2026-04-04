@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { encrypt } from "@/lib/crypto/encrypt";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/settings/anthropic-key" });
 
 // GET — 현재 조직에 등록된 Anthropic API Key 정보 조회 (prefix만 반환)
 export async function GET(request: NextRequest) {
@@ -31,7 +34,7 @@ export async function GET(request: NextRequest) {
       updatedAt: record.updatedAt,
     });
   } catch (error) {
-    console.error("Anthropic Key 조회 오류:", error);
+    logger.error("Anthropic Key 조회 오류", { error });
     return NextResponse.json({ error: "키 조회에 실패했습니다." }, { status: 500 });
   }
 }
@@ -88,7 +91,7 @@ export async function POST(request: NextRequest) {
       { status: 201 },
     );
   } catch (error) {
-    console.error("Anthropic Key 저장 오류:", error);
+    logger.error("Anthropic Key 저장 오류", { error });
     return NextResponse.json({ error: "키 저장에 실패했습니다." }, { status: 500 });
   }
 }
@@ -110,7 +113,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ deleted: true });
   } catch (error) {
-    console.error("Anthropic Key 삭제 오류:", error);
+    logger.error("Anthropic Key 삭제 오류", { error });
     return NextResponse.json({ error: "키 삭제에 실패했습니다." }, { status: 500 });
   }
 }

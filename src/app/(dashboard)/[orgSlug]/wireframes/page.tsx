@@ -169,14 +169,7 @@ export default function WireframesPage() {
             {projectSelection?.name} — AI가 와이어프레임을 생성하고 있습니다.
           </p>
         </div>
-        <GenerationProgress
-          stage={sse.stage}
-          message={sse.message}
-          progress={sse.progress}
-          chunkInfo={sse.chunkInfo}
-          charsReceived={sse.charsReceived}
-          onCancel={sse.cancel}
-        />
+        <GenerationProgress sse={sse} onCancel={sse.cancel} />
       </div>
     );
   }

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { randomBytes, createHash } from "crypto";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/settings/api-keys" });
 
 // POST — API Key 발급
 export async function POST(request: NextRequest) {
@@ -42,7 +45,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("API Key 발급 오류:", error);
+    logger.error("API Key 발급 오류", { error });
     return NextResponse.json({ error: "API Key 발급에 실패했습니다." }, { status: 500 });
   }
 }
@@ -70,7 +73,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ keys });
   } catch (error) {
-    console.error("API Key 목록 조회 오류:", error);
+    logger.error("API Key 목록 조회 오류", { error });
     return NextResponse.json({ error: "목록 조회에 실패했습니다." }, { status: 500 });
   }
 }
