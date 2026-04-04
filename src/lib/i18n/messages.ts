@@ -32,6 +32,7 @@ export interface Messages {
     create: string;
     add: string;
     noData: string;
+    networkError: string;
   };
   settings: {
     title: string;
@@ -53,6 +54,7 @@ export interface Messages {
       currentUrl: string;
       slugChangeNote: string;
       slugValid: string;
+      slugInvalid: string;
       unsavedDot: string;
       memberCount: string;
       figmaPluginTitle: string;
@@ -80,7 +82,12 @@ export interface Messages {
       leaveOrgDialogDesc: string;
       processing: string;
       savedOk: string;
+      saveFailed: string;
       loadFailed: string;
+      deleteOk: string;
+      deleteFailed: string;
+      leaveOk: string;
+      leaveFailed: string;
       tokenGenFailed: string;
       tokenRevoked: string;
       tokenRevokeFailed: string;
@@ -102,6 +109,7 @@ export interface Messages {
       removeFromOrg: string;
       roleChangeTitle: string;
       roleChangeDesc: string;
+      roleChangeSuffix: string;
       roleChanging: string;
       roleChangeConfirm: string;
       roleChangeOk: string;
@@ -135,6 +143,51 @@ export interface Messages {
       checkoutFailed: string;
       portalFailed: string;
       loadFailed: string;
+    };
+    webhooks: {
+      secretTitle: string;
+      noWebhooks: string;
+      allEvents: string;
+      active: string;
+      inactive: string;
+      testBtn: string;
+      disableBtn: string;
+      enableBtn: string;
+      addBtn: string;
+      creating: string;
+      urlLabel: string;
+      descLabel: string;
+      eventsLabel: string;
+      createFailed: string;
+      deleteOk: string;
+      loadFailed: string;
+      urlHttpsError: string;
+      eventLabels: {
+        generationCompleted: string;
+        generationFailed: string;
+        memberInvited: string;
+        projectCreated: string;
+      };
+    };
+    invite: {
+      title: string;
+      description: string;
+      roleLabel: string;
+      roleAdmin: string;
+      roleMember: string;
+      emailLabel: string;
+      expiresLabel: string;
+      expires24h: string;
+      expires72h: string;
+      expires7d: string;
+      createdTitle: string;
+      copyable: string;
+      newLinkBtn: string;
+      createBtn: string;
+      creating: string;
+      createdOk: string;
+      createFailed: string;
+      copyFailed: string;
     };
   };
   testRun: {
@@ -393,7 +446,8 @@ export interface Messages {
     expiresLabel: string;
     accepting: string;
     joinOrgButton: string;
-    joinedTitle: string;
+    joinedTitlePrefix: string;
+    joinedTitleSuffix: string;
     fallbackOrg: string;
     memberAdded: string;
     goToDashboard: string;
@@ -459,48 +513,5 @@ export interface Messages {
   jobStatus: {
     autoShowResult: string;
     generationFailed: string;
-  };
-  onboarding: {
-    title: string;
-    subtitle: string;
-    nameLabel: string;
-    namePlaceholder: string;
-    orgNameLabel: string;
-    orgNamePlaceholder: string;
-    orgSlugLabel: string;
-    slugHintKorean: string;
-    slugInvalid: string;
-    slugValid: string;
-    submitting: string;
-    start: string;
-    or: string;
-    joinByInvite: string;
-    inviteTokenLabel: string;
-    inviteTokenPlaceholder: string;
-    acceptInvite: string;
-    loginRequired: string;
-    createTeamFailed: string;
-    networkError: string;
-  };
-  invite: {
-    orgInvite: string;
-    loginAutoAccept: string;
-    loginToAccept: string;
-    signupToAccept: string;
-    roleLabel: string;
-    expiresLabel: string;
-    accepting: string;
-    joinOrgButton: string;
-    joinedTitlePrefix: string;
-    joinedTitleSuffix: string;
-    fallbackOrg: string;
-    memberAdded: string;
-    goToDashboard: string;
-    requestNewInvite: string;
-    goHome: string;
-    acceptFailed: string;
-    noToken: string;
-    invalidInvite: string;
-    networkError: string;
   };
 }

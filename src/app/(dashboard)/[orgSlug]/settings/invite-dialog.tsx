@@ -32,6 +32,7 @@ import {
   FormControl,
   FormMessage,
 } from "@/components/ui/form";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 const inviteSchema = z.object({
   role: z.enum(["admin", "member"]),
@@ -72,6 +73,9 @@ export default function InviteDialog({
   const [inviteUrl, setInviteUrl] = useState("");
   const [copied, setCopied] = useState(false);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const { t } = useLocale();
+  const si = t.settings.invite;
 
   const form = useForm<InviteFormValues>({
     resolver: zodResolver(inviteSchema),
@@ -121,12 +125,12 @@ export default function InviteDialog({
           expiresAt: data.expiresAt,
           token: data.token,
         });
-        toast.success("초대 링크가 생성되었습니다.");
+        toast.success(si.createdOk);
       } else {
-        toast.error(data.error || "초대 생성에 실패했습니다.");
+        toast.error(data.error || si.createFailed);
       }
     } catch {
-      toast.error("네트워크 오류가 발생했습니다.");
+      toast.error(t.common.networkError);
     } finally {
       setCreating(false);
     }
@@ -139,7 +143,7 @@ export default function InviteDialog({
       setCopied(true);
       copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error("클립보드 복사에 실패했습니다.");
+      toast.error(si.copyFailed);
     }
   }
 
@@ -147,9 +151,9 @@ export default function InviteDialog({
     <Sheet open={open} onOpenChange={(o) => !o && handleClose()}>
       <SheetContent side="right" className="flex flex-col">
         <SheetHeader>
-          <SheetTitle>초대 링크 생성</SheetTitle>
+          <SheetTitle>{si.title}</SheetTitle>
           <SheetDescription>
-            새 멤버를 초대할 링크를 생성합니다.
+            {si.description}
           </SheetDescription>
         </SheetHeader>
 
@@ -158,7 +162,7 @@ export default function InviteDialog({
             <div className="space-y-4 pt-2">
               <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
                 <p className="mb-2 text-xs font-semibold text-emerald-700">
-                  초대 링크가 생성되었습니다
+                  {si.createdTitle}
                 </p>
                 <div className="flex gap-2">
                   <Input
@@ -181,14 +185,14 @@ export default function InviteDialog({
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">
-                시트를 닫아도 목록에서 다시 복사할 수 있습니다.
+                {si.copyable}
               </p>
               <Button
                 variant="outline"
                 className="w-full"
                 onClick={reset}
               >
-                새 링크 생성
+                {si.newLinkBtn}
               </Button>
             </div>
           ) : (
@@ -203,7 +207,7 @@ export default function InviteDialog({
                   name="role"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>역할</FormLabel>
+                      <FormLabel>{si.roleLabel}</FormLabel>
                       <Select
                         value={field.value}
                         onValueChange={(v) => v && field.onChange(v)}
@@ -214,8 +218,8 @@ export default function InviteDialog({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="admin">관리자</SelectItem>
-                          <SelectItem value="member">멤버</SelectItem>
+                          <SelectItem value="admin">{si.roleAdmin}</SelectItem>
+                          <SelectItem value="member">{si.roleMember}</SelectItem>
                         </SelectContent>
                       </Select>
                     </FormItem>
@@ -226,7 +230,7 @@ export default function InviteDialog({
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>이메일 (선택)</FormLabel>
+                      <FormLabel>{si.emailLabel}</FormLabel>
                       <FormControl>
                         <Input
                           type="email"
@@ -243,7 +247,7 @@ export default function InviteDialog({
                   name="expiresInHours"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>만료</FormLabel>
+                      <FormLabel>{si.expiresLabel}</FormLabel>
                       <Select
                         value={String(field.value)}
                         onValueChange={(v) => v && field.onChange(Number(v))}
@@ -254,9 +258,9 @@ export default function InviteDialog({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="24">24시간</SelectItem>
-                          <SelectItem value="72">72시간</SelectItem>
-                          <SelectItem value="168">7일</SelectItem>
+                          <SelectItem value="24">{si.expires24h}</SelectItem>
+                          <SelectItem value="72">{si.expires72h}</SelectItem>
+                          <SelectItem value="168">{si.expires7d}</SelectItem>
                         </SelectContent>
                       </Select>
                     </FormItem>
@@ -270,7 +274,7 @@ export default function InviteDialog({
         {!inviteUrl && (
           <SheetFooter className="flex-row px-4">
             <SheetClose render={<Button variant="outline" className="flex-1" />}>
-              취소
+              {t.common.cancel}
             </SheetClose>
             <Button
               type="submit"
@@ -278,14 +282,14 @@ export default function InviteDialog({
               disabled={creating}
               className="flex-1"
             >
-              {creating ? "생성 중..." : "링크 생성"}
+              {creating ? si.creating : si.createBtn}
             </Button>
           </SheetFooter>
         )}
         {inviteUrl && (
           <SheetFooter className="px-4">
             <Button onClick={handleClose} className="w-full">
-              닫기
+              {t.common.close}
             </Button>
           </SheetFooter>
         )}

@@ -46,6 +46,11 @@ export function SettingsTabs({ activeTab: initialTab }: { activeTab: TabKey }) {
 
   return (
     <>
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight">{t.settings.title}</h2>
+        <p className="text-muted-foreground">{t.settings.description}</p>
+      </div>
+
       <TabNav
         tabs={tabs.map(({ key, label }) => ({ value: key, label }))}
         value={activeTab}

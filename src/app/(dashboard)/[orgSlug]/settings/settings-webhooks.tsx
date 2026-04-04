@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 interface Endpoint {
   id: string;
@@ -27,28 +28,7 @@ interface Delivery {
   createdAt: string;
 }
 
-const ALL_EVENTS = [
-  { value: "generation.completed", label: "생성 완료" },
-  { value: "generation.failed", label: "생성 실패" },
-  { value: "member.invited", label: "멤버 초대" },
-  { value: "member.role_changed", label: "역할 변경" },
-  { value: "member.removed", label: "멤버 제거" },
-  { value: "project.created", label: "프로젝트 생성" },
-  { value: "project.updated", label: "프로젝트 수정" },
-  { value: "project.archived", label: "프로젝트 보관" },
-  { value: "project.unarchived", label: "프로젝트 보관 해제" },
-  { value: "project.deleted", label: "프로젝트 삭제" },
-  { value: "project.restored", label: "프로젝트 복구" },
-  { value: "version.created", label: "버전 생성" },
-  { value: "version.activated", label: "버전 활성화" },
-  { value: "agent.task_completed", label: "에이전트 작업 완료" },
-  { value: "agent.task_failed", label: "에이전트 작업 실패" },
-  { value: "test_run.started", label: "테스트 실행 시작" },
-  { value: "test_run.completed", label: "테스트 실행 완료" },
-  { value: "test_run.aborted", label: "테스트 실행 중단" },
-];
-
-function SecretBox({ secret }: { secret: string }) {
+function SecretBox({ secret, title }: { secret: string; title: string }) {
   const [copied, setCopied] = useState(false);
   function copy() {
     navigator.clipboard.writeText(secret);
@@ -58,7 +38,7 @@ function SecretBox({ secret }: { secret: string }) {
   return (
     <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950">
       <p className="mb-1 text-xs font-semibold text-amber-800 dark:text-amber-300">
-        시크릿 키 — 지금만 확인 가능합니다
+        {title}
       </p>
       <div className="flex items-center gap-2">
         <code className="flex-1 truncate rounded bg-amber-100 px-2 py-1 text-xs font-mono dark:bg-amber-900">
@@ -157,11 +137,22 @@ export default function SettingsWebhooks() {
   const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
+  const { t } = useLocale();
+  const sw = t.settings.webhooks;
+  const el = sw.eventLabels;
+
+  const ALL_EVENTS = [
+    { value: "generation.completed", label: el.generationCompleted },
+    { value: "generation.failed", label: el.generationFailed },
+    { value: "member.invited", label: el.memberInvited },
+    { value: "project.created", label: el.projectCreated },
+  ];
+
   useEffect(() => {
     fetch("/api/webhook-endpoints")
       .then((r) => r.json())
       .then((d) => setEndpoints(d.endpoints ?? []))
-      .catch(() => toast.error("웹훅 목록을 불러오지 못했습니다."))
+      .catch(() => toast.error(sw.loadFailed))
       .finally(() => setLoading(false));
   }, []);
 
@@ -173,7 +164,7 @@ export default function SettingsWebhooks() {
 
   async function handleCreate() {
     if (!url.startsWith("https://")) {
-      toast.error("URL은 https://로 시작해야 합니다.");
+      toast.error(sw.urlHttpsError);
       return;
     }
     setSaving(true);
@@ -185,7 +176,7 @@ export default function SettingsWebhooks() {
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || "생성에 실패했습니다.");
+        toast.error(data.error || sw.createFailed);
         return;
       }
       setEndpoints((prev) => [{ ...data, createdAt: data.createdAt }, ...prev]);
@@ -195,7 +186,7 @@ export default function SettingsWebhooks() {
       setSelectedEvents([]);
       setShowForm(false);
     } catch {
-      toast.error("네트워크 오류가 발생했습니다.");
+      toast.error(t.common.networkError);
     } finally {
       setSaving(false);
     }
@@ -216,7 +207,7 @@ export default function SettingsWebhooks() {
     const res = await fetch(`/api/webhook-endpoints/${id}`, { method: "DELETE" });
     if (res.ok) {
       setEndpoints((prev) => prev.filter((e) => e.id !== id));
-      toast.success("삭제되었습니다.");
+      toast.success(sw.deleteOk);
     }
   }
 
@@ -256,13 +247,13 @@ export default function SettingsWebhooks() {
 
   return (
     <div className="space-y-4">
-      {newSecret && <SecretBox secret={newSecret} />}
+      {newSecret && <SecretBox secret={newSecret} title={sw.secretTitle} />}
 
-      {/* 엔드포인트 목록 */}
+      {/* Endpoint list */}
       {endpoints.length === 0 && !showForm ? (
         <Card>
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            등록된 웹훅이 없습니다
+            {sw.noWebhooks}
           </CardContent>
         </Card>
       ) : (
@@ -277,7 +268,7 @@ export default function SettingsWebhooks() {
                   )}
                   <div className="mt-1.5 flex flex-wrap gap-1">
                     {ep.events.length === 0 ? (
-                      <Badge variant="secondary" className="text-xs">전체 이벤트</Badge>
+                      <Badge variant="secondary" className="text-xs">{sw.allEvents}</Badge>
                     ) : (
                       ep.events.map((ev) => (
                         <Badge key={ev} variant="outline" className="text-xs">
@@ -286,7 +277,7 @@ export default function SettingsWebhooks() {
                       ))
                     )}
                     <Badge variant={ep.isActive ? "default" : "secondary"} className="text-xs">
-                      {ep.isActive ? "활성" : "비활성"}
+                      {ep.isActive ? sw.active : sw.inactive}
                     </Badge>
                   </div>
                 </div>
@@ -305,7 +296,7 @@ export default function SettingsWebhooks() {
                     테스트
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => handleToggle(ep)}>
-                    {ep.isActive ? "비활성화" : "활성화"}
+                    {ep.isActive ? sw.disableBtn : sw.enableBtn}
                   </Button>
                   <Button
                     variant="ghost"
@@ -334,12 +325,12 @@ export default function SettingsWebhooks() {
         ))
       )}
 
-      {/* 추가 폼 */}
+      {/* Add form */}
       {showForm && (
         <Card>
           <CardContent className="space-y-3 py-2">
             <div className="space-y-1.5">
-              <Label>URL</Label>
+              <Label>{sw.urlLabel}</Label>
               <Input
                 placeholder="https://example.com/webhook"
                 value={url}
@@ -347,15 +338,15 @@ export default function SettingsWebhooks() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label>설명 (선택)</Label>
+              <Label>{sw.descLabel}</Label>
               <Input
-                placeholder="Slack 알림 등"
+                placeholder="Slack notifications etc."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
             </div>
             <div className="space-y-1.5">
-              <Label>이벤트 (미선택 시 전체)</Label>
+              <Label>{sw.eventsLabel}</Label>
               <div className="flex flex-wrap gap-2">
                 {ALL_EVENTS.map((ev) => (
                   <button
@@ -375,10 +366,10 @@ export default function SettingsWebhooks() {
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" size="sm" onClick={() => setShowForm(false)}>
-                취소
+                {t.common.cancel}
               </Button>
               <Button size="sm" onClick={handleCreate} disabled={saving}>
-                {saving ? "생성 중..." : "생성"}
+                {saving ? sw.creating : t.common.create}
               </Button>
             </div>
           </CardContent>
@@ -388,7 +379,7 @@ export default function SettingsWebhooks() {
       {!showForm && (
         <Button variant="outline" onClick={() => { setNewSecret(null); setShowForm(true); }}>
           <Plus className="mr-2 h-4 w-4" />
-          웹훅 추가
+          {sw.addBtn}
         </Button>
       )}
     </div>

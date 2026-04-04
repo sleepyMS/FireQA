@@ -18,12 +18,6 @@ export default async function SettingsPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">설정</h2>
-        <p className="text-muted-foreground">조직 설정을 관리합니다.</p>
-      </div>
-
-      {/* SettingsTabs가 탭 nav + 콘텐츠 렌더링 모두 담당 */}
       <SettingsTabs activeTab={activeTab} />
     </div>
   );
