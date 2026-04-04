@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { CommentWithReplies } from "@/types/comment";
 import { CommentItem } from "./comment-item";
 import { CommentForm } from "./comment-form";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 interface CommentThreadProps {
   comment: CommentWithReplies;
@@ -18,8 +19,9 @@ export function CommentThread({
   onRefresh,
   jobId,
 }: CommentThreadProps) {
+  const { t } = useLocale();
   // Show reply form when there are no replies and comment is not resolved,
-  // or when "답글" button is clicked.
+  // or when reply button is clicked.
   const [showReplyForm, setShowReplyForm] = useState(
     comment.replies.length === 0 && !comment.isResolved
   );
@@ -100,9 +102,9 @@ export function CommentThread({
       {showReplyForm && (
         <div ref={replyFormRef} className="ml-4 pl-4 border-l">
           <CommentForm
-            placeholder="답글을 입력하세요..."
+            placeholder={t.comments.replyPlaceholder}
             onSubmit={handleReplySubmit}
-            submitLabel="답글 달기"
+            submitLabel={t.comments.replySubmit}
           />
         </div>
       )}
