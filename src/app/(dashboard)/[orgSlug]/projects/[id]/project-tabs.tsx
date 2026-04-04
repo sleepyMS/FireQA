@@ -31,6 +31,7 @@ import {
   STATUS_CONFIG,
   JobType,
 } from "@/types/enums";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 // ── 타입 ──────────────────────────────────────────────────────────────────────
 
@@ -88,20 +89,6 @@ function JobTypeIcon({ type, className }: { type: string; className?: string }) 
 
 // ── 개요 탭 ───────────────────────────────────────────────────────────────────
 
-const STAT_TYPES = [
-  { type: JobType.TEST_CASES, label: "TC 생성", color: "text-blue-600", bg: "bg-blue-100" },
-  { type: JobType.DIAGRAMS, label: "다이어그램", color: "text-purple-600", bg: "bg-purple-100" },
-  { type: JobType.WIREFRAMES, label: "와이어프레임", color: "text-pink-600", bg: "bg-pink-100" },
-  { type: JobType.SPEC_IMPROVE, label: "기획서 개선", color: "text-emerald-600", bg: "bg-emerald-100" },
-];
-
-const QUICK_ACTIONS = [
-  { href: "/generate", label: "TC 생성", color: "text-blue-600", bg: "bg-blue-100" },
-  { href: "/diagrams", label: "다이어그램 생성", color: "text-purple-600", bg: "bg-purple-100" },
-  { href: "/wireframes", label: "와이어프레임 생성", color: "text-pink-600", bg: "bg-pink-100" },
-  { href: "/improve", label: "기획서 개선", color: "text-emerald-600", bg: "bg-emerald-100" },
-];
-
 function OverviewTab({
   projectId,
   projectStatus,
@@ -115,6 +102,21 @@ function OverviewTab({
 }) {
   const { orgSlug } = useParams<{ orgSlug?: string }>();
   const orgPrefix = orgSlug ? `/${orgSlug}` : "";
+  const { t } = useLocale();
+
+  const STAT_TYPES = [
+    { type: JobType.TEST_CASES, label: t.projects.statTcGenerate, color: "text-blue-600", bg: "bg-blue-100" },
+    { type: JobType.DIAGRAMS, label: t.projects.statDiagrams, color: "text-purple-600", bg: "bg-purple-100" },
+    { type: JobType.WIREFRAMES, label: t.projects.statWireframes, color: "text-pink-600", bg: "bg-pink-100" },
+    { type: JobType.SPEC_IMPROVE, label: t.projects.statSpecImprove, color: "text-emerald-600", bg: "bg-emerald-100" },
+  ];
+
+  const QUICK_ACTIONS = [
+    { href: "/generate", label: t.projects.quickActionTcGenerate, color: "text-blue-600", bg: "bg-blue-100" },
+    { href: "/diagrams", label: t.projects.quickActionDiagrams, color: "text-purple-600", bg: "bg-purple-100" },
+    { href: "/wireframes", label: t.projects.quickActionWireframes, color: "text-pink-600", bg: "bg-pink-100" },
+    { href: "/improve", label: t.projects.quickActionSpecImprove, color: "text-emerald-600", bg: "bg-emerald-100" },
+  ];
 
   return (
     <div className="space-y-6">
@@ -140,10 +142,10 @@ function OverviewTab({
       {/* 최근 생성 이력 */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>최근 생성 이력</CardTitle>
+          <CardTitle>{t.projects.recentJobsTitle}</CardTitle>
           <Link href={`${orgPrefix}/projects/${projectId}?tab=jobs`}>
             <Button variant="ghost" size="sm">
-              전체 보기
+              {t.projects.viewAll}
             </Button>
           </Link>
         </CardHeader>
@@ -151,7 +153,7 @@ function OverviewTab({
           {recentJobs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
               <Search className="mb-3 h-8 w-8 opacity-40" />
-              <p className="text-sm">아직 생성 이력이 없습니다.</p>
+              <p className="text-sm">{t.projects.noRecentJobs}</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -188,7 +190,7 @@ function OverviewTab({
       {projectStatus !== "deleted" && (
         <Card>
           <CardHeader>
-            <CardTitle>생성하기</CardTitle>
+            <CardTitle>{t.projects.createSectionTitle}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -219,14 +221,6 @@ function OverviewTab({
 
 // ── 생성 결과 탭 ──────────────────────────────────────────────────────────────
 
-const TYPE_FILTERS = [
-  { label: "전체", value: "" },
-  { label: "TC 생성", value: JobType.TEST_CASES },
-  { label: "다이어그램", value: JobType.DIAGRAMS },
-  { label: "와이어프레임", value: JobType.WIREFRAMES },
-  { label: "기획서 개선", value: JobType.SPEC_IMPROVE },
-];
-
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 function JobsTab({ projectId }: { projectId: string }) {
@@ -234,6 +228,15 @@ function JobsTab({ projectId }: { projectId: string }) {
   const { orgSlug } = useParams<{ orgSlug?: string }>();
   const orgPrefix = orgSlug ? `/${orgSlug}` : "";
   const [typeFilter, setTypeFilter] = useState("");
+  const { t } = useLocale();
+
+  const TYPE_FILTERS = [
+    { label: t.projects.filterAll, value: "" },
+    { label: t.projects.statTcGenerate, value: JobType.TEST_CASES },
+    { label: t.projects.statDiagrams, value: JobType.DIAGRAMS },
+    { label: t.projects.statWireframes, value: JobType.WIREFRAMES },
+    { label: t.projects.statSpecImprove, value: JobType.SPEC_IMPROVE },
+  ];
 
   // SWR: 같은 필터로 재진입 시 캐시 사용 (API 재호출 없음)
   const params = new URLSearchParams({ projectId, all: "1" });
@@ -265,7 +268,7 @@ function JobsTab({ projectId }: { projectId: string }) {
           <CardContent className="flex items-center justify-center py-16 text-muted-foreground">
             <div className="text-center">
               <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-              <p>이력을 불러오는 중...</p>
+              <p>{t.projects.loadingJobs}</p>
             </div>
           </CardContent>
         </Card>
@@ -275,8 +278,8 @@ function JobsTab({ projectId }: { projectId: string }) {
             <Search className="mb-4 h-10 w-10 opacity-40" />
             <p className="text-sm">
               {typeFilter
-                ? `${JOB_TYPE_LABEL[typeFilter] ?? typeFilter} 이력이 없습니다.`
-                : "아직 생성 이력이 없습니다."}
+                ? t.projects.noJobsFiltered.replace("{type}", JOB_TYPE_LABEL[typeFilter] ?? typeFilter)
+                : t.projects.noJobs}
             </p>
           </CardContent>
         </Card>
@@ -316,7 +319,7 @@ function JobsTab({ projectId }: { projectId: string }) {
                     onClick={(e) => e.stopPropagation()}
                   >
                     <Button variant="outline" size="sm">
-                      결과 보기
+                      {t.projects.viewResult}
                     </Button>
                   </Link>
                 </div>
@@ -334,6 +337,7 @@ function JobsTab({ projectId }: { projectId: string }) {
 function UploadsTab({ uploads }: { uploads: UploadRecord[] }) {
   const [preview, setPreview] = useState<{ fileName: string; text: string } | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const { t } = useLocale();
 
   async function openPreview(uploadId: string) {
     setLoadingId(uploadId);
@@ -351,8 +355,8 @@ function UploadsTab({ uploads }: { uploads: UploadRecord[] }) {
       <Card>
         <CardContent className="flex flex-col items-center py-16 text-center text-muted-foreground">
           <Upload className="mb-4 h-10 w-10 opacity-40" />
-          <p className="text-sm">업로드된 파일이 없습니다.</p>
-          <p className="text-xs mt-1">생성 시 업로드한 파일이 여기에 표시됩니다.</p>
+          <p className="text-sm">{t.projects.noUploads}</p>
+          <p className="text-xs mt-1">{t.projects.noUploadsHint}</p>
         </CardContent>
       </Card>
     );
@@ -383,7 +387,7 @@ function UploadsTab({ uploads }: { uploads: UploadRecord[] }) {
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  title="미리보기"
+                  title={t.projects.previewTitle}
                   disabled={loadingId === upload.id}
                   onClick={(e) => { e.stopPropagation(); openPreview(upload.id); }}
                 >
@@ -394,7 +398,7 @@ function UploadsTab({ uploads }: { uploads: UploadRecord[] }) {
                   download
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <Button variant="ghost" size="icon-sm" title="텍스트 다운로드">
+                  <Button variant="ghost" size="icon-sm" title={t.projects.downloadTitle}>
                     <Download className="h-4 w-4" />
                   </Button>
                 </a>
@@ -420,12 +424,6 @@ function UploadsTab({ uploads }: { uploads: UploadRecord[] }) {
 
 // ── 메인 탭 컴포넌트 ──────────────────────────────────────────────────────────
 
-const TABS = [
-  { value: "overview", label: "개요" },
-  { value: "jobs", label: "생성 결과" },
-  { value: "uploads", label: "업로드" },
-];
-
 export function ProjectTabs({
   projectId,
   projectName: _projectName, // eslint-disable-line @typescript-eslint/no-unused-vars
@@ -435,12 +433,20 @@ export function ProjectTabs({
   recentJobs,
   uploads,
 }: ProjectTabsProps) {
+  const { t } = useLocale();
+
+  const TABS = [
+    { value: "overview", label: t.projects.overviewTabLabel },
+    { value: "jobs", label: t.projects.jobsTabLabel },
+    { value: "uploads", label: t.projects.uploadsTabLabel },
+  ];
+
   return (
     <Tabs defaultValue={initialTab}>
       <TabsList>
-        {TABS.map((t) => (
-          <TabsTrigger key={t.value} value={t.value}>
-            {t.label}
+        {TABS.map((tab) => (
+          <TabsTrigger key={tab.value} value={tab.value}>
+            {tab.label}
           </TabsTrigger>
         ))}
       </TabsList>

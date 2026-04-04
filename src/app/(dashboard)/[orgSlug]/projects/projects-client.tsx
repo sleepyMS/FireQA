@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { FolderOpen, Archive, Trash2, Plus, Search } from "lucide-react";
-import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,9 +17,9 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { ProjectCard } from "@/components/projects/project-card";
-import { Skeleton } from "@/components/ui/skeleton";
 import useSWR from "swr";
 import { SWR_KEYS } from "@/lib/swr/keys";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 // SSR 서버 컴포넌트에서 직렬화된 프로젝트 타입
 export interface Project {
@@ -36,43 +35,44 @@ export interface Project {
 
 type StatusFilter = "active" | "archived" | "deleted";
 
-const STATUS_TABS: { value: StatusFilter; label: string }[] = [
-  { value: "active", label: "활성" },
-  { value: "archived", label: "보관됨" },
-  { value: "deleted", label: "휴지통" },
-];
-
 function SkeletonCard() {
   return (
-    <div className="rounded-xl bg-card ring-1 ring-foreground/10 p-4 flex flex-col gap-3">
-      <Skeleton className="h-4 w-2/3" />
-      <Skeleton className="h-3 w-full" />
-      <Skeleton className="h-3 w-4/5" />
+    <div className="animate-pulse rounded-xl bg-card ring-1 ring-foreground/10 p-4 flex flex-col gap-3">
+      <div className="h-4 w-2/3 rounded bg-muted" />
+      <div className="h-3 w-full rounded bg-muted" />
+      <div className="h-3 w-4/5 rounded bg-muted" />
       <div className="flex gap-2 mt-2">
-        <Skeleton className="h-5 w-16 rounded-full" />
-        <Skeleton className="h-5 w-16 rounded-full" />
+        <div className="h-5 w-16 rounded-full bg-muted" />
+        <div className="h-5 w-16 rounded-full bg-muted" />
       </div>
     </div>
   );
 }
 
-function ProjectEmptyState({ status }: { status: StatusFilter }) {
-  const config = {
-    archived: {
-      icon: <Archive className="h-12 w-12" />,
-      title: "보관된 프로젝트가 없습니다.",
-    },
-    deleted: {
-      icon: <Trash2 className="h-12 w-12" />,
-      title: "휴지통이 비어있습니다.",
-    },
-    active: {
-      icon: <FolderOpen className="h-12 w-12" />,
-      title: "프로젝트가 없습니다. 새 프로젝트를 만들어보세요.",
-    },
-  } as const;
-  const { icon, title } = config[status];
-  return <EmptyState icon={icon} title={title} className="col-span-full" />;
+function EmptyState({ status }: { status: StatusFilter }) {
+  const { t } = useLocale();
+  if (status === "archived") {
+    return (
+      <div className="col-span-full flex flex-col items-center justify-center py-20 text-center text-muted-foreground">
+        <Archive className="mb-4 h-12 w-12 opacity-30" />
+        <p>{t.projects.emptyArchived}</p>
+      </div>
+    );
+  }
+  if (status === "deleted") {
+    return (
+      <div className="col-span-full flex flex-col items-center justify-center py-20 text-center text-muted-foreground">
+        <Trash2 className="mb-4 h-12 w-12 opacity-30" />
+        <p>{t.projects.emptyDeleted}</p>
+      </div>
+    );
+  }
+  return (
+    <div className="col-span-full flex flex-col items-center justify-center py-20 text-center text-muted-foreground">
+      <FolderOpen className="mb-4 h-12 w-12 opacity-30" />
+      <p>{t.projects.emptyActive}</p>
+    </div>
+  );
 }
 
 interface ProjectsClientProps {
@@ -84,10 +84,17 @@ export function ProjectsClient({
   initialProjects,
   initialNextCursor,
 }: ProjectsClientProps) {
+  const { t } = useLocale();
   const [status, setStatus] = useState<StatusFilter>("active");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [loadingMore, setLoadingMore] = useState(false);
+
+  const STATUS_TABS: { value: StatusFilter; label: string }[] = [
+    { value: "active", label: t.projects.tabActive },
+    { value: "archived", label: t.projects.tabArchived },
+    { value: "deleted", label: t.projects.tabDeleted },
+  ];
 
   // 검색어 디바운스 (300ms)
   useEffect(() => {
@@ -145,7 +152,7 @@ export function ProjectsClient({
       moreParams.set("cursor", cursor);
       const res = await fetch(`/api/projects?${moreParams}`);
       if (!res.ok) {
-        toast.error("더 불러오기에 실패했습니다.");
+        toast.error(t.projects.toastLoadMoreError);
         return;
       }
       const moreData = (await res.json()) as {
@@ -155,7 +162,7 @@ export function ProjectsClient({
       setExtraProjects((prev) => [...prev, ...moreData.projects]);
       setExtraNextCursor(moreData.nextCursor);
     } catch {
-      toast.error("네트워크 오류가 발생했습니다.");
+      toast.error(t.projects.toastNetworkError);
     } finally {
       setLoadingMore(false);
     }
@@ -175,7 +182,7 @@ export function ProjectsClient({
 
   async function handleCreate() {
     if (!newName.trim()) {
-      toast.error("프로젝트 이름을 입력해주세요.");
+      toast.error(t.projects.nameRequired);
       return;
     }
     setCreating(true);
@@ -189,7 +196,7 @@ export function ProjectsClient({
         }),
       });
       if (res.ok) {
-        toast.success("프로젝트가 생성되었습니다.");
+        toast.success(t.projects.toastCreated);
         setNewProjectOpen(false);
         setNewName("");
         setNewDescription("");
@@ -198,10 +205,10 @@ export function ProjectsClient({
         refresh();
       } else {
         const errData = await res.json();
-        toast.error(errData.error || "프로젝트 생성에 실패했습니다.");
+        toast.error(errData.error || t.projects.toastCreateError);
       }
     } catch {
-      toast.error("네트워크 오류가 발생했습니다.");
+      toast.error(t.projects.toastNetworkError);
     } finally {
       setCreating(false);
     }
@@ -217,15 +224,15 @@ export function ProjectsClient({
       });
       if (res.ok) {
         toast.success(
-          isArchived ? "보관이 해제되었습니다." : "프로젝트를 보관했습니다."
+          isArchived ? t.projects.toastUnarchived : t.projects.toastArchived
         );
         refresh();
       } else {
         const errData = await res.json();
-        toast.error(errData.error || "처리에 실패했습니다.");
+        toast.error(errData.error || t.projects.toastArchiveError);
       }
     } catch {
-      toast.error("네트워크 오류가 발생했습니다.");
+      toast.error(t.projects.toastNetworkError);
     }
   }
 
@@ -235,14 +242,14 @@ export function ProjectsClient({
         method: "DELETE",
       });
       if (res.ok) {
-        toast.success("프로젝트가 삭제되었습니다.");
+        toast.success(t.projects.toastDeleted);
         refresh();
       } else {
         const errData = await res.json();
-        toast.error(errData.error || "삭제에 실패했습니다.");
+        toast.error(errData.error || t.projects.toastDeleteError);
       }
     } catch {
-      toast.error("네트워크 오류가 발생했습니다.");
+      toast.error(t.projects.toastNetworkError);
     }
   }
 
@@ -252,14 +259,14 @@ export function ProjectsClient({
         method: "POST",
       });
       if (res.ok) {
-        toast.success("프로젝트가 복구되었습니다.");
+        toast.success(t.projects.toastRestored);
         refresh();
       } else {
         const errData = await res.json();
-        toast.error(errData.error || "복구에 실패했습니다.");
+        toast.error(errData.error || t.projects.toastRestoreError);
       }
     } catch {
-      toast.error("네트워크 오류가 발생했습니다.");
+      toast.error(t.projects.toastNetworkError);
     }
   }
 
@@ -268,14 +275,14 @@ export function ProjectsClient({
       {/* 페이지 헤더 */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">프로젝트</h2>
+          <h2 className="text-2xl font-bold tracking-tight">{t.projects.pageTitle}</h2>
           <p className="text-muted-foreground">
-            조직의 프로젝트를 관리합니다.
+            {t.projects.pageDescription}
           </p>
         </div>
         <Button onClick={() => setNewProjectOpen(true)}>
           <Plus className="mr-1 h-4 w-4" />
-          새 프로젝트
+          {t.projects.newProject}
         </Button>
       </div>
 
@@ -302,7 +309,7 @@ export function ProjectsClient({
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
           <Input
-            placeholder="프로젝트 검색..."
+            placeholder={t.projects.searchPlaceholder}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-8 w-full sm:w-60"
@@ -319,7 +326,7 @@ export function ProjectsClient({
             <SkeletonCard />
           </>
         ) : allProjects.length === 0 ? (
-          <ProjectEmptyState status={status} />
+          <EmptyState status={status} />
         ) : (
           allProjects.map((project) => (
             <ProjectCard
@@ -341,7 +348,7 @@ export function ProjectsClient({
             onClick={loadMore}
             disabled={loadingMore}
           >
-            {loadingMore ? "불러오는 중..." : "더 보기"}
+            {loadingMore ? t.projects.loadingMore : t.projects.loadMore}
           </Button>
         </div>
       )}
@@ -359,18 +366,18 @@ export function ProjectsClient({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>새 프로젝트</DialogTitle>
+            <DialogTitle>{t.projects.newProjectDialogTitle}</DialogTitle>
             <DialogDescription>
-              새 프로젝트의 이름과 설명을 입력하세요.
+              {t.projects.newProjectDialogDescription}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="project-name">이름 *</Label>
+              <Label htmlFor="project-name">{t.projects.nameLabel}</Label>
               <Input
                 id="project-name"
-                placeholder="프로젝트 이름"
+                placeholder={t.projects.namePlaceholder}
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={(e) => {
@@ -379,10 +386,10 @@ export function ProjectsClient({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="project-description">설명 (선택)</Label>
+              <Label htmlFor="project-description">{t.projects.descriptionLabel}</Label>
               <Textarea
                 id="project-description"
-                placeholder="프로젝트에 대한 간단한 설명"
+                placeholder={t.projects.descriptionPlaceholderLong}
                 value={newDescription}
                 onChange={(e) => setNewDescription(e.target.value)}
                 rows={3}
@@ -391,9 +398,9 @@ export function ProjectsClient({
           </div>
 
           <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>취소</DialogClose>
+            <DialogClose render={<Button variant="outline" />}>{t.common.cancel}</DialogClose>
             <Button onClick={handleCreate} disabled={creating}>
-              {creating ? "생성 중..." : "생성"}
+              {creating ? t.projects.creating : t.common.create}
             </Button>
           </DialogFooter>
         </DialogContent>

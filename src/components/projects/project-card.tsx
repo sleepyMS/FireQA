@@ -31,6 +31,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 interface ProjectCardProps {
   project: {
@@ -49,11 +50,12 @@ interface ProjectCardProps {
 }
 
 function StatusBadge({ status }: { status: string }) {
+  const { t } = useLocale();
   if (status === "archived")
-    return <Badge variant="secondary">보관됨</Badge>;
+    return <Badge variant="secondary">{t.projects.statusArchived}</Badge>;
   if (status === "deleted")
-    return <Badge variant="outline">삭제됨</Badge>;
-  return <Badge variant="default">활성</Badge>;
+    return <Badge variant="outline">{t.projects.statusDeleted}</Badge>;
+  return <Badge variant="default">{t.projects.statusActive}</Badge>;
 }
 
 export function ProjectCard({
@@ -65,6 +67,7 @@ export function ProjectCard({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const router = useRouter();
   const { orgSlug } = useParams<{ orgSlug?: string }>();
+  const { t } = useLocale();
 
   const lastUpdated = new Date(project.updatedAt).toLocaleDateString("ko-KR");
 
@@ -87,7 +90,7 @@ export function ProjectCard({
           </CardTitle>
           <CardDescription className="line-clamp-2">
             {project.description ?? (
-              <span className="italic">설명 없음</span>
+              <span className="italic">{t.projects.noDescription}</span>
             )}
           </CardDescription>
           <CardAction>
@@ -103,7 +106,7 @@ export function ProjectCard({
                 }
               >
                 <MoreHorizontal className="h-4 w-4" />
-                <span className="sr-only">메뉴 열기</span>
+                <span className="sr-only">{t.projects.openMenu}</span>
               </DropdownMenuTrigger>
               <DropdownMenuContent side="bottom" align="end">
                 {project.status !== "deleted" && (
@@ -111,12 +114,12 @@ export function ProjectCard({
                     {project.status === "archived" ? (
                       <>
                         <ArchiveRestore className="mr-2 h-4 w-4" />
-                        보관 해제
+                        {t.projects.unarchive}
                       </>
                     ) : (
                       <>
                         <Archive className="mr-2 h-4 w-4" />
-                        보관
+                        {t.projects.archive}
                       </>
                     )}
                   </DropdownMenuItem>
@@ -124,7 +127,7 @@ export function ProjectCard({
                 {project.status === "deleted" && (
                   <DropdownMenuItem onClick={onRestore}>
                     <ArchiveRestore className="mr-2 h-4 w-4" />
-                    복구
+                    {t.projects.restore}
                   </DropdownMenuItem>
                 )}
                 {project.status !== "deleted" && (
@@ -138,7 +141,7 @@ export function ProjectCard({
                       }}
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
-                      삭제
+                      {t.common.delete}
                     </DropdownMenuItem>
                   </>
                 )}
@@ -148,13 +151,17 @@ export function ProjectCard({
         </CardHeader>
 
         <CardContent className="flex flex-wrap gap-2">
-          <Badge variant="secondary">생성 {project._count.jobs}건</Badge>
-          <Badge variant="secondary">파일 {project._count.uploads}개</Badge>
+          <Badge variant="secondary">
+            {t.projects.jobsCount.replace("{count}", String(project._count.jobs))}
+          </Badge>
+          <Badge variant="secondary">
+            {t.projects.uploadsCount.replace("{count}", String(project._count.uploads))}
+          </Badge>
           <StatusBadge status={project.status} />
         </CardContent>
 
         <CardFooter className="text-xs text-muted-foreground">
-          마지막 수정: {lastUpdated}
+          {t.projects.lastModified.replace("{date}", lastUpdated)}
         </CardFooter>
       </Card>
 
@@ -165,14 +172,13 @@ export function ProjectCard({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>프로젝트 삭제</DialogTitle>
+            <DialogTitle>{t.projects.deleteProjectTitle}</DialogTitle>
             <DialogDescription>
-              &quot;{project.name}&quot; 프로젝트를 삭제하시겠습니까? 삭제된
-              프로젝트는 휴지통에서 복구할 수 있습니다.
+              {t.projects.deleteProjectConfirm.replace("{name}", project.name)}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>취소</DialogClose>
+            <DialogClose render={<Button variant="outline" />}>{t.common.cancel}</DialogClose>
             <Button
               variant="destructive"
               onClick={() => {
@@ -180,7 +186,7 @@ export function ProjectCard({
                 onDelete?.();
               }}
             >
-              삭제
+              {t.common.delete}
             </Button>
           </DialogFooter>
         </DialogContent>
