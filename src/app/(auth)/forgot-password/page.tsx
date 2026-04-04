@@ -7,8 +7,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 export default function ForgotPasswordPage() {
+  const { t } = useLocale();
+
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -36,31 +39,31 @@ export default function ForgotPasswordPage() {
     <Card className="w-full max-w-sm">
       <CardContent className="space-y-6 pt-6">
         <div className="text-center">
-          <h1 className="text-xl font-bold">비밀번호 찾기</h1>
+          <h1 className="text-xl font-bold">{t.auth.forgotPassword.title}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            가입한 이메일을 입력하면 재설정 링크를 보내드립니다
+            {t.auth.forgotPassword.subtitle}
           </p>
         </div>
 
         {sent ? (
           <div className="space-y-4 text-center">
             <p className="text-sm text-emerald-600 font-medium">
-              재설정 링크를 전송했습니다. 이메일을 확인해주세요.
+              {t.auth.forgotPassword.sentMessage}
             </p>
             <Link href="/login">
-              <Button variant="outline" className="w-full">로그인으로 돌아가기</Button>
+              <Button variant="outline" className="w-full">{t.auth.forgotPassword.backToLogin}</Button>
             </Link>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">이메일</Label>
+              <Label htmlFor="email">{t.auth.forgotPassword.emailLabel}</Label>
               <Input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
+                placeholder={t.auth.forgotPassword.emailPlaceholder}
                 required
               />
             </div>
@@ -68,11 +71,11 @@ export default function ForgotPasswordPage() {
             {error && <p className="text-sm text-destructive">{error}</p>}
 
             <Button type="submit" disabled={loading} className="w-full">
-              {loading ? "전송 중..." : "재설정 링크 전송"}
+              {loading ? t.auth.forgotPassword.submitting : t.auth.forgotPassword.submit}
             </Button>
 
             <Link href="/login">
-              <Button variant="ghost" className="w-full">돌아가기</Button>
+              <Button variant="ghost" className="w-full">{t.auth.forgotPassword.back}</Button>
             </Link>
           </form>
         )}

@@ -8,11 +8,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 export default function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/";
+  const { t } = useLocale();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -28,7 +30,7 @@ export default function SignupForm() {
     setError("");
 
     if (password !== passwordConfirm) {
-      setError("비밀번호가 일치하지 않습니다.");
+      setError(t.auth.signup.errorPasswordMismatch);
       return;
     }
 
@@ -47,7 +49,7 @@ export default function SignupForm() {
     }
 
     if (!data.user) {
-      setError("회원가입에 실패했습니다.");
+      setError(t.auth.signup.errorSignupFailed);
       setLoading(false);
       return;
     }
@@ -63,52 +65,52 @@ export default function SignupForm() {
       <CardContent className="space-y-6 pt-6">
         <div className="text-center">
           <h1 className="text-2xl font-bold">FireQA</h1>
-          <p className="mt-1 text-sm text-muted-foreground">새 계정을 만들어 시작하세요</p>
+          <p className="mt-1 text-sm text-muted-foreground">{t.auth.signup.subtitle}</p>
         </div>
 
         <form onSubmit={handleSignup} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">이름</Label>
+            <Label htmlFor="name">{t.auth.signup.nameLabel}</Label>
             <Input
               id="name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="홍길동"
+              placeholder={t.auth.signup.namePlaceholder}
               required
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="email">이메일</Label>
+            <Label htmlFor="email">{t.auth.signup.emailLabel}</Label>
             <Input
               id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder={t.auth.signup.emailPlaceholder}
               required
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">비밀번호</Label>
+            <Label htmlFor="password">{t.auth.signup.passwordLabel}</Label>
             <Input
               id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="8자 이상"
+              placeholder={t.auth.signup.passwordPlaceholder}
               minLength={8}
               required
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="passwordConfirm">비밀번호 확인</Label>
+            <Label htmlFor="passwordConfirm">{t.auth.signup.passwordConfirmLabel}</Label>
             <Input
               id="passwordConfirm"
               type="password"
               value={passwordConfirm}
               onChange={(e) => setPasswordConfirm(e.target.value)}
-              placeholder="비밀번호를 다시 입력하세요"
+              placeholder={t.auth.signup.passwordConfirmPlaceholder}
               required
             />
           </div>
@@ -116,14 +118,14 @@ export default function SignupForm() {
           {error && <p className="text-sm text-destructive">{error}</p>}
 
           <Button type="submit" disabled={loading} className="w-full">
-            {loading ? "가입 중..." : "회원가입"}
+            {loading ? t.auth.signup.submitting : t.auth.signup.submit}
           </Button>
         </form>
 
         <p className="text-center text-sm text-muted-foreground">
-          이미 계정이 있으신가요?{" "}
+          {t.auth.signup.hasAccount}{" "}
           <Link href="/login" className="text-primary hover:underline">
-            로그인
+            {t.auth.signup.loginLink}
           </Link>
         </p>
       </CardContent>
