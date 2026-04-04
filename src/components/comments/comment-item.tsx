@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CommentData } from "@/types/comment";
 import { CommentForm } from "./comment-form";
+import { useLocale } from "@/lib/i18n/locale-provider";
+import type { Messages } from "@/lib/i18n/messages";
 
 interface CommentItemProps {
   comment: CommentData;
@@ -16,16 +18,25 @@ interface CommentItemProps {
   isReply?: boolean;
 }
 
-function getRelativeTime(dateStr: string): string {
+function getRelativeTime(
+  dateStr: string,
+  t: Messages["comments"],
+  locale: string,
+): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const minutes = Math.floor(diff / 60000);
   const hours = Math.floor(diff / 3600000);
   const days = Math.floor(diff / 86400000);
 
-  if (minutes < 1) return "방금";
-  if (minutes < 60) return `${minutes}분 전`;
-  if (hours < 24) return `${hours}시간 전`;
-  return `${days}일 전`;
+  if (minutes < 1) return t.justNow;
+  if (locale === "ko") {
+    if (minutes < 60) return `${minutes}분 전`;
+    if (hours < 24) return `${hours}시간 전`;
+    return `${days}일 전`;
+  }
+  if (minutes < 60) return `${minutes}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  return `${days}d ago`;
 }
 
 export function CommentItem({
@@ -37,6 +48,7 @@ export function CommentItem({
   onEdit,
   isReply = false,
 }: CommentItemProps) {
+  const { t, locale } = useLocale();
   const [isEditing, setIsEditing] = useState(false);
   const [isActioning, setIsActioning] = useState(false);
 
@@ -48,7 +60,7 @@ export function CommentItem({
     try {
       await onResolve();
     } catch (err) {
-      console.error("해결 처리 오류:", err);
+      console.error("resolve error:", err);
     } finally {
       setIsActioning(false);
     }
@@ -59,7 +71,7 @@ export function CommentItem({
     try {
       await onDelete();
     } catch (err) {
-      console.error("삭제 오류:", err);
+      console.error("delete error:", err);
     } finally {
       setIsActioning(false);
     }
@@ -74,32 +86,32 @@ export function CommentItem({
     <div className="space-y-1">
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <span className="font-medium text-foreground">
-          사용자 {comment.authorId.slice(0, 8)}
+          {t.comments.user} {comment.authorId.slice(0, 8)}
         </span>
-        <span>{getRelativeTime(comment.createdAt)}</span>
+        <span>{getRelativeTime(comment.createdAt, t.comments, locale)}</span>
         {comment.editedAt && !isDeleted && (
-          <span className="italic">(수정됨)</span>
+          <span className="italic">{t.comments.edited}</span>
         )}
         {comment.isResolved && !isReply && (
           <Badge
             variant="outline"
             className="border-green-500 text-green-600 text-xs px-1.5 py-0"
           >
-            해결됨
+            {t.comments.resolved}
           </Badge>
         )}
       </div>
 
       {isDeleted ? (
         <p className="text-sm text-muted-foreground italic">
-          삭제된 코멘트입니다.
+          {t.comments.deleted}
         </p>
       ) : isEditing ? (
         <CommentForm
           initialValue={comment.body}
           onSubmit={handleEdit}
-          submitLabel="저장"
-          placeholder="코멘트를 수정하세요..."
+          submitLabel={t.common.save}
+          placeholder={t.comments.editPlaceholder}
         />
       ) : (
         <p className="text-sm whitespace-pre-wrap break-words">{comment.body}</p>
@@ -115,7 +127,7 @@ export function CommentItem({
               onClick={handleResolve}
               disabled={isActioning}
             >
-              {comment.isResolved ? "해결 취소" : "해결"}
+              {comment.isResolved ? t.comments.unresolve : t.comments.resolve}
             </Button>
           )}
           {isAuthor && (
@@ -126,7 +138,7 @@ export function CommentItem({
               onClick={() => setIsEditing(true)}
               disabled={isActioning}
             >
-              편집
+              {t.common.edit}
             </Button>
           )}
           {isAuthor && (
@@ -137,7 +149,7 @@ export function CommentItem({
               onClick={handleDelete}
               disabled={isActioning}
             >
-              삭제
+              {t.common.delete}
             </Button>
           )}
           {!isReply && onReply && (
@@ -148,7 +160,7 @@ export function CommentItem({
               onClick={onReply}
               disabled={isActioning}
             >
-              답글
+              {t.comments.reply}
             </Button>
           )}
         </div>
@@ -160,7 +172,7 @@ export function CommentItem({
           className="h-6 px-2 text-xs"
           onClick={() => setIsEditing(false)}
         >
-          취소
+          {t.common.cancel}
         </Button>
       )}
     </div>

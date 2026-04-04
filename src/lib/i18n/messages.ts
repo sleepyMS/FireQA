@@ -658,4 +658,24 @@ export interface Messages {
     docPreviewTitle: string;
     docPreviewEmpty: string;
   };
+  comments: {
+    title: string;
+    placeholder: string;
+    submit: string;
+    loading: string;
+    empty: string;
+    reply: string;
+    resolve: string;
+    unresolve: string;
+    register: string;
+    justNow: string;
+    submitting: string;
+    editPlaceholder: string;
+    replyPlaceholder: string;
+    replySubmit: string;
+    edited: string;
+    resolved: string;
+    deleted: string;
+    user: string;
+  };
 }
