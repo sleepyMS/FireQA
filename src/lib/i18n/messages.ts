@@ -16,6 +16,12 @@ export interface Messages {
     testRuns: string;
     settings: string;
     admin: string;
+    agent: string;
+    overview: string;
+    files: string;
+    closeMenu: string;
+    mainMenu: string;
+    currentProject: string;
   };
   common: {
     save: string;

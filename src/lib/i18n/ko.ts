@@ -16,6 +16,12 @@ export const ko: Messages = {
     testRuns: "테스트 실행",
     settings: "설정",
     admin: "관리자",
+    agent: "에이전트",
+    overview: "개요",
+    files: "파일",
+    closeMenu: "메뉴 닫기",
+    mainMenu: "메인 메뉴",
+    currentProject: "현재 프로젝트",
   },
   common: {
     save: "저장",

@@ -16,6 +16,12 @@ export const en: Messages = {
     testRuns: "Test Runs",
     settings: "Settings",
     admin: "Admin",
+    agent: "Agent",
+    overview: "Overview",
+    files: "Files",
+    closeMenu: "Close menu",
+    mainMenu: "Main menu",
+    currentProject: "Current Project",
   },
   common: {
     save: "Save",
