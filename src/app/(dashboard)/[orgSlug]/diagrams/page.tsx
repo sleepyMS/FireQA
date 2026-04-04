@@ -11,12 +11,14 @@ import { GenerationProgress } from "@/components/generation-progress";
 import { GenerationError } from "@/components/generation-error";
 import { RecentJobsPanel } from "@/components/recent-jobs-panel";
 import { ProjectSelector } from "@/components/projects/project-selector";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 type ProjectSelection =
   | { type: "existing"; id: string; name: string }
   | { type: "new"; name: string };
 
 export default function DiagramsPage() {
+  const { t } = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { orgSlug } = useParams<{ orgSlug?: string }>();
@@ -76,9 +78,9 @@ export default function DiagramsPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">다이어그램 생성</h2>
+          <h2 className="text-2xl font-bold tracking-tight">{t.diagrams.pageTitle}</h2>
           <p className="text-muted-foreground">
-            {projectSelection?.name} — AI가 다이어그램을 생성하고 있습니다.
+            {projectSelection?.name} — {t.diagrams.streaming}
           </p>
         </div>
         <GenerationProgress
@@ -97,7 +99,7 @@ export default function DiagramsPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">다이어그램 생성</h2>
+          <h2 className="text-2xl font-bold tracking-tight">{t.diagrams.pageTitle}</h2>
         </div>
         <GenerationError error={sse.error} />
       </div>
@@ -107,17 +109,15 @@ export default function DiagramsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">다이어그램 생성</h2>
-        <p className="text-muted-foreground">
-          기획 문서를 업로드하면 AI가 사용자 플로우와 상태 다이어그램을 생성하여 FigJam에서 확인할 수 있습니다.
-        </p>
+        <h2 className="text-2xl font-bold tracking-tight">{t.diagrams.pageTitle}</h2>
+        <p className="text-muted-foreground">{t.diagrams.pageDescription}</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">1. 프로젝트 이름</CardTitle>
+              <CardTitle className="text-base">{t.diagrams.step1}</CardTitle>
             </CardHeader>
             <CardContent>
               <ProjectSelector
@@ -130,7 +130,7 @@ export default function DiagramsPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">2. 기획 문서 업로드</CardTitle>
+              <CardTitle className="text-base">{t.diagrams.step2}</CardTitle>
             </CardHeader>
             <CardContent>
               <Dropzone onFileSelected={handleFileSelected} />
@@ -150,7 +150,7 @@ export default function DiagramsPage() {
             onClick={handleGenerate}
           >
             <GitBranch className="mr-2 h-4 w-4" />
-            다이어그램 생성하기
+            {t.diagrams.generate}
           </Button>
         </div>
 

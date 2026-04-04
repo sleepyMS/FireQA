@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { SpecImproveSummary } from "@/types/spec-improve";
 import { VersionBar } from "@/components/versions/version-bar";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 interface SpecImproveResultsProps {
   jobId: string;
@@ -19,6 +20,7 @@ interface SpecImproveResultsProps {
 }
 
 export function SpecImproveResults({ jobId, markdown, summary, originalFileName }: SpecImproveResultsProps) {
+  const { t } = useLocale();
   const [copied, setCopied] = useState(false);
   const [showComparison, setShowComparison] = useState(false);
 
@@ -44,11 +46,11 @@ export function SpecImproveResults({ jobId, markdown, summary, originalFileName 
       {/* 변경 요약 카드 */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">개선 요약</CardTitle>
+          <CardTitle className="text-base">{t.specImprove.improveSummaryTitle}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            총 <span className="font-semibold text-foreground">{summary.totalSections}개</span> 섹션으로 재구성되었습니다.
+            {t.specImprove.totalSections.replace("{count}", String(summary.totalSections))}
           </p>
           {summary.changeHighlights.length > 0 && (
             <div className="flex flex-wrap gap-2">
@@ -64,11 +66,11 @@ export function SpecImproveResults({ jobId, markdown, summary, originalFileName 
       <div className="flex items-center gap-2">
         <Button variant="outline" size="sm" onClick={handleCopy}>
           {copied ? <Check className="mr-1.5 h-3.5 w-3.5 text-green-600" /> : <Copy className="mr-1.5 h-3.5 w-3.5" />}
-          {copied ? "복사됨" : "Markdown 복사"}
+          {copied ? t.specImprove.copied : t.specImprove.copyMarkdown}
         </Button>
         <Button variant="outline" size="sm" onClick={handleDownload}>
           <Download className="mr-1.5 h-3.5 w-3.5" />
-          .md 다운로드
+          {t.specImprove.downloadMd}
         </Button>
         <Button
           variant={showComparison ? "default" : "outline"}
@@ -76,7 +78,7 @@ export function SpecImproveResults({ jobId, markdown, summary, originalFileName 
           onClick={() => setShowComparison(!showComparison)}
         >
           <GitCompare className="mr-1.5 h-3.5 w-3.5" />
-          원문 비교
+          {t.specImprove.compareOriginal}
         </Button>
       </div>
 
@@ -85,15 +87,17 @@ export function SpecImproveResults({ jobId, markdown, summary, originalFileName 
         <div className="grid gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm text-muted-foreground">원문 파일명: {originalFileName}</CardTitle>
+              <CardTitle className="text-sm text-muted-foreground">
+                {t.specImprove.originalFileName.replace("{name}", originalFileName)}
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">원문 내용은 업로드한 파일을 참고하세요.</p>
+              <p className="text-sm text-muted-foreground">{t.specImprove.originalHint}</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">개선된 기획서</CardTitle>
+              <CardTitle className="text-sm font-medium">{t.specImprove.improvedSpec}</CardTitle>
             </CardHeader>
             <CardContent>
               <MarkdownRenderer markdown={markdown} />

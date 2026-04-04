@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams, useParams } from "next/navigation";
 import {
   Smartphone,
@@ -18,39 +18,24 @@ import { GenerationProgress } from "@/components/generation-progress";
 import { GenerationError } from "@/components/generation-error";
 import { RecentJobsPanel } from "@/components/recent-jobs-panel";
 import { ProjectSelector } from "@/components/projects/project-selector";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
-const SCREEN_TYPE_OPTIONS = [
-  {
-    value: "auto",
-    label: "AI 자동 판단",
-    description: "AI가 문서를 분석해 화면별 타입 결정",
-    icon: Sparkles,
-  },
-  {
-    value: "mobile",
-    label: "모바일",
-    description: "전체 화면을 모바일(360px)로 생성",
-    icon: Smartphone,
-  },
-  {
-    value: "desktop",
-    label: "데스크톱",
-    description: "전체 화면을 데스크톱(800px)로 생성",
-    icon: Monitor,
-  },
-  {
-    value: "mixed",
-    label: "혼합",
-    description: "모바일과 데스크톱을 AI가 혼합 배치",
-    icon: Shuffle,
-  },
-] as const;
+const SCREEN_TYPE_VALUES = ["auto", "mobile", "desktop", "mixed"] as const;
+type ScreenTypeValue = typeof SCREEN_TYPE_VALUES[number];
+
+const SCREEN_TYPE_ICONS: Record<ScreenTypeValue, React.ComponentType<{ className?: string }>> = {
+  auto: Sparkles,
+  mobile: Smartphone,
+  desktop: Monitor,
+  mixed: Shuffle,
+};
 
 type ProjectSelection =
   | { type: "existing"; id: string; name: string }
   | { type: "new"; name: string };
 
 export default function WireframesPage() {
+  const { t } = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { orgSlug } = useParams<{ orgSlug?: string }>();
@@ -106,14 +91,25 @@ export default function WireframesPage() {
     sse.start(formData);
   };
 
+  const screenTypeOptions = useMemo(
+    () =>
+      SCREEN_TYPE_VALUES.map((value) => ({
+        value,
+        label: t.wireframes.screenTypes[value],
+        description: t.wireframes.screenTypes[`${value}Desc` as `${ScreenTypeValue}Desc`],
+        Icon: SCREEN_TYPE_ICONS[value],
+      })),
+    [t],
+  );
+
   // 스트리밍 중이면 진행상태 표시
   if (sse.isStreaming) {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">와이어프레임 생성</h2>
+          <h2 className="text-2xl font-bold tracking-tight">{t.wireframes.pageTitle}</h2>
           <p className="text-muted-foreground">
-            {projectSelection?.name} — AI가 와이어프레임을 생성하고 있습니다.
+            {projectSelection?.name} — {t.wireframes.streaming}
           </p>
         </div>
         <GenerationProgress
@@ -132,7 +128,7 @@ export default function WireframesPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">와이어프레임 생성</h2>
+          <h2 className="text-2xl font-bold tracking-tight">{t.wireframes.pageTitle}</h2>
         </div>
         <GenerationError error={sse.error} />
       </div>
@@ -142,18 +138,15 @@ export default function WireframesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">와이어프레임 생성</h2>
-        <p className="text-muted-foreground">
-          기획 문서를 업로드하면 AI가 화면 구성과 흐름을 설계하여 Figma에서
-          와이어프레임으로 생성합니다.
-        </p>
+        <h2 className="text-2xl font-bold tracking-tight">{t.wireframes.pageTitle}</h2>
+        <p className="text-muted-foreground">{t.wireframes.pageDescription}</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">1. 프로젝트 이름</CardTitle>
+              <CardTitle className="text-base">{t.wireframes.step1}</CardTitle>
             </CardHeader>
             <CardContent>
               <ProjectSelector
@@ -166,7 +159,7 @@ export default function WireframesPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">2. 기획 문서 업로드</CardTitle>
+              <CardTitle className="text-base">{t.wireframes.step2}</CardTitle>
             </CardHeader>
             <CardContent>
               <Dropzone onFileSelected={handleFileSelected} />
@@ -181,11 +174,11 @@ export default function WireframesPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">3. 화면 타입</CardTitle>
+              <CardTitle className="text-base">{t.wireframes.step3}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-2">
-                {SCREEN_TYPE_OPTIONS.map((opt) => {
+                {screenTypeOptions.map((opt) => {
                   const isSelected = screenTypeMode === opt.value;
                   return (
                     <button
@@ -199,7 +192,7 @@ export default function WireframesPage() {
                           : "border-transparent bg-muted/50 hover:bg-muted"
                       )}
                     >
-                      <opt.icon
+                      <opt.Icon
                         className={cn(
                           "h-5 w-5 shrink-0",
                           isSelected ? "text-primary" : "text-muted-foreground"
@@ -225,7 +218,7 @@ export default function WireframesPage() {
             onClick={handleGenerate}
           >
             <Smartphone className="mr-2 h-4 w-4" />
-            와이어프레임 생성하기
+            {t.wireframes.generate}
           </Button>
         </div>
 
