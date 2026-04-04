@@ -13,6 +13,7 @@ import { GenerationProgress } from "@/components/generation-progress";
 import { GenerationError } from "@/components/generation-error";
 import { RecentJobsPanel } from "@/components/recent-jobs-panel";
 import { ProjectSelector } from "@/components/projects/project-selector";
+import { AIModelSelector } from "@/components/ai-model-selector";
 
 type ProjectSelection =
   | { type: "existing"; id: string; name: string }
@@ -28,6 +29,7 @@ export default function DiagramsPage() {
   const [parsedPreview, setParsedPreview] = useState<string | null>(null);
 
   const sse = useSSE("/api/diagrams");
+  const [aiModel, setAiModel] = useState("openai");
   const [agentMode, setAgentMode] = useState(false);
   const [agentSubmitting, setAgentSubmitting] = useState(false);
 
@@ -120,6 +122,9 @@ export default function DiagramsPage() {
       formData.append("projectName", projectSelection.name);
     }
     formData.append("type", "diagrams");
+    if (aiModel !== "openai") {
+      formData.append("provider", aiModel);
+    }
 
     sse.start(formData);
   };
@@ -188,6 +193,13 @@ export default function DiagramsPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* AI 모델 선택 */}
+          <AIModelSelector
+            value={aiModel}
+            onChange={setAiModel}
+            disabled={sse.isStreaming}
+          />
 
           {/* 에이전트 모드 토글 */}
           <div className="flex items-center justify-between rounded-lg border p-3">

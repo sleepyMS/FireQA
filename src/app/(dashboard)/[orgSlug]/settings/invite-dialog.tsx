@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { toast } from "sonner";
 import { Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -22,6 +24,30 @@ import {
   SheetFooter,
   SheetClose,
 } from "@/components/ui/sheet";
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "@/components/ui/form";
+
+const inviteSchema = z.object({
+  role: z.enum(["admin", "member"]),
+  email: z
+    .string()
+    .transform((v) => v.trim())
+    .pipe(
+      z.union([
+        z.literal(""),
+        z.string().email("유효한 이메일을 입력해주세요."),
+      ]),
+    ),
+  expiresInHours: z.number(),
+});
+
+type InviteFormValues = z.infer<typeof inviteSchema>;
 
 export interface CreatedInvitation {
   id: string;
@@ -42,13 +68,19 @@ export default function InviteDialog({
   onClose,
   onCreated,
 }: InviteSheetProps) {
-  const [role, setRole] = useState("member");
-  const [email, setEmail] = useState("");
-  const [expiresInHours, setExpiresInHours] = useState(72);
   const [creating, setCreating] = useState(false);
   const [inviteUrl, setInviteUrl] = useState("");
   const [copied, setCopied] = useState(false);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const form = useForm<InviteFormValues>({
+    resolver: zodResolver(inviteSchema),
+    defaultValues: {
+      role: "member",
+      email: "",
+      expiresInHours: 72,
+    },
+  });
 
   useEffect(() => {
     return () => {
@@ -57,9 +89,7 @@ export default function InviteDialog({
   }, []);
 
   function reset() {
-    setRole("member");
-    setEmail("");
-    setExpiresInHours(72);
+    form.reset({ role: "member", email: "", expiresInHours: 72 });
     setInviteUrl("");
     setCopied(false);
   }
@@ -69,16 +99,16 @@ export default function InviteDialog({
     onClose();
   }
 
-  async function handleCreate() {
+  async function handleCreate(values: InviteFormValues) {
     setCreating(true);
     try {
       const res = await fetch("/api/invitations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          role,
-          email: email.trim() || undefined,
-          expiresInHours,
+          role: values.role,
+          email: values.email || undefined,
+          expiresInHours: values.expiresInHours,
         }),
       });
       const data = await res.json();
@@ -86,8 +116,8 @@ export default function InviteDialog({
         setInviteUrl(data.inviteUrl);
         onCreated({
           id: data.id,
-          email: email.trim() || null,
-          role,
+          email: values.email || null,
+          role: values.role,
           expiresAt: data.expiresAt,
           token: data.token,
         });
@@ -162,48 +192,78 @@ export default function InviteDialog({
               </Button>
             </div>
           ) : (
-            <div className="space-y-4 pt-2">
-              <div className="space-y-2">
-                <Label>역할</Label>
-                <Select
-                  value={role}
-                  onValueChange={(v) => v && setRole(v)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="admin">관리자</SelectItem>
-                    <SelectItem value="member">멤버</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>이메일 (선택)</Label>
-                <Input
-                  type="email"
-                  placeholder="user@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+            <Form {...form}>
+              <form
+                id="invite-form"
+                onSubmit={form.handleSubmit(handleCreate)}
+                className="space-y-4 pt-2"
+              >
+                <FormField
+                  control={form.control}
+                  name="role"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>역할</FormLabel>
+                      <Select
+                        value={field.value}
+                        onValueChange={(v) => v && field.onChange(v)}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="admin">관리자</SelectItem>
+                          <SelectItem value="member">멤버</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
                 />
-              </div>
-              <div className="space-y-2">
-                <Label>만료</Label>
-                <Select
-                  value={String(expiresInHours)}
-                  onValueChange={(v) => v && setExpiresInHours(Number(v))}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="24">24시간</SelectItem>
-                    <SelectItem value="72">72시간</SelectItem>
-                    <SelectItem value="168">7일</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>이메일 (선택)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="email"
+                          placeholder="user@example.com"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="expiresInHours"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>만료</FormLabel>
+                      <Select
+                        value={String(field.value)}
+                        onValueChange={(v) => v && field.onChange(Number(v))}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="24">24시간</SelectItem>
+                          <SelectItem value="72">72시간</SelectItem>
+                          <SelectItem value="168">7일</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+              </form>
+            </Form>
           )}
         </div>
 
@@ -213,7 +273,8 @@ export default function InviteDialog({
               취소
             </SheetClose>
             <Button
-              onClick={handleCreate}
+              type="submit"
+              form="invite-form"
               disabled={creating}
               className="flex-1"
             >

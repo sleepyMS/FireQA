@@ -13,6 +13,7 @@ import { GenerationProgress } from "@/components/generation-progress";
 import { GenerationError } from "@/components/generation-error";
 import { RecentJobsPanel } from "@/components/recent-jobs-panel";
 import { ProjectSelector } from "@/components/projects/project-selector";
+import { AIModelSelector } from "@/components/ai-model-selector";
 import type { SpecImproveResult } from "@/types/spec-improve";
 
 type ProjectSelection =
@@ -29,6 +30,7 @@ export default function ImprovePage() {
   const [parsedPreview, setParsedPreview] = useState<string | null>(null);
 
   const sse = useSSE<SpecImproveResult>("/api/improve");
+  const [aiModel, setAiModel] = useState("openai");
   const [agentMode, setAgentMode] = useState(false);
   const [agentSubmitting, setAgentSubmitting] = useState(false);
 
@@ -121,6 +123,9 @@ export default function ImprovePage() {
       formData.append("projectName", projectSelection.name);
     }
     formData.append("type", "spec-improve");
+    if (aiModel !== "openai") {
+      formData.append("provider", aiModel);
+    }
 
     sse.start(formData);
   };
@@ -189,6 +194,13 @@ export default function ImprovePage() {
               )}
             </CardContent>
           </Card>
+
+          {/* AI 모델 선택 */}
+          <AIModelSelector
+            value={aiModel}
+            onChange={setAiModel}
+            disabled={sse.isStreaming}
+          />
 
           {/* 에이전트 모드 토글 */}
           <div className="flex items-center justify-between rounded-lg border p-3">

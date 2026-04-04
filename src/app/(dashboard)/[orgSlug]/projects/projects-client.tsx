@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { FolderOpen, Archive, Trash2, Plus, Search } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +18,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { ProjectCard } from "@/components/projects/project-card";
+import { Skeleton } from "@/components/ui/skeleton";
 import useSWR from "swr";
 import { SWR_KEYS } from "@/lib/swr/keys";
 
@@ -42,41 +44,35 @@ const STATUS_TABS: { value: StatusFilter; label: string }[] = [
 
 function SkeletonCard() {
   return (
-    <div className="animate-pulse rounded-xl bg-card ring-1 ring-foreground/10 p-4 flex flex-col gap-3">
-      <div className="h-4 w-2/3 rounded bg-muted" />
-      <div className="h-3 w-full rounded bg-muted" />
-      <div className="h-3 w-4/5 rounded bg-muted" />
+    <div className="rounded-xl bg-card ring-1 ring-foreground/10 p-4 flex flex-col gap-3">
+      <Skeleton className="h-4 w-2/3" />
+      <Skeleton className="h-3 w-full" />
+      <Skeleton className="h-3 w-4/5" />
       <div className="flex gap-2 mt-2">
-        <div className="h-5 w-16 rounded-full bg-muted" />
-        <div className="h-5 w-16 rounded-full bg-muted" />
+        <Skeleton className="h-5 w-16 rounded-full" />
+        <Skeleton className="h-5 w-16 rounded-full" />
       </div>
     </div>
   );
 }
 
-function EmptyState({ status }: { status: StatusFilter }) {
-  if (status === "archived") {
-    return (
-      <div className="col-span-full flex flex-col items-center justify-center py-20 text-center text-muted-foreground">
-        <Archive className="mb-4 h-12 w-12 opacity-30" />
-        <p>보관된 프로젝트가 없습니다.</p>
-      </div>
-    );
-  }
-  if (status === "deleted") {
-    return (
-      <div className="col-span-full flex flex-col items-center justify-center py-20 text-center text-muted-foreground">
-        <Trash2 className="mb-4 h-12 w-12 opacity-30" />
-        <p>휴지통이 비어있습니다.</p>
-      </div>
-    );
-  }
-  return (
-    <div className="col-span-full flex flex-col items-center justify-center py-20 text-center text-muted-foreground">
-      <FolderOpen className="mb-4 h-12 w-12 opacity-30" />
-      <p>프로젝트가 없습니다. 새 프로젝트를 만들어보세요.</p>
-    </div>
-  );
+function ProjectEmptyState({ status }: { status: StatusFilter }) {
+  const config = {
+    archived: {
+      icon: <Archive className="h-12 w-12" />,
+      title: "보관된 프로젝트가 없습니다.",
+    },
+    deleted: {
+      icon: <Trash2 className="h-12 w-12" />,
+      title: "휴지통이 비어있습니다.",
+    },
+    active: {
+      icon: <FolderOpen className="h-12 w-12" />,
+      title: "프로젝트가 없습니다. 새 프로젝트를 만들어보세요.",
+    },
+  } as const;
+  const { icon, title } = config[status];
+  return <EmptyState icon={icon} title={title} className="col-span-full" />;
 }
 
 interface ProjectsClientProps {
@@ -323,7 +319,7 @@ export function ProjectsClient({
             <SkeletonCard />
           </>
         ) : allProjects.length === 0 ? (
-          <EmptyState status={status} />
+          <ProjectEmptyState status={status} />
         ) : (
           allProjects.map((project) => (
             <ProjectCard

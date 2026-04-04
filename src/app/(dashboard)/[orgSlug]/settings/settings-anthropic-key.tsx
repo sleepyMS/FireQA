@@ -2,12 +2,26 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
 import { KeyRound, Trash2, Eye, EyeOff } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+  FormDescription,
+} from "@/components/ui/form";
+import { useFormAction } from "@/lib/hooks/use-form-action";
+
+const anthropicKeySchema = z.object({
+  apiKey: z.string().min(1, "API 키를 입력해주세요."),
+});
 
 interface AnthropicKeyData {
   hasKey: boolean;
@@ -17,10 +31,25 @@ interface AnthropicKeyData {
 export default function SettingsAnthropicKey() {
   const [data, setData] = useState<AnthropicKeyData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [apiKey, setApiKey] = useState("");
-  const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showKey, setShowKey] = useState(false);
+
+  const { form, onSubmit, isSubmitting } = useFormAction({
+    schema: anthropicKeySchema,
+    defaultValues: { apiKey: "" },
+    action: (values) =>
+      fetch("/api/settings/anthropic-key", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: values.apiKey.trim() }),
+      }),
+    successMessage: "Anthropic API 키가 저장되었습니다.",
+    onSuccess: (body: any) => {
+      setData({ hasKey: true, keyPrefix: body.keyPrefix });
+      form.reset({ apiKey: "" });
+      setShowKey(false);
+    },
+  });
 
   useEffect(() => {
     fetch("/api/settings/anthropic-key")
@@ -29,34 +58,6 @@ export default function SettingsAnthropicKey() {
       .catch(() => toast.error("Anthropic 키 정보를 불러오지 못했습니다."))
       .finally(() => setLoading(false));
   }, []);
-
-  async function handleSave() {
-    if (!apiKey.trim()) {
-      toast.error("API 키를 입력해주세요.");
-      return;
-    }
-    setSaving(true);
-    try {
-      const res = await fetch("/api/settings/anthropic-key", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ apiKey: apiKey.trim() }),
-      });
-      const body = await res.json();
-      if (!res.ok) {
-        toast.error(body.error || "저장에 실패했습니다.");
-        return;
-      }
-      setData({ hasKey: true, keyPrefix: body.keyPrefix });
-      setApiKey("");
-      setShowKey(false);
-      toast.success("Anthropic API 키가 저장되었습니다.");
-    } catch {
-      toast.error("네트워크 오류가 발생했습니다.");
-    } finally {
-      setSaving(false);
-    }
-  }
 
   async function handleDelete() {
     if (!confirm("Anthropic API 키를 삭제하시겠습니까?")) return;
@@ -87,6 +88,8 @@ export default function SettingsAnthropicKey() {
       </Card>
     );
   }
+
+  const apiKeyValue = form.watch("apiKey");
 
   return (
     <div className="space-y-4">
@@ -133,37 +136,47 @@ export default function SettingsAnthropicKey() {
             </div>
           ) : (
             /* 키가 없는 상태: 입력 폼 */
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label>Anthropic API 키</Label>
-                <div className="relative">
-                  <Input
-                    type={showKey ? "text" : "password"}
-                    placeholder="sk-ant-api03-..."
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    className="pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowKey((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    {showKey ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Anthropic Console에서 발급한 API 키를 입력하세요.
-                </p>
-              </div>
-              <Button onClick={handleSave} disabled={saving || !apiKey.trim()}>
-                {saving ? "저장 중..." : "저장"}
-              </Button>
-            </div>
+            <Form {...form}>
+              <form onSubmit={onSubmit} className="space-y-3">
+                <FormField
+                  control={form.control}
+                  name="apiKey"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Anthropic API 키</FormLabel>
+                      <div className="relative">
+                        <FormControl>
+                          <Input
+                            type={showKey ? "text" : "password"}
+                            placeholder="sk-ant-api03-..."
+                            className="pr-10"
+                            {...field}
+                          />
+                        </FormControl>
+                        <button
+                          type="button"
+                          onClick={() => setShowKey((v) => !v)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                          {showKey ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                      <FormDescription>
+                        Anthropic Console에서 발급한 API 키를 입력하세요.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" disabled={isSubmitting || !apiKeyValue.trim()}>
+                  {isSubmitting ? "저장 중..." : "저장"}
+                </Button>
+              </form>
+            </Form>
           )}
         </CardContent>
       </Card>

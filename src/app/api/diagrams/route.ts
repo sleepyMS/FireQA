@@ -6,7 +6,7 @@ import { logActivity } from "@/lib/activity/log-activity";
 import { JobType, ActivityAction } from "@/types/enums";
 import { Stage } from "@/types/sse";
 import { createSSEStream, sendStage } from "@/lib/sse/create-sse-stream";
-import { streamOpenAIWithSchema } from "@/lib/sse/stream-openai";
+import { resolveProvider } from "@/lib/ai/resolve-provider";
 import {
   DIAGRAM_SYSTEM_PROMPT,
   buildDiagramUserPrompt,
@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
   const file = formData.get("file") as File;
   const projectId = formData.get("projectId") as string | null;
   const projectName = formData.get("projectName") as string | null;
+  const providerParam = formData.get("provider") as string | null;
 
   // projectId 또는 projectName 중 하나는 반드시 필요
   if (!file || (!projectId && !projectName)) {
@@ -70,7 +71,8 @@ export async function POST(request: NextRequest) {
 
       sendStage(writer, { stage: Stage.GENERATING, message: "AI가 다이어그램을 생성하고 있습니다...", progress: 35, stageIndex: 3, stageTotal: STAGE_TOTAL });
 
-      const { result: raw, tokenUsage } = await streamOpenAIWithSchema<DiagramGenerationResult>({
+      const aiProvider = await resolveProvider(user.organizationId, providerParam);
+      const { result: raw, tokenUsage } = await aiProvider.streamWithSchema<DiagramGenerationResult>({
         systemPrompt: DIAGRAM_SYSTEM_PROMPT,
         userPrompt: buildDiagramUserPrompt(input),
         jsonSchema: diagramJsonSchema,

@@ -6,7 +6,7 @@ import { logActivity } from "@/lib/activity/log-activity";
 import { JobType, ActivityAction } from "@/types/enums";
 import { Stage } from "@/types/sse";
 import { createSSEStream, sendStage } from "@/lib/sse/create-sse-stream";
-import { streamOpenAIWithSchema } from "@/lib/sse/stream-openai";
+import { resolveProvider } from "@/lib/ai/resolve-provider";
 import { wireframeJsonSchema } from "@/lib/openai/schemas/wireframe";
 import {
   WIREFRAME_SYSTEM_PROMPT,
@@ -22,6 +22,7 @@ export async function POST(request: NextRequest) {
   const projectId = formData.get("projectId") as string | null;
   const projectName = formData.get("projectName") as string | null;
   const screenTypeMode = (formData.get("screenTypeMode") as string) || "auto";
+  const providerParam = formData.get("provider") as string | null;
 
   // projectId 또는 projectName 중 하나는 반드시 필요
   if (!file || (!projectId && !projectName)) {
@@ -66,7 +67,8 @@ export async function POST(request: NextRequest) {
 
       sendStage(writer, { stage: Stage.GENERATING, message: "AI가 와이어프레임을 생성하고 있습니다...", progress: 40, stageIndex: 3, stageTotal: STAGE_TOTAL });
 
-      const { result, tokenUsage } = await streamOpenAIWithSchema({
+      const aiProvider = await resolveProvider(user.organizationId, providerParam);
+      const { result, tokenUsage } = await aiProvider.streamWithSchema({
         systemPrompt: WIREFRAME_SYSTEM_PROMPT,
         userPrompt: buildWireframeUserPrompt(input, screenTypeMode),
         jsonSchema: wireframeJsonSchema,

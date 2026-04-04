@@ -6,7 +6,7 @@ import { logActivity } from "@/lib/activity/log-activity";
 import { JobType, ActivityAction } from "@/types/enums";
 import { Stage } from "@/types/sse";
 import { createSSEStream, sendStage } from "@/lib/sse/create-sse-stream";
-import { streamOpenAIWithSchema } from "@/lib/sse/stream-openai";
+import { resolveProvider } from "@/lib/ai/resolve-provider";
 import {
   SPEC_IMPROVE_SYSTEM_PROMPT,
   buildSpecImproveUserPrompt,
@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
   const file = formData.get("file") as File;
   const projectId = formData.get("projectId") as string | null;
   const projectName = formData.get("projectName") as string | null;
+  const providerParam = formData.get("provider") as string | null;
 
   // projectId 또는 projectName 중 하나는 반드시 필요
   if (!file || (!projectId && !projectName)) {
@@ -69,7 +70,8 @@ export async function POST(request: NextRequest) {
 
       sendStage(writer, { stage: Stage.GENERATING, message: "AI가 기획서를 개선하고 있습니다...", progress: 40, stageIndex: 3, stageTotal: STAGE_TOTAL });
 
-      const { result, tokenUsage } = await streamOpenAIWithSchema<SpecImproveResult>({
+      const aiProvider = await resolveProvider(user.organizationId, providerParam);
+      const { result, tokenUsage } = await aiProvider.streamWithSchema<SpecImproveResult>({
         systemPrompt: SPEC_IMPROVE_SYSTEM_PROMPT,
         userPrompt: buildSpecImproveUserPrompt(input),
         jsonSchema: specImproveJsonSchema,

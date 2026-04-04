@@ -28,6 +28,7 @@ import { GenerationProgress } from "@/components/generation-progress";
 import { GenerationError } from "@/components/generation-error";
 import { RecentJobsPanel } from "@/components/recent-jobs-panel";
 import { ProjectSelector } from "@/components/projects/project-selector";
+import { AIModelSelector } from "@/components/ai-model-selector";
 
 interface Template {
   id: string;
@@ -59,6 +60,7 @@ export default function GeneratePage() {
   );
 
   const sse = useSSE("/api/generate");
+  const [aiModel, setAiModel] = useState("openai");
   const [agentMode, setAgentMode] = useState(false);
   const [agentSubmitting, setAgentSubmitting] = useState(false);
 
@@ -191,6 +193,9 @@ export default function GeneratePage() {
     formData.append("type", "test-cases");
     if (mode === "template" && selectedTemplateId) {
       formData.append("templateId", selectedTemplateId);
+    }
+    if (aiModel !== "openai") {
+      formData.append("provider", aiModel);
     }
 
     sse.start(formData);
@@ -385,6 +390,13 @@ export default function GeneratePage() {
               )}
             </CardContent>
           </Card>
+
+          {/* AI 모델 선택 */}
+          <AIModelSelector
+            value={aiModel}
+            onChange={setAiModel}
+            disabled={sse.isStreaming}
+          />
 
           {/* 에이전트 모드 토글 */}
           <div className="flex items-center justify-between rounded-lg border p-3">

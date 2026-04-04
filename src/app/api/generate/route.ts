@@ -7,8 +7,8 @@ import { logActivity } from "@/lib/activity/log-activity";
 import { JobType, ActivityAction } from "@/types/enums";
 import { Stage } from "@/types/sse";
 import { createSSEStream, sendStage } from "@/lib/sse/create-sse-stream";
-import { streamOpenAIWithSchema } from "@/lib/sse/stream-openai";
 import { streamOpenAIChunked } from "@/lib/sse/stream-openai-chunked-tc";
+import { resolveProvider } from "@/lib/ai/resolve-provider";
 import {
   TEST_CASE_SYSTEM_PROMPT,
   buildTestCaseUserPrompt,
@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
   const projectId = formData.get("projectId") as string | null;
   const projectName = formData.get("projectName") as string | null;
   const templateId = formData.get("templateId") as string | null;
+  const providerParam = formData.get("provider") as string | null;
 
   // projectId 또는 projectName 중 하나는 반드시 필요
   if (!file || (!projectId && !projectName)) {
@@ -89,11 +90,13 @@ export async function POST(request: NextRequest) {
         progress: 40, stageIndex: 3, stageTotal: STAGE_TOTAL,
       });
 
+      const aiProvider = await resolveProvider(user.organizationId, providerParam);
+
       let result: TestCaseGenerationResult;
       let tokenUsage: number;
 
       if (chunks.length === 1) {
-        const res = await streamOpenAIWithSchema<TestCaseGenerationResult>({
+        const res = await aiProvider.streamWithSchema<TestCaseGenerationResult>({
           systemPrompt,
           userPrompt: buildTestCaseUserPrompt(parsedText),
           jsonSchema: testCaseJsonSchema,
