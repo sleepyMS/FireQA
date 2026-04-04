@@ -153,7 +153,7 @@ export function Sidebar({ initialMemberships, initialActiveOrgId }: SidebarProps
           <Flame className="h-6 w-6 text-orange-500" />
           <span className="text-lg font-bold">FireQA</span>
         </div>
-        <button className="lg:hidden" onClick={() => setMobileOpen(false)}>
+        <button className="lg:hidden" onClick={() => setMobileOpen(false)} aria-label="메뉴 닫기">
           <X className="h-5 w-5" />
         </button>
       </div>
@@ -165,7 +165,7 @@ export function Sidebar({ initialMemberships, initialActiveOrgId }: SidebarProps
         />
       </div>
 
-      <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+      <nav className="flex-1 space-y-1 overflow-y-auto p-3" role="navigation" aria-label="메인 메뉴">
         {navItems.map((item) => {
           const isActive =
             pathname === item.href ||
@@ -255,6 +255,7 @@ export function Sidebar({ initialMemberships, initialActiveOrgId }: SidebarProps
       <button
         className="fixed left-4 top-3 z-50 rounded-md p-2 lg:hidden"
         onClick={() => setMobileOpen(true)}
+        aria-label="메뉴 열기"
       >
         <Menu className="h-5 w-5" />
       </button>

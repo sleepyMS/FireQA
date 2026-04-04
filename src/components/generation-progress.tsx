@@ -153,7 +153,7 @@ export function GenerationProgress({
           )}
 
           {/* Current status */}
-          <div className="flex flex-col items-center gap-2 text-center">
+          <div className="flex flex-col items-center gap-2 text-center" aria-live="polite" aria-busy={stage === Stage.GENERATING}>
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
               {currentMeta.icon}
             </div>
