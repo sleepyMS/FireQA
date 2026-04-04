@@ -79,8 +79,10 @@ export type DeviceAuthStatus =
 
 export const NotificationType = {
   COMMENT_REPLY: "comment.reply",
+  COMMENT_MENTION: "comment.mention",
   CREDIT_LOW: "credit.low",
   CREDIT_DEPLETED: "credit.depleted",
+  GENERATION_COMPLETED: "generation.completed",
 } as const;
 
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];

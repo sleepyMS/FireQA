@@ -3,7 +3,8 @@ import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createGenerationJob, completeJob, failJob } from "@/lib/api/create-generation-job";
 import { checkRateLimit } from "@/lib/rate-limit/check-rate-limit";
 import { logActivity } from "@/lib/activity/log-activity";
-import { JobType, ActivityAction } from "@/types/enums";
+import { createNotification } from "@/lib/notifications/create-notification";
+import { JobType, ActivityAction, NotificationType } from "@/types/enums";
 import { Stage } from "@/types/sse";
 import { createSSEStream, sendStage } from "@/lib/sse/create-sse-stream";
 import { resolveProvider } from "@/lib/ai/resolve-provider";
@@ -94,6 +95,13 @@ export async function POST(request: NextRequest) {
       sendStage(writer, { stage: Stage.SAVING, message: "결과를 저장하고 있습니다...", progress: 95, stageIndex: 5, stageTotal: STAGE_TOTAL });
       await completeJob(jobId, result, tokenUsage, user.userId);
       logActivity({ organizationId: user.organizationId, actorId: user.userId, action: ActivityAction.GENERATION_COMPLETED, jobId, metadata: { type: "diagrams" } });
+      createNotification({
+        userId: user.userId,
+        organizationId: user.organizationId,
+        type: NotificationType.GENERATION_COMPLETED,
+        title: "다이어그램 생성이 완료되었습니다",
+        linkUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/diagrams/${jobId}`,
+      });
 
       writer.send({ type: "complete", data: result, tokenUsage });
     } catch (err) {

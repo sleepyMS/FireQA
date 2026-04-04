@@ -3,6 +3,8 @@ import { createNotification } from "@/lib/notifications/create-notification";
 import { NotificationType } from "@/types/enums";
 import { sendEmail } from "@/lib/email/brevo";
 import { commentReplyEmailHtml } from "@/lib/email/templates/comment-reply";
+import { commentMentionEmailHtml } from "@/lib/email/templates/comment-mention";
+import { parseMentions } from "@/lib/comments/parse-mentions";
 import {
   withApiHandler,
   ApiError,
@@ -164,6 +166,55 @@ export const POST = withApiHandler<CreateCommentBody>(
           });
         })
         .catch((err) => logger.error("답글 이메일 발송 오류", { error: err }));
+    }
+
+    // @멘션 알림 발송 (fire-and-forget)
+    const mentionedNames = parseMentions(trimmed);
+    if (mentionedNames.length > 0) {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+      const linkUrl = `${appUrl}/generate/${jobId}`;
+
+      // 조직 내 멤버 중 멘션된 이름과 일치하는 사용자 조회
+      prisma.organizationMembership
+        .findMany({
+          where: { organizationId: user.organizationId },
+          select: { user: { select: { id: true, name: true, email: true } } },
+        })
+        .then(async (memberships) => {
+          const mentioner = await prisma.user.findUnique({
+            where: { id: user.userId },
+            select: { name: true },
+          });
+          const mentionerName = mentioner?.name ?? user.email;
+
+          for (const m of memberships) {
+            const memberName = m.user.name ?? m.user.email;
+            // 본인 제외, 이름이 멘션 목록에 있는 경우
+            if (m.user.id === user.userId) continue;
+            if (!mentionedNames.includes(memberName)) continue;
+            // 답글 알림과 중복 방지: 이미 답글 알림을 받은 사용자 스킵
+            if (parentComment && m.user.id === parentComment.authorId) continue;
+
+            createNotification({
+              userId: m.user.id,
+              organizationId: user.organizationId,
+              type: NotificationType.COMMENT_MENTION,
+              title: `${mentionerName}님이 코멘트에서 멘션했습니다`,
+              linkUrl,
+            });
+
+            sendEmail({
+              to: { email: m.user.email, name: m.user.name ?? undefined },
+              subject: "[FireQA] 코멘트에서 멘션되었습니다",
+              htmlContent: commentMentionEmailHtml({
+                mentionerName,
+                commentPreview: trimmed,
+                linkUrl,
+              }),
+            }).catch((err) => logger.error("멘션 이메일 발송 오류", { error: err }));
+          }
+        })
+        .catch((err) => logger.error("멘션 알림 처리 오류", { error: err }));
     }
 
     return {

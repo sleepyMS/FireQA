@@ -17,4 +17,5 @@ export const SWR_KEYS = {
   testRunDetail: (id: string) => `/api/test-runs/${id}`,
   adminStats: "/api/admin/stats",
   adminMembers: (params: string) => `/api/admin/members?${params}`,
+  organizationMembers: "/api/organization/members",
 } as const;

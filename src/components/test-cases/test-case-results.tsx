@@ -33,17 +33,18 @@ export function TestCaseResults({
 
   const totalTCs = sheets.reduce((sum, s) => sum + s.testCases.length, 0);
 
-  const handleExport = async () => {
+  const handleExport = async (format: "excel" | "csv" = "excel") => {
     setIsExporting(true);
     try {
-      const res = await fetch(`/api/export/excel?jobId=${jobId}`);
+      const ext = format === "csv" ? "csv" : "xlsx";
+      const res = await fetch(`/api/export/${format}?jobId=${jobId}`);
       if (!res.ok) throw new Error("내보내기 실패");
 
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${projectName}_QA_TC.xlsx`;
+      a.download = `${projectName}_QA_TC.${ext}`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -51,6 +52,10 @@ export function TestCaseResults({
     } finally {
       setIsExporting(false);
     }
+  };
+
+  const handlePdfExport = () => {
+    window.open(`/api/export/pdf?jobId=${jobId}`, "_blank");
   };
 
   const startEdit = useCallback((sheetIdx: number, tcIdx: number) => {
@@ -143,10 +148,20 @@ export function TestCaseResults({
             {sheets.length}개 시트
           </Badge>
         </div>
-        <Button onClick={handleExport} disabled={isExporting}>
-          <Download className="mr-2 h-4 w-4" />
-          {isExporting ? "내보내는 중..." : "Excel 다운로드"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => handleExport("excel")} disabled={isExporting}>
+            <Download className="mr-2 h-4 w-4" />
+            {isExporting ? "내보내는 중..." : "Excel 다운로드"}
+          </Button>
+          <Button variant="outline" onClick={() => handleExport("csv")} disabled={isExporting}>
+            <Download className="mr-2 h-4 w-4" />
+            CSV
+          </Button>
+          <Button variant="outline" onClick={handlePdfExport}>
+            <Download className="mr-2 h-4 w-4" />
+            PDF
+          </Button>
+        </div>
       </div>
 
       {/* Sheet Tabs */}
