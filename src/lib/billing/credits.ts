@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
+import { checkCreditThreshold } from "./credit-alert";
 
 type CreditResult =
   | { success: true; balanceAfter: number }
@@ -14,7 +15,7 @@ export async function deductCredits(
   amount: number,
   opts: { type: string; taskId?: string; description?: string },
 ): Promise<CreditResult> {
-  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+  const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     // FOR UPDATE 잠금으로 잔액 조회
     const rows = await tx.$queryRaw<
       { id: string; balance: number }[]
@@ -49,6 +50,17 @@ export async function deductCredits(
 
     return { success: true as const, balanceAfter: newBalance };
   });
+
+  // fire-and-forget: 크레딧 임계치 알림
+  if (result.success) {
+    const quota = await prisma.creditBalance.findUnique({
+      where: { organizationId },
+      select: { monthlyQuota: true },
+    });
+    checkCreditThreshold(organizationId, result.balanceAfter, quota?.monthlyQuota ?? 0).catch(() => {});
+  }
+
+  return result;
 }
 
 /**

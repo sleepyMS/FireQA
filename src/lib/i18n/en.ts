@@ -15,6 +15,7 @@ export const en: Messages = {
     guide: "Guide",
     testRuns: "Test Runs",
     settings: "Settings",
+    admin: "Admin",
   },
   common: {
     save: "Save",

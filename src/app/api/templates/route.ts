@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, description, sheets, columns, constraints, requirements } = body;
+    const { name, description, sheets, columns, constraints, requirements, systemPromptOverride, promptMode } = body;
 
     if (!name || !sheets || sheets.length === 0) {
       return NextResponse.json(
@@ -59,6 +59,8 @@ export async function POST(request: NextRequest) {
         columnConfig: JSON.stringify(columns || []),
         constraints: constraints || "",
         requirements: requirements || "",
+        systemPromptOverride: systemPromptOverride?.trim() || null,
+        promptMode: promptMode === "replace" ? "replace" : "append",
       },
     });
 

@@ -340,9 +340,11 @@ model QATemplate {
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   sheetConfig    String       @default("[]") // JSON
   columnConfig   String       @default("{}") // JSON
-  constraints    String       @default("") // 제약조건 (최우선 준수)
-  requirements   String       @default("") // 요구사항 (희망 사항)
-  isDefault      Boolean      @default(false)
+  constraints          String       @default("") // 제약조건 (최우선 준수)
+  requirements         String       @default("") // 요구사항 (희망 사항)
+  systemPromptOverride String?      // 사용자 커스텀 시스템 프롬프트
+  promptMode           String       @default("append") // "append" | "replace"
+  isDefault            Boolean      @default(false)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 

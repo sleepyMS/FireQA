@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import useSWR from "swr";
 import { toast } from "sonner";
-import { Coins, ShoppingCart } from "lucide-react";
+import { Coins, ShoppingCart, BarChart3 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +57,64 @@ function CreditBar({ balance, quota }: { balance: number; quota: number }) {
           className={`h-2 rounded-full transition-all ${pct <= 20 ? "bg-destructive" : "bg-primary"}`}
           style={{ width: `${pct}%` }}
         />
+      </div>
+    </div>
+  );
+}
+
+function buildDailyUsage(transactions: CreditTransaction[]): { date: string; amount: number }[] {
+  const now = new Date();
+  const days: { date: string; amount: number }[] = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    days.push({ date: d.toISOString().slice(0, 10), amount: 0 });
+  }
+  const dateMap = new Map(days.map((d) => [d.date, d]));
+
+  for (const tx of transactions) {
+    if (tx.amount >= 0) continue; // 충전/환불은 제외, 소비만
+    const dateKey = tx.createdAt.slice(0, 10);
+    const entry = dateMap.get(dateKey);
+    if (entry) {
+      entry.amount += Math.abs(tx.amount);
+    }
+  }
+
+  return days;
+}
+
+function CreditUsageChart({ transactions }: { transactions: CreditTransaction[] }) {
+  const daily = useMemo(() => buildDailyUsage(transactions), [transactions]);
+  const max = Math.max(...daily.map((d) => d.amount), 1);
+  const total = daily.reduce((s, d) => s + d.amount, 0);
+  const labelIndices = new Set([0, 6, 13, 20, 27, 29]);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-medium">최근 30일 소비량: {total.toLocaleString()} 크레딧</p>
+      </div>
+      <div className="flex h-24 items-end gap-px">
+        {daily.map((d, i) => {
+          const h = Math.round((d.amount / max) * 100);
+          return (
+            <div key={d.date} className="group relative flex flex-1 flex-col items-center justify-end">
+              <div
+                className="w-full rounded-t-sm bg-primary/70 transition-all group-hover:bg-primary"
+                style={{ height: `${Math.max(h, d.amount > 0 ? 4 : 0)}%` }}
+              />
+              {labelIndices.has(i) && (
+                <span className="mt-1 text-[9px] text-muted-foreground">
+                  {d.date.slice(5)}
+                </span>
+              )}
+              <div className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-foreground px-1.5 py-0.5 text-[10px] text-background opacity-0 group-hover:opacity-100">
+                {d.date.slice(5)}: {d.amount}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -131,6 +189,21 @@ export default function SettingsCredits() {
           </p>
         </CardContent>
       </Card>
+
+      {/* 크레딧 소비 추이 */}
+      {transactions.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <BarChart3 className="h-4 w-4" />
+              크레딧 소비 추이
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CreditUsageChart transactions={transactions} />
+          </CardContent>
+        </Card>
+      )}
 
       {/* 크레딧 구매 */}
       <Card>

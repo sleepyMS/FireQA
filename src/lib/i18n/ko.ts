@@ -15,6 +15,7 @@ export const ko: Messages = {
     guide: "사용법",
     testRuns: "테스트 실행",
     settings: "설정",
+    admin: "관리자",
   },
   common: {
     save: "저장",

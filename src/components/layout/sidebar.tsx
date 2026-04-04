@@ -23,12 +23,15 @@ import {
   LogOut,
   Bot,
   FlaskConical,
+  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { OrgSwitcher } from "@/components/layout/org-switcher";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import type { Messages } from "@/lib/i18n/messages";
 import { useUser } from "@/lib/auth/user-provider";
+import { hasRole } from "@/lib/auth/require-role";
+import { UserRole } from "@/types/enums";
 import { useCurrentProject } from "@/lib/current-project-context";
 import useSWR from "swr";
 import { SWR_KEYS } from "@/lib/swr/keys";
@@ -37,8 +40,8 @@ import { SWR_KEYS } from "@/lib/swr/keys";
 // React state/effect 없이 사용해 set-state-in-effect lint 규칙을 회피
 const lastProjectPerOrg = new Map<string, string>();
 
-function buildNavItems(nav: Messages["nav"], orgSlug: string) {
-  return [
+function buildNavItems(nav: Messages["nav"], orgSlug: string, userRole?: string) {
+  const items = [
     { label: nav.dashboard, href: `/${orgSlug}/dashboard`, icon: LayoutDashboard },
     { label: nav.projects, href: `/${orgSlug}/projects`, icon: FolderOpen },
     { label: nav.templates, href: `/${orgSlug}/templates`, icon: Settings },
@@ -47,6 +50,12 @@ function buildNavItems(nav: Messages["nav"], orgSlug: string) {
     { label: nav.testRuns, href: `/${orgSlug}/test-runs`, icon: FlaskConical },
     { label: nav.settings, href: `/${orgSlug}/settings`, icon: Settings2 },
   ];
+
+  if (userRole && hasRole(userRole, UserRole.ADMIN)) {
+    items.push({ label: nav.admin, href: `/${orgSlug}/admin`, icon: Shield });
+  }
+
+  return items;
 }
 
 function buildProjectNavItems(projectId: string, orgSlug: string) {
@@ -112,7 +121,7 @@ export function Sidebar({ initialMemberships, initialActiveOrgId }: SidebarProps
     await supabase.auth.signOut();
     router.push("/login");
   }
-  const navItems = buildNavItems(t.nav, orgSlug);
+  const navItems = buildNavItems(t.nav, orgSlug, authUser?.role);
   const { projectId: contextProjectId } = useCurrentProject();
 
   // 에이전트 페이지에서는 30초 polling, 그 외에는 캐시만 사용 (불필요한 API 호출 방지)

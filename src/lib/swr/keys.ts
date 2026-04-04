@@ -15,4 +15,6 @@ export const SWR_KEYS = {
   hostedWorkers: "/api/admin/workers",
   testRuns: (params: string) => `/api/test-runs?${params}`,
   testRunDetail: (id: string) => `/api/test-runs/${id}`,
+  adminStats: "/api/admin/stats",
+  adminMembers: (params: string) => `/api/admin/members?${params}`,
 } as const;

@@ -15,6 +15,7 @@ export interface Messages {
     guide: string;
     testRuns: string;
     settings: string;
+    admin: string;
   };
   common: {
     save: string;

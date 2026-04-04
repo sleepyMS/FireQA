@@ -15,6 +15,7 @@ import {
   GripVertical,
   MessageSquarePlus,
   ShieldAlert,
+  Code,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,6 +41,8 @@ interface Template {
   columnConfig: string;
   constraints?: string;
   requirements?: string;
+  systemPromptOverride?: string | null;
+  promptMode?: string;
   createdAt: string;
 }
 
@@ -67,6 +70,8 @@ const templateFormSchema = z.object({
   description: z.string().optional(),
   constraints: z.string().optional(),
   requirements: z.string().optional(),
+  systemPromptOverride: z.string().optional(),
+  promptMode: z.enum(["append", "replace"]),
   sheets: z
     .array(
       z.object({
@@ -99,6 +104,8 @@ export default function TemplatesPage() {
       description: "",
       constraints: "",
       requirements: "",
+      systemPromptOverride: "",
+      promptMode: "append",
       sheets: [{ name: "", description: "" }],
     },
   });
@@ -126,6 +133,8 @@ export default function TemplatesPage() {
       description: "",
       constraints: "",
       requirements: "",
+      systemPromptOverride: "",
+      promptMode: "append",
       sheets: [{ name: "", description: "" }],
     });
     setColumns(DEFAULT_COLUMNS.map((c) => ({ ...c })));
@@ -148,6 +157,8 @@ export default function TemplatesPage() {
           columns: columns.filter((c) => c.enabled),
           constraints: values.constraints?.trim(),
           requirements: values.requirements?.trim(),
+          systemPromptOverride: values.systemPromptOverride?.trim() || null,
+          promptMode: values.promptMode,
         }),
       });
 
@@ -555,6 +566,76 @@ export default function TemplatesPage() {
 
                 <Separator />
 
+                {/* System Prompt Override */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Code className="h-4 w-4 text-purple-500" />
+                    <FormLabel className="text-sm font-semibold">
+                      시스템 프롬프트 커스터마이즈
+                    </FormLabel>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    AI에게 전달되는 시스템 프롬프트를 커스터마이즈합니다. 비워두면 기본 프롬프트가 사용됩니다.
+                  </p>
+
+                  <FormField
+                    control={form.control}
+                    name="promptMode"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel className="text-xs">적용 모드</FormLabel>
+                        <FormControl>
+                          <div className="flex gap-4">
+                            <label className="flex items-center gap-2 text-sm cursor-pointer">
+                              <input
+                                type="radio"
+                                value="append"
+                                checked={field.value === "append"}
+                                onChange={() => field.onChange("append")}
+                                className="accent-primary"
+                              />
+                              <span>추가 모드</span>
+                              <span className="text-xs text-muted-foreground">— 기본 프롬프트 뒤에 추가</span>
+                            </label>
+                            <label className="flex items-center gap-2 text-sm cursor-pointer">
+                              <input
+                                type="radio"
+                                value="replace"
+                                checked={field.value === "replace"}
+                                onChange={() => field.onChange("replace")}
+                                className="accent-primary"
+                              />
+                              <span>대체 모드</span>
+                              <span className="text-xs text-muted-foreground">— 기본 프롬프트를 완전히 대체</span>
+                            </label>
+                          </div>
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="systemPromptOverride"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Textarea
+                            placeholder={form.watch("promptMode") === "replace"
+                              ? "기본 시스템 프롬프트를 완전히 대체할 커스텀 프롬프트를 입력하세요.\n\n주의: 대체 모드에서는 기본 프롬프트가 사용되지 않으므로, TC 생성에 필요한 전체 지침을 포함해야 합니다."
+                              : "기본 시스템 프롬프트에 추가할 지침을 입력하세요.\n\n예: 모든 TC에 대해 한글과 영문 병기로 작성해주세요."}
+                            rows={6}
+                            className="border-purple-200 font-mono text-xs focus-visible:ring-purple-300"
+                            {...field}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <Separator />
+
                 <div className="flex gap-2">
                   <Button type="submit">
                     저장
@@ -657,6 +738,17 @@ export default function TemplatesPage() {
                       <p className="text-xs text-muted-foreground line-clamp-2">
                         <span className="font-medium text-blue-600">요구:</span>{" "}
                         {tmpl.requirements}
+                      </p>
+                    </div>
+                  )}
+                  {tmpl.systemPromptOverride && (
+                    <div className="flex items-start gap-2">
+                      <Code className="mt-0.5 h-3.5 w-3.5 shrink-0 text-purple-400" />
+                      <p className="text-xs text-muted-foreground line-clamp-2">
+                        <span className="font-medium text-purple-600">
+                          프롬프트 ({tmpl.promptMode === "replace" ? "대체" : "추가"}):
+                        </span>{" "}
+                        {tmpl.systemPromptOverride}
                       </p>
                     </div>
                   )}
