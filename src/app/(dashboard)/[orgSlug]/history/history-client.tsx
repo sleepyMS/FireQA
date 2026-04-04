@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import {
   FileText,
@@ -38,6 +38,7 @@ import useSWR from "swr";
 import { SWR_KEYS } from "@/lib/swr/keys";
 import { STATUS_CONFIG, JOB_TYPE_LABEL, JOB_TYPE_PATH } from "@/types/enums";
 import { TabNav } from "@/components/ui/tab-nav";
+import { useLocale, interp } from "@/lib/i18n/locale-provider";
 
 export interface Job {
   id: string;
@@ -48,14 +49,6 @@ export interface Job {
   project: { id: string; name: string };
   upload: { fileName: string };
 }
-
-const filterLinks: { label: string; value: string; icon?: React.ReactNode }[] = [
-  { label: "전체", value: "" },
-  { label: "TC 생성", value: "test-cases", icon: <FileText className="mr-1 h-3 w-3" /> },
-  { label: "다이어그램", value: "diagrams", icon: <GitBranch className="mr-1 h-3 w-3" /> },
-  { label: "와이어프레임", value: "wireframes", icon: <Smartphone className="mr-1 h-3 w-3" /> },
-  { label: "기획서 개선", value: "spec-improve", icon: <FileEdit className="mr-1 h-3 w-3" /> },
-];
 
 export function HistoryClient({
   initialJobs,
@@ -72,6 +65,18 @@ export function HistoryClient({
 }) {
   const router = useRouter();
   const { orgSlug } = useParams<{ orgSlug?: string }>();
+  const { t } = useLocale();
+
+  const filterLinks = useMemo(
+    () => [
+      { label: t.history.filterAll, value: "" },
+      { label: t.history.filterTc, value: "test-cases", icon: <FileText className="mr-1 h-3 w-3" /> },
+      { label: t.history.filterDiagrams, value: "diagrams", icon: <GitBranch className="mr-1 h-3 w-3" /> },
+      { label: t.history.filterWireframes, value: "wireframes", icon: <Smartphone className="mr-1 h-3 w-3" /> },
+      { label: t.history.filterSpecImprove, value: "spec-improve", icon: <FileEdit className="mr-1 h-3 w-3" /> },
+    ],
+    [t],
+  );
 
   // 필터를 client state로 관리 — 변경 시 router.push 대신 SWR 재조회
   const [activeType, setActiveType] = useState(initialType);
@@ -182,10 +187,14 @@ export function HistoryClient({
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold tracking-tight">
-          생성 이력{projectName ? ` — ${projectName}` : ""}
+          {projectName
+            ? interp(t.history.titleWithProject, { name: projectName })
+            : t.history.title}
         </h2>
         <p className="text-muted-foreground">
-          {projectId ? `${projectName ?? "이 프로젝트"}의 생성 이력을 확인합니다.` : "모든 TC 생성, 다이어그램, 와이어프레임, 기획서 개선 이력을 확인합니다."}
+          {projectId
+            ? interp(t.history.descriptionProject, { name: projectName ?? t.history.title })
+            : t.history.descriptionAll}
         </p>
       </div>
 
@@ -201,8 +210,8 @@ export function HistoryClient({
             <Search className="mb-4 h-12 w-12 opacity-50" />
             <p>
               {activeType
-                ? `${JOB_TYPE_LABEL[activeType] || activeType} 이력이 없습니다.`
-                : "아직 생성 이력이 없습니다."}
+                ? interp(t.history.emptyFiltered, { type: JOB_TYPE_LABEL[activeType] || activeType })
+                : t.history.emptyAll}
             </p>
           </CardContent>
         </Card>
@@ -230,7 +239,7 @@ export function HistoryClient({
                     <p className="text-xs text-muted-foreground">
                       {job.upload.fileName} &middot; {JOB_TYPE_LABEL[job.type] || job.type} &middot;{" "}
                       {new Date(job.createdAt).toLocaleDateString("ko-KR")}
-                      {job.tokenUsage ? ` · ${job.tokenUsage.toLocaleString()} 토큰` : ""}
+                      {job.tokenUsage ? ` · ${interp(t.history.tokens, { count: job.tokenUsage.toLocaleString() })}` : ""}
                     </p>
                   </div>
                 </div>
@@ -247,16 +256,16 @@ export function HistoryClient({
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => handleNavigate(job)}>
                         <ExternalLink className="mr-2 h-4 w-4" />
-                        결과 보기
+                        {t.history.viewResult}
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => openEdit(job)}>
                         <Pencil className="mr-2 h-4 w-4" />
-                        프로젝트명 수정
+                        {t.history.editProjectName}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem variant="destructive" onClick={() => openDelete(job)}>
                         <Trash2 className="mr-2 h-4 w-4" />
-                        삭제
+                        {t.common.delete}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -268,7 +277,7 @@ export function HistoryClient({
         {showLoadMore && (
           <div className="flex justify-center pt-2">
             <Button variant="outline" onClick={loadMore} disabled={loadingMore}>
-              {loadingMore ? "불러오는 중..." : "더 보기"}
+              {loadingMore ? t.history.loadingMore : t.history.loadMore}
             </Button>
           </div>
         )}
@@ -278,24 +287,24 @@ export function HistoryClient({
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>프로젝트명 수정</DialogTitle>
+            <DialogTitle>{t.history.editProjectName}</DialogTitle>
             <DialogDescription>
-              이 이력의 프로젝트명을 변경합니다. 같은 프로젝트의 다른 이력에도 반영됩니다.
+              {t.history.editProjectNameDescription}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
-            <Label>프로젝트명</Label>
+            <Label>{t.history.projectNameLabel}</Label>
             <Input
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
-              placeholder="프로젝트명을 입력하세요"
+              placeholder={t.history.projectNamePlaceholder}
               onKeyDown={(e) => { if (e.key === "Enter") handleEdit(); }}
             />
           </div>
           <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>취소</DialogClose>
+            <DialogClose render={<Button variant="outline" />}>{t.common.cancel}</DialogClose>
             <Button onClick={handleEdit} disabled={!editName.trim() || saving}>
-              {saving ? "저장 중..." : "저장"}
+              {saving ? t.common.saving : t.common.save}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -304,15 +313,15 @@ export function HistoryClient({
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>이력 삭제</DialogTitle>
+            <DialogTitle>{t.history.deleteTitle}</DialogTitle>
             <DialogDescription>
-              &quot;{deletingJob?.project.name}&quot; 이력을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
+              {interp(t.history.deleteDescription, { name: deletingJob?.project.name ?? "" })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>취소</DialogClose>
+            <DialogClose render={<Button variant="outline" />}>{t.common.cancel}</DialogClose>
             <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
-              {deleting ? "삭제 중..." : "삭제"}
+              {deleting ? t.history.deleting : t.common.delete}
             </Button>
           </DialogFooter>
         </DialogContent>
