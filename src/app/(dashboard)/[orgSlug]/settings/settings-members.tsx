@@ -25,6 +25,7 @@ import {
 import { ROLE_LABEL, UserRole } from "@/types/enums";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { getAvatarColor } from "@/lib/avatar-colors";
+import { useLocale } from "@/lib/i18n/locale-provider";
 import InviteDialog, { type CreatedInvitation } from "./invite-dialog";
 
 interface Member {
@@ -40,7 +41,7 @@ interface Invitation {
   email: string | null;
   role: string;
   expiresAt: string;
-  token?: string; // 생성 직후에만 존재, 새로고침 시 사라짐
+  token?: string; // only present immediately after creation, gone after page refresh
 }
 
 function RoleBadge({ role }: { role: string }) {
@@ -67,22 +68,22 @@ export default function SettingsMembers() {
   const [currentEmail, setCurrentEmail] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
 
-  // 멤버 제거 확인
   const [removeTarget, setRemoveTarget] = useState<Member | null>(null);
   const [removing, setRemoving] = useState(false);
 
-  // 역할 변경 확인
   const [roleChangeTarget, setRoleChangeTarget] = useState<{
     member: Member;
     newRole: string;
   } | null>(null);
   const [roleChanging, setRoleChanging] = useState(false);
 
-  // 초대 취소 진행 중인 id
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const { t } = useLocale();
+  const sm = t.settings.members;
 
   useEffect(() => {
     return () => {
@@ -106,7 +107,7 @@ export default function SettingsMembers() {
         fetch("/api/invitations"),
       ]);
       if (!membersRes.ok || !invitesRes.ok) {
-        toast.error("데이터를 불러오지 못했습니다.");
+        toast.error(sm.loadFailed);
         return;
       }
       const membersData = await membersRes.json();
@@ -114,7 +115,7 @@ export default function SettingsMembers() {
       setMembers(membersData.members ?? []);
       setInvitations(invitesData.invitations ?? []);
     } catch {
-      toast.error("네트워크 오류가 발생했습니다.");
+      toast.error(t.common.networkError);
     } finally {
       setLoading(false);
     }
@@ -136,7 +137,7 @@ export default function SettingsMembers() {
       const res = await fetch("/api/invitations");
       if (!res.ok) return;
       const data = await res.json();
-      // 기존에 token이 저장된 항목은 유지 (새로고침 전까지 복사 가능)
+      // preserve tokens from previous state until page refresh
       setInvitations((prev) => {
         const tokenMap = new Map(prev.map((inv) => [inv.id, inv.token]));
         return (data.invitations ?? []).map((inv: Invitation) => ({
@@ -149,7 +150,6 @@ export default function SettingsMembers() {
     }
   }
 
-  // 역할 변경 — ⋯ 메뉴에서 호출, 확인 Dialog 표시
   function requestRoleChange(member: Member, newRole: string) {
     setRoleChangeTarget({ member, newRole });
   }
@@ -167,14 +167,14 @@ export default function SettingsMembers() {
         }
       );
       if (res.ok) {
-        toast.success("역할이 변경되었습니다.");
+        toast.success(sm.roleChangeOk);
         refreshMembers();
       } else {
         const data = await res.json();
-        toast.error(data.error || "역할 변경에 실패했습니다.");
+        toast.error(data.error || sm.roleChangeFailed);
       }
     } catch {
-      toast.error("네트워크 오류가 발생했습니다.");
+      toast.error(t.common.networkError);
     } finally {
       setRoleChanging(false);
       setRoleChangeTarget(null);
@@ -189,14 +189,14 @@ export default function SettingsMembers() {
         method: "DELETE",
       });
       if (res.ok) {
-        toast.success("멤버가 제거되었습니다.");
+        toast.success(sm.removeOk);
         refreshMembers();
       } else {
         const data = await res.json();
-        toast.error(data.error || "멤버 제거에 실패했습니다.");
+        toast.error(data.error || sm.removeFailed);
       }
     } catch {
-      toast.error("네트워크 오류가 발생했습니다.");
+      toast.error(t.common.networkError);
     } finally {
       setRemoving(false);
       setRemoveTarget(null);
@@ -208,23 +208,21 @@ export default function SettingsMembers() {
     try {
       const res = await fetch(`/api/invitations/${id}`, { method: "DELETE" });
       if (res.ok) {
-        toast.success("초대가 취소되었습니다.");
+        toast.success(sm.cancelInviteOk);
         refreshInvitations();
       } else {
         const data = await res.json();
-        toast.error(data.error || "초대 취소에 실패했습니다.");
+        toast.error(data.error || sm.cancelInviteFailed);
       }
     } catch {
-      toast.error("네트워크 오류가 발생했습니다.");
+      toast.error(t.common.networkError);
     } finally {
       setCancellingId(null);
     }
   }
 
-  // 초대 생성 완료 — token 포함하여 로컬 상태에 추가
   function handleInviteCreated(inv: CreatedInvitation) {
     setInvitations((prev) => {
-      // 중복 방지 (재생성 시 교체)
       const filtered = prev.filter((i) => i.id !== inv.id);
       return [inv, ...filtered];
     });
@@ -240,7 +238,7 @@ export default function SettingsMembers() {
       setCopiedId(inv.id);
       copyTimeoutRef.current = setTimeout(() => setCopiedId(null), 2000);
     } catch {
-      toast.error("클립보드 복사에 실패했습니다.");
+      toast.error(sm.copyFailed);
     }
   }
 
@@ -250,7 +248,7 @@ export default function SettingsMembers() {
         <CardContent className="flex items-center justify-center py-20 text-muted-foreground">
           <div className="text-center">
             <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-            <p>멤버 목록을 불러오는 중...</p>
+            <p>{t.common.loading}</p>
           </div>
         </CardContent>
       </Card>
@@ -261,14 +259,14 @@ export default function SettingsMembers() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">
-          멤버{" "}
+          {sm.title}{" "}
           <span className="text-sm font-normal text-muted-foreground">
-            {members.length}명
+            {members.length}
           </span>
         </h3>
         <Button onClick={() => setInviteOpen(true)} size="sm">
           <UserPlus className="mr-1 h-4 w-4" />
-          초대
+          {sm.invite}
         </Button>
       </div>
 
@@ -292,7 +290,7 @@ export default function SettingsMembers() {
                     {m.name}
                     {isMe && (
                       <span className="ml-1 text-xs text-muted-foreground">
-                        (나)
+                        ({sm.me})
                       </span>
                     )}
                   </p>
@@ -319,14 +317,14 @@ export default function SettingsMembers() {
                         <DropdownMenuItem
                           onClick={() => requestRoleChange(m, UserRole.ADMIN)}
                         >
-                          관리자로 변경
+                          {sm.changeToAdmin}
                         </DropdownMenuItem>
                       )}
                       {m.role !== UserRole.MEMBER && (
                         <DropdownMenuItem
                           onClick={() => requestRoleChange(m, UserRole.MEMBER)}
                         >
-                          멤버로 변경
+                          {sm.changeToMember}
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuSeparator />
@@ -334,7 +332,7 @@ export default function SettingsMembers() {
                         variant="destructive"
                         onClick={() => setRemoveTarget(m)}
                       >
-                        조직에서 제거
+                        {sm.removeFromOrg}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -349,10 +347,10 @@ export default function SettingsMembers() {
 
       <div>
         <h3 className="mb-3 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-          대기 중인 초대
+          {sm.pendingInvites}
         </h3>
         {invitations.length === 0 ? (
-          <p className="text-sm text-muted-foreground">대기 중인 초대가 없습니다</p>
+          <p className="text-sm text-muted-foreground">{sm.noPendingInvites}</p>
         ) : (
           <div className="rounded-lg border bg-muted/30 p-2 space-y-1">
             {invitations.map((inv) => (
@@ -365,10 +363,10 @@ export default function SettingsMembers() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">
-                      {inv.email ?? "링크 초대"}
+                      {inv.email ?? sm.linkInvite}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {new Date(inv.expiresAt).toLocaleString("ko-KR")} 만료
+                      {new Date(inv.expiresAt).toLocaleString()} {sm.expires}
                     </p>
                   </div>
                   <RoleBadge role={inv.role} />
@@ -377,7 +375,7 @@ export default function SettingsMembers() {
                     size="icon-sm"
                     onClick={() => handleCopyInviteUrl(inv)}
                     disabled={!inv.token}
-                    title={inv.token ? "링크 복사" : "새로고침 후 복사 불가. 새 링크를 생성하세요."}
+                    title={inv.token ? sm.copyLink : sm.copyLinkStale}
                   >
                     {copiedId === inv.id ? (
                       <Check className="h-4 w-4 text-emerald-600" />
@@ -392,7 +390,7 @@ export default function SettingsMembers() {
                     onClick={() => handleCancelInvite(inv.id)}
                     disabled={cancellingId === inv.id}
                   >
-                    {cancellingId === inv.id ? "취소 중..." : "취소"}
+                    {cancellingId === inv.id ? sm.cancelling : t.common.cancel}
                   </Button>
                 </div>
               ))}
@@ -406,17 +404,17 @@ export default function SettingsMembers() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>역할 변경</DialogTitle>
+            <DialogTitle>{sm.roleChangeTitle}</DialogTitle>
             <DialogDescription>
-              &quot;{roleChangeTarget?.member.name}&quot;님의 역할을{" "}
-              <strong>{ROLE_LABEL[roleChangeTarget?.newRole ?? ""] ?? roleChangeTarget?.newRole}</strong>
-              (으)로 변경하시겠습니까?
+              &quot;{roleChangeTarget?.member.name}&quot; {sm.roleChangeDesc}{" "}
+              <strong>{ROLE_LABEL[roleChangeTarget?.newRole ?? ""] ?? roleChangeTarget?.newRole}</strong>{" "}
+              {sm.roleChangeSuffix}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>취소</DialogClose>
+            <DialogClose render={<Button variant="outline" />}>{t.common.cancel}</DialogClose>
             <Button onClick={confirmRoleChange} disabled={roleChanging}>
-              {roleChanging ? "변경 중..." : "변경"}
+              {roleChanging ? sm.roleChanging : sm.roleChangeConfirm}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -428,19 +426,19 @@ export default function SettingsMembers() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>멤버 제거</DialogTitle>
+            <DialogTitle>{sm.removeMemberTitle}</DialogTitle>
             <DialogDescription>
-              &quot;{removeTarget?.name}&quot;님을 조직에서 제거하시겠습니까?
+              &quot;{removeTarget?.name}&quot; {sm.removeMemberDesc}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>취소</DialogClose>
+            <DialogClose render={<Button variant="outline" />}>{t.common.cancel}</DialogClose>
             <Button
               variant="destructive"
               onClick={handleRemove}
               disabled={removing}
             >
-              {removing ? "제거 중..." : "제거"}
+              {removing ? sm.removing : t.common.delete}
             </Button>
           </DialogFooter>
         </DialogContent>
