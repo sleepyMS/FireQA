@@ -460,4 +460,47 @@ export interface Messages {
     autoShowResult: string;
     generationFailed: string;
   };
+  onboarding: {
+    title: string;
+    subtitle: string;
+    nameLabel: string;
+    namePlaceholder: string;
+    orgNameLabel: string;
+    orgNamePlaceholder: string;
+    orgSlugLabel: string;
+    slugHintKorean: string;
+    slugInvalid: string;
+    slugValid: string;
+    submitting: string;
+    start: string;
+    or: string;
+    joinByInvite: string;
+    inviteTokenLabel: string;
+    inviteTokenPlaceholder: string;
+    acceptInvite: string;
+    loginRequired: string;
+    createTeamFailed: string;
+    networkError: string;
+  };
+  invite: {
+    orgInvite: string;
+    loginAutoAccept: string;
+    loginToAccept: string;
+    signupToAccept: string;
+    roleLabel: string;
+    expiresLabel: string;
+    accepting: string;
+    joinOrgButton: string;
+    joinedTitlePrefix: string;
+    joinedTitleSuffix: string;
+    fallbackOrg: string;
+    memberAdded: string;
+    goToDashboard: string;
+    requestNewInvite: string;
+    goHome: string;
+    acceptFailed: string;
+    noToken: string;
+    invalidInvite: string;
+    networkError: string;
+  };
 }
