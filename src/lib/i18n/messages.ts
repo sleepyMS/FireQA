@@ -48,4 +48,16 @@ export interface Messages {
       en: string;
     };
   };
+  testRun: {
+    status: {
+      inProgress: string;
+      completed: string;
+      aborted: string;
+      pending: string;
+      passed: string;
+      failed: string;
+      skipped: string;
+      blocked: string;
+    };
+  };
 }

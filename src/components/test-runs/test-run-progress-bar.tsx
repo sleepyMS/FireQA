@@ -1,5 +1,7 @@
 "use client";
 
+import { useLocale } from "@/lib/i18n/locale-provider";
+
 type TestCaseCount = {
   total: number;
   pending: number;
@@ -10,15 +12,16 @@ type TestCaseCount = {
 };
 
 export function TestRunProgressBar({ counts }: { counts: TestCaseCount }) {
+  const { t } = useLocale();
   const { total, passed, failed, skipped, blocked, pending } = counts;
   if (total === 0) return null;
 
   const segments = [
-    { count: passed, color: "bg-green-500", label: "성공" },
-    { count: failed, color: "bg-red-500", label: "실패" },
-    { count: blocked, color: "bg-amber-500", label: "차단" },
-    { count: skipped, color: "bg-gray-400", label: "스킵" },
-    { count: pending, color: "bg-blue-500", label: "대기" },
+    { count: passed, color: "bg-green-500", label: t.testRun.status.passed },
+    { count: failed, color: "bg-red-500", label: t.testRun.status.failed },
+    { count: blocked, color: "bg-amber-500", label: t.testRun.status.blocked },
+    { count: skipped, color: "bg-gray-400", label: t.testRun.status.skipped },
+    { count: pending, color: "bg-blue-500", label: t.testRun.status.pending },
   ];
 
   return (

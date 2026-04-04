@@ -48,4 +48,16 @@ export const en: Messages = {
       en: "English",
     },
   },
+  testRun: {
+    status: {
+      inProgress: "In Progress",
+      completed: "Completed",
+      aborted: "Aborted",
+      pending: "Pending",
+      passed: "Passed",
+      failed: "Failed",
+      skipped: "Skipped",
+      blocked: "Blocked",
+    },
+  },
 };

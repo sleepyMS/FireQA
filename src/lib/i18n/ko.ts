@@ -48,4 +48,16 @@ export const ko: Messages = {
       en: "English",
     },
   },
+  testRun: {
+    status: {
+      inProgress: "실행 중",
+      completed: "완료",
+      aborted: "중단됨",
+      pending: "대기",
+      passed: "성공",
+      failed: "실패",
+      skipped: "스킵",
+      blocked: "차단",
+    },
+  },
 };
