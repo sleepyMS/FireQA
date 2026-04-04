@@ -26,6 +26,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { getAvatarColor } from "@/lib/avatar-colors";
 import { deriveOrgSlug } from "@/lib/slug";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 interface Membership {
   organizationId: string;
@@ -53,6 +54,7 @@ export function OrgSwitcher({ initialMemberships, initialActiveOrgId }: OrgSwitc
   const router = useRouter();
   const params = useParams<{ orgSlug?: string }>();
   const currentOrgSlug = params.orgSlug;
+  const { t } = useLocale();
 
   const { data, mutate } = useSWR<{
     memberships: Membership[];
@@ -85,7 +87,7 @@ export function OrgSwitcher({ initialMemberships, initialActiveOrgId }: OrgSwitc
 
   function handleSwitch(slug: string) {
     if (slug === currentOrgSlug) return;
-    // URL 변경만으로 전환 — [orgSlug]/layout.tsx가 세션 동기화 처리
+    // URL change triggers org switch — [orgSlug]/layout.tsx handles session sync
     router.push(`/${slug}/dashboard`);
   }
 
@@ -104,7 +106,7 @@ export function OrgSwitcher({ initialMemberships, initialActiveOrgId }: OrgSwitc
       const responseData = await res.json();
       if (res.ok) {
         if (!responseData.slug) {
-          toast.error("서버 응답에 슬러그가 없습니다.");
+          toast.error(t.teams.slugMissingError);
           return;
         }
         setCreateOpen(false);
@@ -114,10 +116,10 @@ export function OrgSwitcher({ initialMemberships, initialActiveOrgId }: OrgSwitc
         await mutate();
         router.push(`/${responseData.slug}/dashboard`);
       } else {
-        toast.error(responseData.error || "팀 생성에 실패했습니다.");
+        toast.error(responseData.error || t.teams.createFailedError);
       }
     } catch {
-      toast.error("네트워크 오류가 발생했습니다.");
+      toast.error(t.teams.networkError);
     } finally {
       setCreating(false);
     }
@@ -159,11 +161,11 @@ export function OrgSwitcher({ initialMemberships, initialActiveOrgId }: OrgSwitc
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setCreateOpen(true)}>
             <Plus className="h-4 w-4" />
-            새 팀 만들기
+            {t.teams.createNew}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setJoinOpen(true)}>
             <LogIn className="h-4 w-4" />
-            초대 코드로 참여
+            {t.teams.joinViaCode}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -171,14 +173,14 @@ export function OrgSwitcher({ initialMemberships, initialActiveOrgId }: OrgSwitc
       <Dialog open={joinOpen} onOpenChange={(open) => { setJoinOpen(open); if (!open) setInviteInput(""); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>초대 코드로 참여</DialogTitle>
+            <DialogTitle>{t.teams.joinViaCode}</DialogTitle>
           </DialogHeader>
           <div className="space-y-2">
-            <Label>초대 링크 또는 코드</Label>
+            <Label>{t.teams.inviteLinkOrCode}</Label>
             <Input
               value={inviteInput}
               onChange={(e) => setInviteInput(e.target.value)}
-              placeholder="초대 링크를 붙여넣으세요"
+              placeholder={t.teams.inviteLinkPlaceholder}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && inviteInput.trim()) {
                   router.push(`/invite?token=${extractInviteToken(inviteInput.trim())}`);
@@ -189,7 +191,7 @@ export function OrgSwitcher({ initialMemberships, initialActiveOrgId }: OrgSwitc
             />
           </div>
           <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>취소</DialogClose>
+            <DialogClose render={<Button variant="outline" />}>{t.common.cancel}</DialogClose>
             <Button
               disabled={!inviteInput.trim()}
               onClick={() => {
@@ -198,7 +200,7 @@ export function OrgSwitcher({ initialMemberships, initialActiveOrgId }: OrgSwitc
                 setInviteInput("");
               }}
             >
-              참여하기
+              {t.teams.join}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -214,20 +216,20 @@ export function OrgSwitcher({ initialMemberships, initialActiveOrgId }: OrgSwitc
         }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>새 팀 만들기</DialogTitle>
+            <DialogTitle>{t.teams.createNew}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>팀 이름</Label>
+              <Label>{t.teams.teamName}</Label>
               <Input
                 value={newOrgName}
                 onChange={(e) => handleNameChange(e.target.value)}
-                placeholder="예: 파이브스팟 QA팀"
+                placeholder={t.teams.teamNamePlaceholder}
                 onKeyDown={(e) => e.key === "Enter" && !creating && handleCreate()}
               />
             </div>
             <div className="space-y-2">
-              <Label>URL 슬러그</Label>
+              <Label>{t.teams.urlSlug}</Label>
               <div className="flex items-center gap-1">
                 <span className="shrink-0 text-sm text-muted-foreground">fireqa.com/</span>
                 <Input
@@ -237,16 +239,16 @@ export function OrgSwitcher({ initialMemberships, initialActiveOrgId }: OrgSwitc
                   className="flex-1"
                 />
               </div>
-              <p className="text-xs text-muted-foreground">소문자, 숫자, 하이픈만 사용 가능</p>
+              <p className="text-xs text-muted-foreground">{t.teams.slugHelp}</p>
               {newOrgSlug && !newOrgSlug.replace(/-/g, "").length && (
-                <p className="text-xs text-destructive">슬러그는 영문자나 숫자를 포함해야 합니다.</p>
+                <p className="text-xs text-destructive">{t.teams.slugError}</p>
               )}
             </div>
           </div>
           <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>취소</DialogClose>
+            <DialogClose render={<Button variant="outline" />}>{t.common.cancel}</DialogClose>
             <Button onClick={handleCreate} disabled={creating || !newOrgName.trim() || !newOrgSlug.replace(/-/g, "").length}>
-              {creating ? "생성 중..." : "만들기"}
+              {creating ? t.teams.creating : t.teams.makeTeam}
             </Button>
           </DialogFooter>
         </DialogContent>

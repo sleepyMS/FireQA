@@ -8,11 +8,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/";
+  const { t } = useLocale();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -54,26 +56,26 @@ export default function LoginForm() {
       <CardContent className="space-y-6 pt-6">
         <div className="text-center">
           <h1 className="text-2xl font-bold">FireQA</h1>
-          <p className="mt-1 text-sm text-muted-foreground">로그인하여 시작하세요</p>
+          <p className="mt-1 text-sm text-muted-foreground">{t.auth.login.subtitle}</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">이메일</Label>
+            <Label htmlFor="email">{t.auth.login.emailLabel}</Label>
             <Input
               id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder={t.auth.login.emailPlaceholder}
               required
             />
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="password">비밀번호</Label>
+              <Label htmlFor="password">{t.auth.login.passwordLabel}</Label>
               <Link href="/forgot-password" className="text-xs text-muted-foreground hover:text-primary">
-                비밀번호 찾기
+                {t.auth.login.forgotPassword}
               </Link>
             </div>
             <Input
@@ -81,7 +83,7 @@ export default function LoginForm() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder={t.auth.login.passwordPlaceholder}
               required
             />
           </div>
@@ -89,7 +91,7 @@ export default function LoginForm() {
           {error && <p className="text-sm text-destructive">{error}</p>}
 
           <Button type="submit" disabled={loading} className="w-full">
-            {loading ? "로그인 중..." : "로그인"}
+            {loading ? t.auth.login.submitting : t.auth.login.submit}
           </Button>
         </form>
 
@@ -98,18 +100,18 @@ export default function LoginForm() {
             <div className="w-full border-t" />
           </div>
           <div className="relative flex justify-center text-xs">
-            <span className="bg-card px-2 text-muted-foreground">또는</span>
+            <span className="bg-card px-2 text-muted-foreground">{t.auth.login.divider}</span>
           </div>
         </div>
 
         <Button variant="outline" className="w-full" onClick={handleGoogleLogin}>
-          Google로 로그인
+          {t.auth.login.googleLogin}
         </Button>
 
         <p className="text-center text-sm text-muted-foreground">
-          계정이 없으신가요?{" "}
+          {t.auth.login.noAccount}{" "}
           <Link href="/signup" className="text-primary hover:underline">
-            회원가입
+            {t.auth.login.signupLink}
           </Link>
         </p>
       </CardContent>
