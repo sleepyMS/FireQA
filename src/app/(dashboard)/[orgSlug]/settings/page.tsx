@@ -13,7 +13,6 @@ export default async function SettingsPage({
     : tab === "webhooks" ? "webhooks"
     : tab === "api-keys" ? "api-keys"
     : tab === "anthropic-key" ? "anthropic-key"
-    : tab === "agent" ? "agent"
     : "general";
 
   return (
