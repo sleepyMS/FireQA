@@ -23,7 +23,6 @@ import {
   FormLabel,
   FormControl,
   FormMessage,
-  FormDescription,
 } from "@/components/ui/form";
 import { Key } from "lucide-react";
 import { getAvatarColor } from "@/lib/avatar-colors";
@@ -65,10 +64,11 @@ export default function SettingsGeneral() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       }),
-    onSuccess: (data: any) => {
-      setOrg((prev) => (prev ? { ...prev, ...data } : prev));
-      if (data.slug && data.slug !== org?.slug) {
-        router.push(`/${data.slug}/settings`);
+    onSuccess: (data) => {
+      const d = data as Partial<OrgInfo>;
+      setOrg((prev) => (prev ? { ...prev, ...d } : prev));
+      if (d.slug && d.slug !== org?.slug) {
+        router.push(`/${d.slug}/settings`);
       } else {
         toast.success("설정이 저장되었습니다.");
       }

@@ -154,7 +154,6 @@ export function VersionBar({ jobId, onVersionChange }: VersionBarProps) {
         )}
 
         <VersionCompareDialog
-          jobId={jobId}
           versions={versions}
           currentVersionId={current?.id}
         />

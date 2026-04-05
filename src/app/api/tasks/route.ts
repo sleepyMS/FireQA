@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { logActivity } from "@/lib/activity/log-activity";
 import { ActivityAction } from "@/types/enums";
-import { AgentTaskType, AgentTaskStatus } from "@/types/agent";
+import { AgentTaskType } from "@/types/agent";
 import { deductCredits, addCredits, hasEnoughCredits } from "@/lib/billing/credits";
 import { getTaskCreditCost } from "@/lib/billing/credit-pricing";
 import { WorkerOrchestrator } from "@/lib/flyio/orchestrator";
@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
           organizationId: user.organizationId,
           useOwnApiKey,
         });
-      } catch (err) {
+      } catch {
         // 워커 할당 실패 시 크레딧 환불 + 작업 실패 처리
         if (creditsUsed) {
           await addCredits(user.organizationId, creditsUsed, {

@@ -22,7 +22,7 @@ export default async function AdminPage({
         <h2 className="text-2xl font-bold tracking-tight">관리자</h2>
         <p className="text-muted-foreground">조직 현황을 한눈에 확인하고 멤버를 관리합니다.</p>
       </div>
-      <AdminClient orgSlug={orgSlug} />
+      <AdminClient />
     </div>
   );
 }

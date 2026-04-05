@@ -336,7 +336,7 @@ function MembersTab() {
 }
 
 // --- Main Admin Client ---
-export function AdminClient({ orgSlug }: { orgSlug: string }) {
+export function AdminClient() {
   const [tab, setTab] = useState<TabKey>("overview");
 
   const tabs: { value: TabKey; label: string }[] = [

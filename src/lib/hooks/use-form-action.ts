@@ -14,7 +14,7 @@ interface UseFormActionOptions<TValues extends FieldValues> {
   schema: z.ZodType<TValues, TValues>;
   action: (data: TValues) => Promise<Response>;
   defaultValues?: DefaultValues<TValues>;
-  onSuccess?: (data: any) => void;
+  onSuccess?: (data: unknown) => void;
   successMessage?: string;
   errorMessage?: string;
 }

@@ -1,5 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { ZodError } from "zod";
+import { describe, it, expect, afterEach } from "vitest";
 import { z } from "zod";
 import { ApiError } from "../api-error";
 import { ApiErrorCode } from "../api-error-codes";

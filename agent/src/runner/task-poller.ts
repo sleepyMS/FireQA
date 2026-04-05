@@ -106,7 +106,7 @@ export async function startAgent(store: ConfigStore): Promise<void> {
           }
         }
       }
-    } catch (err) {
+    } catch {
       heartbeatFailures++;
       if (heartbeatFailures > 3) {
         console.warn(`heartbeat 연속 실패 (${heartbeatFailures}회)`);

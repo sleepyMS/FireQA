@@ -4,7 +4,6 @@ import { ActivityAction } from "@/types/enums";
 import {
   withApiHandler,
   ApiError,
-  ApiErrorCode,
   updateTestRunSchema,
   type UpdateTestRunBody,
 } from "@/lib/api";

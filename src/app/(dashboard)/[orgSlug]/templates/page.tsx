@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -123,6 +123,8 @@ export default function TemplatesPage() {
   const { fields: sheetFields, append: appendSheet, remove: removeSheet, move: moveSheet } =
     useFieldArray({ control: form.control, name: "sheets" });
 
+  const promptMode = useWatch({ control: form.control, name: "promptMode" });
+
   async function loadTemplates() {
     const res = await fetch("/api/templates");
     const data = await res.json();
@@ -130,7 +132,9 @@ export default function TemplatesPage() {
   }
 
   useEffect(() => {
-    loadTemplates();
+    fetch("/api/templates")
+      .then((res) => res.json())
+      .then((data) => setTemplates(data.templates || []));
   }, []);
 
   const resetForm = () => {
@@ -627,7 +631,7 @@ export default function TemplatesPage() {
                       <FormItem>
                         <FormControl>
                           <Textarea
-                            placeholder={form.watch("promptMode") === "replace"
+                            placeholder={promptMode === "replace"
                               ? "기본 시스템 프롬프트를 완전히 대체할 커스텀 프롬프트를 입력하세요.\n\n주의: 대체 모드에서는 기본 프롬프트가 사용되지 않으므로, TC 생성에 필요한 전체 지침을 포함해야 합니다."
                               : "기본 시스템 프롬프트에 추가할 지침을 입력하세요.\n\n예: 모든 TC에 대해 한글과 영문 병기로 작성해주세요."}
                             rows={6}

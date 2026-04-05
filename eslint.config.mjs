@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Figma plugin build output — generated, not handwritten
     "figma-plugin/dist/**",
+    // Agent worker build output — generated, not handwritten
+    "agent/dist/**",
   ]),
 ]);
 

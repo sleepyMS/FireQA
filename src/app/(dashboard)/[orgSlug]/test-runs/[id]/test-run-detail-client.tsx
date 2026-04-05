@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import {
   CheckCircle2,
@@ -73,7 +72,6 @@ interface Props {
 const EXEC_STATUSES = ["pending", "passed", "failed", "skipped", "blocked"] as const;
 
 export function TestRunDetailClient({ orgSlug, testRunId, initialData }: Props) {
-  const router = useRouter();
   const [updating, setUpdating] = useState<string | null>(null);
 
   const dynamicRefresh = useDynamicRefresh<TestRunDetail>({

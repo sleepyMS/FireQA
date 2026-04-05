@@ -140,13 +140,11 @@ function isTestCaseChanged(a: TestCase, b: TestCase): boolean {
 // ─── 메인 컴포넌트 ───
 
 interface VersionCompareDialogProps {
-  jobId: string;
   versions: VersionInfo[];
   currentVersionId?: string;
 }
 
 export function VersionCompareDialog({
-  jobId,
   versions,
   currentVersionId,
 }: VersionCompareDialogProps) {
@@ -459,7 +457,6 @@ const DISPLAY_FIELDS: { key: keyof TestCase; label: string }[] = [
 function TCCellContent({
   tc,
   other,
-  side: _side,
   status,
 }: {
   tc: TestCase;

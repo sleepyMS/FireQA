@@ -44,8 +44,8 @@ export default function SettingsAnthropicKey() {
         body: JSON.stringify({ apiKey: values.apiKey.trim() }),
       }),
     successMessage: "Anthropic API 키가 저장되었습니다.",
-    onSuccess: (body: any) => {
-      setData({ hasKey: true, keyPrefix: body.keyPrefix });
+    onSuccess: (body) => {
+      setData({ hasKey: true, keyPrefix: (body as { keyPrefix: string | null }).keyPrefix });
       form.reset({ apiKey: "" });
       setShowKey(false);
     },

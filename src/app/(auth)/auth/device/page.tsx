@@ -53,7 +53,7 @@ function DeviceAuthContent() {
           setError("서버에 연결할 수 없습니다.");
         });
     });
-  }, [code, router]);
+  }, [code, router, isAgent]);
 
   async function handleApprove() {
     setStatus("loading");

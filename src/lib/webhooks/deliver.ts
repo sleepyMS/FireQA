@@ -21,7 +21,6 @@ async function sendWithRetry(
 ): Promise<void> {
   let lastStatus: number | null = null;
   let lastResponseBody: string | null = null;
-  let success = false;
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
@@ -41,7 +40,6 @@ async function sendWithRetry(
       }
 
       if (res.ok) {
-        success = true;
         await prisma.webhookDelivery.create({
           data: {
             endpointId,

@@ -2,7 +2,6 @@ import { prisma } from "@/lib/db";
 import {
   withApiHandler,
   ApiError,
-  getJobsQuerySchema,
   patchJobSchema,
   deleteJobSchema,
   type GetJobsQuery,
