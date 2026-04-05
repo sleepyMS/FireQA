@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import { z } from "zod";
 import { ApiError } from "../api-error";
 import { ApiErrorCode } from "../api-error-codes";
@@ -153,10 +153,8 @@ describe("ApiError", () => {
   });
 
   describe("toJSON()", () => {
-    const originalEnv = process.env.NODE_ENV;
-
     afterEach(() => {
-      process.env.NODE_ENV = originalEnv;
+      vi.unstubAllEnvs();
     });
 
     it("includes error code and message", () => {
@@ -179,14 +177,14 @@ describe("ApiError", () => {
     });
 
     it("includes detail in development", () => {
-      process.env.NODE_ENV = "development";
+      vi.stubEnv("NODE_ENV", "development");
       const err = ApiError.internalError(new Error("db crash"));
       const json = err.toJSON();
       expect(json).toHaveProperty("detail", "db crash");
     });
 
     it("excludes detail in production", () => {
-      process.env.NODE_ENV = "production";
+      vi.stubEnv("NODE_ENV", "production");
       const err = ApiError.internalError(new Error("db crash"));
       const json = err.toJSON();
       expect(json).not.toHaveProperty("detail");

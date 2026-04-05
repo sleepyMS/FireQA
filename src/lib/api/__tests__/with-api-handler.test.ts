@@ -35,7 +35,7 @@ function makeRequest(
       url.searchParams.set(k, v);
     }
   }
-  const init: RequestInit = { method };
+  const init: { method: string; body?: string; headers?: Record<string, string> } = { method };
   if (opts?.body !== undefined) {
     init.body = JSON.stringify(opts.body);
     init.headers = { "Content-Type": "application/json" };
