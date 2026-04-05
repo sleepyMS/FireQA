@@ -27,6 +27,10 @@ import {
   Settings,
   FileEdit,
   MousePointerClick,
+  Bot,
+  Server,
+  UserCog,
+  Cpu,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -108,6 +112,8 @@ export default function GuidePage() {
           <Badge variant="secondary">Figma 와이어프레임</Badge>
           <Badge variant="secondary">기획서 AI 개선</Badge>
           <Badge variant="secondary">다이어그램 버전 관리</Badge>
+          <Badge variant="secondary">에이전트 실행 모드</Badge>
+          <Badge variant="secondary">AI 모델 선택</Badge>
         </div>
       </div>
 
@@ -146,6 +152,12 @@ export default function GuidePage() {
             title="기획서 AI 개선"
             description="기획 문서를 업로드하면 AI가 모범 구조로 재작성합니다. 누락된 엣지 케이스, 명확하지 않은 흐름을 보완합니다."
             color="bg-emerald-100 text-emerald-600"
+          />
+          <FeatureCard
+            icon={Bot}
+            title="에이전트 실행 모드"
+            description="서버 LLM 대신 내 Claude Code, Codex CLI, Gemini CLI로 생성 작업을 실행할 수 있습니다. 에이전트가 AI 호출을 담당하므로 내 API 크레딧이 사용됩니다."
+            color="bg-violet-100 text-violet-600"
           />
           <FeatureCard
             icon={FolderOpen}
@@ -664,6 +676,106 @@ export default function GuidePage() {
 
       <Separator />
 
+      {/* Execution Mode Guide */}
+      <section className="space-y-4">
+        <h2 className="text-xl font-bold">실행 방식 선택</h2>
+        <p className="text-sm text-muted-foreground">
+          TC 생성, 다이어그램, 와이어프레임, 기획서 개선 페이지에서 <strong>실행 방식</strong>을 선택할 수 있습니다.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Card className="border-blue-200 bg-blue-50/30">
+            <CardContent className="flex items-start gap-3 py-4">
+              <Server className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
+              <div>
+                <p className="text-sm font-semibold text-foreground">서버 LLM 모드 (기본값)</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  FireQA 서버에서 AI 모델을 직접 호출합니다. 별도 설치 없이 바로 사용 가능합니다.
+                  <strong> 계정 설정</strong>에서 사용할 AI 모델(GPT-4.1 Mini, GPT-4.1, Claude 등)을 선택할 수 있습니다.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-violet-200 bg-violet-50/30">
+            <CardContent className="flex items-start gap-3 py-4">
+              <Bot className="mt-0.5 h-5 w-5 shrink-0 text-violet-600" />
+              <div>
+                <p className="text-sm font-semibold text-foreground">에이전트 모드</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  내 컴퓨터의 Claude Code, Codex CLI, Gemini CLI 등을 사용합니다.
+                  내 API 크레딧으로 실행되며, 결과 페이지에서 에이전트 실시간 로그를 확인할 수 있습니다.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        <Card className="border-violet-200 bg-violet-50/20">
+          <CardContent className="space-y-4 py-4">
+            <p className="text-sm font-medium">에이전트 모드 설정 방법</p>
+            <div className="space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-violet-600 text-xs font-bold text-white">1</div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">에이전트 CLI 설치</p>
+                  <pre className="mt-1 rounded bg-muted px-3 py-2 text-xs font-mono">npm install -g @fireqa/agent</pre>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-violet-600 text-xs font-bold text-white">2</div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">API 키 등록 및 에이전트 시작</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    사이드바 <strong>에이전트</strong> 메뉴 → API 키 발급 후 아래 명령어 실행
+                  </p>
+                  <pre className="mt-1 rounded bg-muted px-3 py-2 text-xs font-mono">fireqa-agent start --api-key YOUR_KEY</pre>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-violet-600 text-xs font-bold text-white">3</div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">생성 페이지에서 에이전트 모드 선택</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    에이전트가 연결된 상태에서 실행 방식을 <strong>에이전트 모드</strong>로 선택 후 생성하면,
+                    내 CLI가 작업을 수행하고 결과를 자동으로 업로드합니다.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      <Separator />
+
+      {/* AI Model Guide */}
+      <section className="space-y-4">
+        <h2 className="text-xl font-bold">AI 모델 선택</h2>
+        <p className="text-sm text-muted-foreground">
+          서버 LLM 모드에서 사용할 기본 AI 모델을 <strong>계정 설정</strong>에서 선택할 수 있습니다.
+          헤더 우측 상단의 <Cpu className="inline h-4 w-4" /> 아이콘을 클릭하세요.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {[
+            { name: "GPT-4.1 Mini (기본값)", desc: "빠르고 경제적. 대부분의 문서에 충분한 품질을 제공합니다.", badge: "추천" },
+            { name: "GPT-4.1", desc: "복잡하거나 분량이 많은 기획 문서에서 더 높은 품질을 제공합니다.", badge: "고품질" },
+            { name: "GPT-4o Mini", desc: "빠른 처리가 필요할 때 적합합니다.", badge: null },
+            { name: "GPT-4o", desc: "멀티모달 이해 능력이 뛰어납니다.", badge: null },
+            { name: "Claude Sonnet", desc: "Anthropic의 Claude 모델. 본인 API 키가 계정에 등록되어 있어야 합니다.", badge: "내 키 필요" },
+          ].map((m) => (
+            <Card key={m.name}>
+              <CardContent className="py-3">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium">{m.name}</p>
+                  {m.badge && <Badge variant="secondary" className="text-[10px]">{m.badge}</Badge>}
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">{m.desc}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      <Separator />
+
       {/* History Guide */}
       <section className="space-y-4">
         <h2 className="text-xl font-bold">이력 관리</h2>
@@ -757,6 +869,18 @@ export default function GuidePage() {
               </div>
             </CardContent>
           </Card>
+          <Card>
+            <CardContent className="flex items-start gap-3 py-2">
+              <UserCog className="mt-0.5 h-4 w-4 shrink-0 text-violet-600" />
+              <div>
+                <p className="text-sm font-medium">계정 설정</p>
+                <p className="text-xs text-muted-foreground">
+                  헤더 우측 상단의 사람 아이콘을 클릭하면 계정 설정 페이지로 이동합니다.
+                  AI 모델 선택, 회원탈퇴 등 개인 설정을 관리합니다.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </section>
 
@@ -795,7 +919,7 @@ export default function GuidePage() {
           {[
             {
               q: "AI가 생성한 TC의 품질은 어떤가요?",
-              a: "OpenAI 모델을 사용하여 정상 케이스, 에러 케이스, 경계값 케이스를 포함한 체계적인 TC를 생성합니다. 기획 문서가 상세할수록 TC 품질이 높아지며, 생성 후 검토/수정을 거쳐 사용하는 것을 권장합니다.",
+              a: "GPT-4.1 Mini(기본값)를 포함해 다양한 AI 모델을 지원합니다. 정상 케이스, 에러 케이스, 경계값 케이스를 포함한 체계적인 TC를 생성합니다. 기획 문서가 상세할수록 TC 품질이 높아지며, 생성 후 검토/수정을 거쳐 사용하는 것을 권장합니다. 계정 설정에서 모델을 변경할 수 있습니다.",
             },
             {
               q: "AI 자율 모드와 템플릿 모드의 차이는?",
@@ -828,6 +952,10 @@ export default function GuidePage() {
             {
               q: "다이어그램 버전은 어떻게 관리되나요?",
               a: "AI에게 수정을 요청할 때마다 새 버전이 DB에 저장됩니다. 상단의 도트 내비게이션으로 모든 버전을 오갈 수 있으며, '이 버전으로 확정'을 클릭하면 최종본으로 지정됩니다. FigJam 플러그인에서 가져올 때 확정 버전이 우선 반영됩니다.",
+            },
+            {
+              q: "에이전트 모드와 서버 LLM 모드의 차이는?",
+              a: "서버 LLM 모드는 FireQA 서버가 AI를 호출합니다(크레딧 소비). 에이전트 모드는 내 컴퓨터에서 실행 중인 Claude Code, Codex CLI 등이 AI를 호출합니다(내 API 키 사용). 에이전트 모드를 사용하려면 fireqa-agent CLI를 설치하고 연결해야 합니다.",
             },
             {
               q: "여러 기획 문서를 하나의 프로젝트로 합칠 수 있나요?",

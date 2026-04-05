@@ -1,23 +1,42 @@
 {
   "name": "fireqa-agent",
-  "version": "0.1.0",
-  "description": "FireQA Agent CLI — connect your AI CLI to FireQA",
+  "version": "0.1.1",
+  "description": "FireQA Agent CLI — connect your AI CLI (Claude Code, Codex, Gemini) to FireQA",
   "type": "module",
   "bin": {
-    "fireqa-agent": "./dist/cli.js"
+    "fireqa-agent": "dist/cli.js"
   },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/cli.ts",
+    "prepublishOnly": "npm run build",
     "test": "vitest run"
   },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "fireqa",
+    "agent",
+    "cli",
+    "claude-code",
+    "codex",
+    "gemini",
+    "qa",
+    "test-automation"
+  ],
+  "license": "MIT",
   "dependencies": {
     "commander": "^13.0.0"
   },
   "devDependencies": {
-    "typescript": "^5.8.0",
+    "@types/node": "^22.0.0",
     "tsx": "^4.0.0",
-    "vitest": "^3.0.0",
-    "@types/node": "^22.0.0"
+    "typescript": "^5.8.0",
+    "vitest": "^3.0.0"
   }
 }

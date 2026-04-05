@@ -4,16 +4,11 @@ import type { AIProvider } from "./provider";
 import { OpenAIProvider } from "./openai-provider";
 import { AnthropicProvider } from "./anthropic-provider";
 
-/**
- * 요청된 프로바이더에 따라 AIProvider 인스턴스를 생성한다.
- * - "anthropic": 조직의 UserApiKey에서 키를 조회/복호화하여 AnthropicProvider 생성
- * - 기본값: OpenAIProvider
- */
 export async function resolveProvider(
   organizationId: string,
-  requestedProvider?: string | null,
+  requestedModel?: string | null,
 ): Promise<AIProvider> {
-  if (requestedProvider === "anthropic") {
+  if (requestedModel === "claude-sonnet") {
     const record = await prisma.userApiKey.findUnique({
       where: {
         organizationId_provider: {
@@ -33,5 +28,5 @@ export async function resolveProvider(
     return new AnthropicProvider(apiKey);
   }
 
-  return new OpenAIProvider();
+  return new OpenAIProvider(requestedModel ?? undefined);
 }

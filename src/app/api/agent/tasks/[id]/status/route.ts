@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { AgentTaskStatus } from "@/types/agent";
 import { createLogger } from "@/lib/logger";
+import { bridgeAgentFailure } from "@/lib/agent/bridge-agent-result";
 
 const logger = createLogger({ module: "api/agent/tasks/status" });
 
@@ -63,6 +64,15 @@ export async function PUT(
         ...(sessionId ? { sessionId } : {}),
       },
     });
+
+    // 에이전트 실패/타임아웃 시 연결된 GenerationJob도 실패 처리
+    if (status === AgentTaskStatus.FAILED || status === AgentTaskStatus.TIMED_OUT) {
+      const failMsg = errorMessage ?? (status === AgentTaskStatus.TIMED_OUT ? "작업 시간 초과" : "에이전트 작업 실패");
+      await bridgeAgentFailure(id, failMsg, {
+        userId: user.userId,
+        organizationId: user.organizationId,
+      }).catch((err) => logger.error("bridgeAgentFailure 실패", { error: err }));
+    }
 
     return NextResponse.json({ status: updated.status });
   } catch (error) {

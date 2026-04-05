@@ -50,11 +50,37 @@ export function TaskResultPreview({ taskType, taskId, projectName, rawResult }: 
         </div>
       );
 
+    case "diagrams":
+      return (
+        <div className="space-y-2">
+          {parsed.diagrams.map((d, i) => (
+            <div key={i} className="rounded-md border bg-white p-4">
+              {d.title && <p className="mb-2 text-sm font-medium">{d.title}</p>}
+              <MermaidPreview code={d.mermaidCode} />
+            </div>
+          ))}
+        </div>
+      );
+
+    case "wireframe":
+      return (
+        <pre className="whitespace-pre-wrap break-words text-xs font-mono bg-muted rounded-md p-3 max-h-64 overflow-y-auto leading-relaxed">
+          {JSON.stringify({ screens: parsed.screens, flows: parsed.flows }, null, 2)}
+        </pre>
+      );
+
+    case "spec":
+      return (
+        <pre className="whitespace-pre-wrap break-words text-xs font-mono bg-muted rounded-md p-3 max-h-64 overflow-y-auto leading-relaxed">
+          {parsed.markdown}
+        </pre>
+      );
+
     case "raw":
     default:
       return (
         <pre className="whitespace-pre-wrap break-words text-xs font-mono bg-muted rounded-md p-3 max-h-64 overflow-y-auto leading-relaxed">
-          {typeof parsed.content === "string" ? parsed.content : JSON.stringify(parsed.content, null, 2)}
+          {(parsed as { content?: string }).content ?? JSON.stringify(parsed, null, 2)}
         </pre>
       );
   }

@@ -4,6 +4,12 @@ import type { SSEWriter } from "@/lib/sse/create-sse-stream";
 import { calcProgress } from "./calc-progress";
 
 export class OpenAIProvider implements AIProvider {
+  private model: string;
+
+  constructor(model: string = MODEL) {
+    this.model = model;
+  }
+
   async streamWithSchema<T>(opts: {
     systemPrompt: string;
     userPrompt: string;
@@ -17,7 +23,7 @@ export class OpenAIProvider implements AIProvider {
     const pMax = progressRange?.max ?? 90;
 
     const stream = await openai.chat.completions.create({
-      model: MODEL,
+      model: this.model,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },

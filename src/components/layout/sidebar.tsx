@@ -44,7 +44,6 @@ function buildNavItems(nav: Messages["nav"], orgSlug: string, userRole?: string)
     { label: nav.dashboard, href: `/${orgSlug}/dashboard`, icon: LayoutDashboard },
     { label: nav.projects, href: `/${orgSlug}/projects`, icon: FolderOpen },
     { label: nav.templates, href: `/${orgSlug}/templates`, icon: Settings },
-    { label: nav.guide, href: `/${orgSlug}/guide`, icon: BookOpen },
     { label: "에이전트", href: `/${orgSlug}/agent`, icon: Bot },
     { label: nav.testRuns, href: `/${orgSlug}/test-runs`, icon: FlaskConical },
     { label: nav.settings, href: `/${orgSlug}/settings`, icon: Settings2 },
@@ -213,6 +212,22 @@ export function Sidebar({ initialMemberships, initialActiveOrgId }: SidebarProps
           </>
         )}
       </nav>
+
+      <div className="border-t px-3 py-2">
+        <Link
+          href={`/${orgSlug}/guide`}
+          onClick={() => setMobileOpen(false)}
+          className={cn(
+            "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+            pathname.startsWith(`/${orgSlug}/guide`)
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+          )}
+        >
+          <BookOpen className="h-4 w-4" />
+          {t.nav.guide}
+        </Link>
+      </div>
 
       <div className="border-t p-4">
         {authUser && (

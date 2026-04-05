@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, updateCachedActiveOrg } from "@/lib/auth/get-current-user";
+import { AgentStatusBanner } from "@/components/agent/agent-status-banner";
 
 type OrgLayoutProps = {
   params: Promise<{ orgSlug: string }>;
@@ -43,5 +44,10 @@ export default async function OrgLayout({ params, children }: OrgLayoutProps) {
     updateCachedActiveOrg(user.userId, orgId);
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <AgentStatusBanner orgSlug={orgSlug} />
+      {children}
+    </>
+  );
 }

@@ -12,7 +12,6 @@ export default async function SettingsPage({
     : tab === "credits" ? "credits"
     : tab === "webhooks" ? "webhooks"
     : tab === "api-keys" ? "api-keys"
-    : tab === "agent" ? "agent"
     : "general";
 
   return (

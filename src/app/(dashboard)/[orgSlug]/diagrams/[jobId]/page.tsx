@@ -33,6 +33,12 @@ export default async function DiagramResultPage({
     try { result = JSON.parse(job.result); } catch { /* malformed — treat as no result */ }
   }
 
+  let agentTaskId: string | null = null;
+  try {
+    const config = job.config ? JSON.parse(job.config) : {};
+    if (config.executionMode === "agent") agentTaskId = config.agentTaskId ?? null;
+  } catch { /* ignore */ }
+
   return (
     <div className="space-y-6">
       <SetCurrentProject projectId={job.project.id} />
@@ -57,6 +63,8 @@ export default async function DiagramResultPage({
         status={job.status}
         error={job.error}
         loadingMessage="다이어그램을 생성하고 있습니다..."
+        agentTaskId={agentTaskId}
+        orgSlug={orgSlug}
       />
 
       {job.status === JobStatus.COMPLETED && result && (

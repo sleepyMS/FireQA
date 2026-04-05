@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createGenerationJob, completeJob, failJob } from "@/lib/api/create-generation-job";
+import { handleAgentMode } from "@/lib/api/handle-agent-mode";
 import { checkRateLimit } from "@/lib/rate-limit/check-rate-limit";
 import { logActivity } from "@/lib/activity/log-activity";
 import { createNotification } from "@/lib/notifications/create-notification";
@@ -24,7 +25,8 @@ export async function POST(request: NextRequest) {
   const file = formData.get("file") as File;
   const projectId = formData.get("projectId") as string | null;
   const projectName = formData.get("projectName") as string | null;
-  const providerParam = formData.get("provider") as string | null;
+  const providerParam = (formData.get("model") ?? formData.get("provider")) as string | null;
+  const executionMode = formData.get("executionMode") as string | null;
 
   // projectId 또는 projectName 중 하나는 반드시 필요
   if (!file || (!projectId && !projectName)) {
@@ -48,6 +50,21 @@ export async function POST(request: NextRequest) {
       { error: `시간당 생성 한도를 초과했습니다. ${resetAt.toISOString()} 이후 다시 시도하세요.` },
       { status: 429, headers: { "X-RateLimit-Remaining": "0", "X-RateLimit-Reset": resetAt.toISOString() } }
     );
+  }
+
+  if (executionMode === "agent") {
+    const { jobId, parsedText, projectId: pid } = await createGenerationJob(file, projectInput, JobType.SPEC_IMPROVE, {
+      userId: user.userId,
+      organizationId: user.organizationId,
+    });
+    return handleAgentMode({
+      jobId,
+      projectId: pid,
+      parsedText,
+      jobType: JobType.SPEC_IMPROVE,
+      systemPrompt: SPEC_IMPROVE_SYSTEM_PROMPT,
+      auth: { userId: user.userId, organizationId: user.organizationId },
+    });
   }
 
   const STAGE_TOTAL = 4; // parsing → preparing → generating → saving

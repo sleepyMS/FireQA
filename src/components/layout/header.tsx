@@ -1,7 +1,8 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { Search } from "lucide-react";
+import Link from "next/link";
+import { usePathname, useParams } from "next/navigation";
+import { Search, UserCog } from "lucide-react";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { SearchDialog } from "@/components/layout/search-dialog";
 import { useLocale } from "@/lib/i18n/locale-provider";
@@ -25,6 +26,7 @@ function buildPageTitles(nav: Messages["nav"]): Record<string, string> {
 
 export function Header({ initialNotificationCount, orgName }: { initialNotificationCount?: number; orgName?: string }) {
   const pathname = usePathname();
+  const { orgSlug } = useParams<{ orgSlug?: string }>();
   const { t } = useLocale();
   const pageTitles = buildPageTitles(t.nav);
 
@@ -55,6 +57,15 @@ export function Header({ initialNotificationCount, orgName }: { initialNotificat
             <kbd className="ml-1 rounded border px-1 py-0.5 text-[10px]">⌘K</kbd>
           </button>
           <NotificationBell initialCount={initialNotificationCount} />
+          {orgSlug && (
+            <Link
+              href={`/${orgSlug}/account`}
+              className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              title="계정 설정"
+            >
+              <UserCog className="h-5 w-5" />
+            </Link>
+          )}
         </div>
       </header>
     </>

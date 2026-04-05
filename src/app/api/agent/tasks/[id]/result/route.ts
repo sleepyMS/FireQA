@@ -5,6 +5,7 @@ import { logActivity } from "@/lib/activity/log-activity";
 import { ActivityAction } from "@/types/enums";
 import { AgentTaskStatus } from "@/types/agent";
 import { createLogger } from "@/lib/logger";
+import { bridgeAgentResult } from "@/lib/agent/bridge-agent-result";
 
 const logger = createLogger({ module: "api/agent/tasks/result" });
 
@@ -55,6 +56,12 @@ export async function POST(
       projectId: task.projectId ?? undefined,
       metadata: { taskId: id, type: task.type },
     });
+
+    // GenerationJob과 연결된 경우 결과를 브릿지
+    await bridgeAgentResult(id, JSON.stringify(result), {
+      userId: user.userId,
+      organizationId: user.organizationId,
+    }).catch((err) => logger.error("bridgeAgentResult 실패", { error: err }));
 
     // hosted 모드 작업 완료 시 워커 해제
     if (task.mode === "hosted" && task.flyMachineId) {

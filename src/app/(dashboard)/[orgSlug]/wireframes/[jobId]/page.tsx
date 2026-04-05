@@ -28,6 +28,12 @@ export default async function WireframeResultPage({
 
   const result = job.result ? JSON.parse(job.result) : null;
 
+  let agentTaskId: string | null = null;
+  try {
+    const config = job.config ? JSON.parse(job.config) : {};
+    if (config.executionMode === "agent") agentTaskId = config.agentTaskId ?? null;
+  } catch { /* ignore */ }
+
   return (
     <div className="min-w-0 space-y-6">
       <SetCurrentProject projectId={job.project.id} />
@@ -52,6 +58,8 @@ export default async function WireframeResultPage({
         status={job.status}
         error={job.error}
         loadingMessage="와이어프레임을 생성하고 있습니다..."
+        agentTaskId={agentTaskId}
+        orgSlug={orgSlug}
       />
 
       {job.status === JobStatus.COMPLETED && result && (

@@ -2,6 +2,8 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { ExternalLink } from "lucide-react";
 import { JobStatus } from "@/types/enums";
 import { useLocale } from "@/lib/i18n/locale-provider";
 
@@ -9,12 +11,16 @@ interface JobStatusDisplayProps {
   status: string;
   error?: string | null;
   loadingMessage?: string;
+  agentTaskId?: string | null;
+  orgSlug?: string;
 }
 
 export function JobStatusDisplay({
   status,
   error,
   loadingMessage,
+  agentTaskId,
+  orgSlug,
 }: JobStatusDisplayProps) {
   const router = useRouter();
   const { t } = useLocale();
@@ -39,6 +45,10 @@ export function JobStatusDisplay({
   }, [status, router]);
 
   if (status === JobStatus.PROCESSING) {
+    const logHref = agentTaskId && orgSlug
+      ? `/${orgSlug}/agent/tasks/${agentTaskId}`
+      : null;
+
     return (
       <div className="flex items-center justify-center py-20 text-muted-foreground">
         <div className="text-center">
@@ -47,6 +57,15 @@ export function JobStatusDisplay({
           <p className="mt-2 text-xs text-muted-foreground/60">
             {t.jobStatus.autoShowResult}
           </p>
+          {logHref && (
+            <Link
+              href={logHref}
+              className="mt-3 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+            >
+              <ExternalLink className="h-3 w-3" />
+              에이전트 실행 로그 보기
+            </Link>
+          )}
         </div>
       </div>
     );

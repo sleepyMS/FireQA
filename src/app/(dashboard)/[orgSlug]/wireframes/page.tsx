@@ -14,6 +14,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dropzone } from "@/components/upload/dropzone";
 import { cn } from "@/lib/utils";
 import { useSSE } from "@/hooks/use-sse";
+import { useAgentGenerate } from "@/hooks/use-agent-generate";
+import { ExecutionModeSelector } from "@/components/execution-mode-selector";
+import { useExecutionMode } from "@/hooks/use-execution-mode";
+import { useModel } from "@/hooks/use-model";
 import { GenerationProgress } from "@/components/generation-progress";
 import { GenerationError } from "@/components/generation-error";
 import { RecentJobsPanel } from "@/components/recent-jobs-panel";
@@ -42,9 +46,12 @@ export default function WireframesPage() {
   const [projectSelection, setProjectSelection] =
     useState<ProjectSelection | null>(null);
   const [file, setFile] = useState<File | null>(null);
-  const [screenTypeMode, setScreenTypeMode] = useState<string>("auto");
+  const [screenTypeMode, setScreenTypeMode] = useState<ScreenTypeValue>("auto");
+  const { executionMode, setExecutionMode } = useExecutionMode();
+  const { selectedModel } = useModel();
 
   const sse = useSSE("/api/wireframes");
+  const agentGenerate = useAgentGenerate("/api/wireframes");
 
   // URL searchParams에 projectId가 있으면 해당 프로젝트를 자동 선택
   useEffect(() => {
@@ -75,20 +82,29 @@ export default function WireframesPage() {
     setFile(selectedFile);
   };
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!file || !projectSelection) return;
 
     const formData = new FormData();
     formData.append("file", file);
-    // 기존 프로젝트면 projectId, 새 프로젝트면 projectName 전달
     if (projectSelection.type === "existing") {
       formData.append("projectId", projectSelection.id);
     } else {
       formData.append("projectName", projectSelection.name);
     }
     formData.append("screenTypeMode", screenTypeMode);
+    if (executionMode === "server") {
+      formData.append("model", selectedModel);
+    }
 
-    sse.start(formData);
+    if (executionMode === "agent") {
+      const res = await agentGenerate.submit(formData);
+      if (res?.jobId) {
+        router.push(`${orgSlug ? `/${orgSlug}` : ""}/wireframes/${res.jobId}`);
+      }
+    } else {
+      sse.start(formData);
+    }
   };
 
   const screenTypeOptions = useMemo(
@@ -211,15 +227,31 @@ export default function WireframesPage() {
             </CardContent>
           </Card>
 
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">실행 방식</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ExecutionModeSelector
+                value={executionMode}
+                onChange={setExecutionMode}
+                disabled={sse.isStreaming || agentGenerate.isSubmitting}
+              />
+            </CardContent>
+          </Card>
+
           <Button
             className="w-full"
             size="lg"
-            disabled={!file || !projectSelection || sse.isStreaming}
+            disabled={!file || !projectSelection || sse.isStreaming || agentGenerate.isSubmitting}
             onClick={handleGenerate}
           >
             <Smartphone className="mr-2 h-4 w-4" />
-            {t.wireframes.generate}
+            {agentGenerate.isSubmitting ? "에이전트에 전달 중..." : t.wireframes.generate}
           </Button>
+          {agentGenerate.error && (
+            <p className="text-sm text-destructive">{agentGenerate.error}</p>
+          )}
         </div>
 
         <RecentJobsPanel type="wireframes" />

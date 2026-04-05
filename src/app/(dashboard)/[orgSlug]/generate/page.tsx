@@ -15,6 +15,10 @@ import { Badge } from "@/components/ui/badge";
 import { Dropzone } from "@/components/upload/dropzone";
 import { cn } from "@/lib/utils";
 import { useSSE } from "@/hooks/use-sse";
+import { useAgentGenerate } from "@/hooks/use-agent-generate";
+import { ExecutionModeSelector } from "@/components/execution-mode-selector";
+import { useExecutionMode } from "@/hooks/use-execution-mode";
+import { useModel } from "@/hooks/use-model";
 import { GenerationProgress } from "@/components/generation-progress";
 import { GenerationError } from "@/components/generation-error";
 import { RecentJobsPanel } from "@/components/recent-jobs-panel";
@@ -50,8 +54,11 @@ export default function GeneratePage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(
     null
   );
+  const { executionMode, setExecutionMode } = useExecutionMode();
+  const { selectedModel } = useModel();
 
   const sse = useSSE("/api/generate");
+  const agentGenerate = useAgentGenerate("/api/generate");
 
   // URL searchParams에 projectId가 있으면 해당 프로젝트를 자동 선택
   useEffect(() => {
@@ -116,12 +123,11 @@ export default function GeneratePage() {
     }
   };
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!file || !projectSelection) return;
 
     const formData = new FormData();
     formData.append("file", file);
-    // 기존 프로젝트면 projectId, 새 프로젝트면 projectName 전달
     if (projectSelection.type === "existing") {
       formData.append("projectId", projectSelection.id);
     } else {
@@ -131,8 +137,18 @@ export default function GeneratePage() {
     if (mode === "template" && selectedTemplateId) {
       formData.append("templateId", selectedTemplateId);
     }
+    if (executionMode === "server") {
+      formData.append("model", selectedModel);
+    }
 
-    sse.start(formData);
+    if (executionMode === "agent") {
+      const res = await agentGenerate.submit(formData);
+      if (res?.jobId) {
+        router.push(`${orgSlug ? `/${orgSlug}` : ""}/generate/${res.jobId}`);
+      }
+    } else {
+      sse.start(formData);
+    }
   };
 
   // 스트리밍 중이면 진행상태 표시
@@ -332,6 +348,19 @@ export default function GeneratePage() {
             </CardContent>
           </Card>
 
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">실행 방식</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ExecutionModeSelector
+                value={executionMode}
+                onChange={setExecutionMode}
+                disabled={sse.isStreaming || agentGenerate.isSubmitting}
+              />
+            </CardContent>
+          </Card>
+
           <Button
             className="w-full"
             size="lg"
@@ -339,15 +368,21 @@ export default function GeneratePage() {
               !file ||
               !projectSelection ||
               sse.isStreaming ||
+              agentGenerate.isSubmitting ||
               (mode === "template" && !selectedTemplateId)
             }
             onClick={handleGenerate}
           >
             <Upload className="mr-2 h-4 w-4" />
-            {mode === "auto"
+            {agentGenerate.isSubmitting
+              ? "에이전트에 전달 중..."
+              : mode === "auto"
               ? t.generation.generateAuto
               : `"${selectedTemplate?.name || t.nav.templates}" ${t.generation.generateTemplate}`}
           </Button>
+          {agentGenerate.error && (
+            <p className="text-sm text-destructive">{agentGenerate.error}</p>
+          )}
         </div>
 
         {/* Right: Preview + Recent Jobs */}

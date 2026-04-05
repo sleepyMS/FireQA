@@ -3,6 +3,9 @@ import type { TestSheet } from "@/types/test-case";
 export type ParsedTaskResult =
   | { type: "tc"; sheets: TestSheet[] }
   | { type: "mermaid"; code: string }
+  | { type: "diagrams"; diagrams: Array<{ title: string; description: string; mermaidCode: string }> }
+  | { type: "wireframe"; screens: unknown[]; flows: unknown[] }
+  | { type: "spec"; markdown: string; summary?: string }
   | { type: "figma-link"; urls: string[] }
   | { type: "raw"; content: string };
 
@@ -31,6 +34,17 @@ export function parseTaskResult(taskType: string, rawResult: string): ParsedTask
     }
 
     case "diagram-generate": {
+      // Try structured JSON first
+      const diagramsJson = extractJsonWithKey(output, "diagrams");
+      if (diagramsJson) {
+        try {
+          const data = JSON.parse(diagramsJson) as { diagrams: Array<{ title: string; description: string; mermaidCode: string }> };
+          if (Array.isArray(data.diagrams) && data.diagrams.length > 0) {
+            return { type: "diagrams", diagrams: data.diagrams };
+          }
+        } catch { /* fall through */ }
+      }
+      // Fall back to mermaid code block
       const mermaidMatch = output.match(/```mermaid\n([\s\S]*?)```/);
       if (mermaidMatch) {
         return { type: "mermaid", code: mermaidMatch[1].trim() };
@@ -39,9 +53,33 @@ export function parseTaskResult(taskType: string, rawResult: string): ParsedTask
     }
 
     case "wireframe-generate": {
+      // Try structured JSON first
+      const screensJson = extractJsonWithKey(output, "screens");
+      if (screensJson) {
+        try {
+          const data = JSON.parse(screensJson) as { screens: unknown[]; flows?: unknown[] };
+          if (Array.isArray(data.screens) && data.screens.length > 0) {
+            return { type: "wireframe", screens: data.screens, flows: data.flows ?? [] };
+          }
+        } catch { /* fall through */ }
+      }
+      // Fall back to Figma URLs
       const figmaUrls = output.match(/https:\/\/www\.figma\.com\/[^\s)]+/g);
       if (figmaUrls && figmaUrls.length > 0) {
         return { type: "figma-link", urls: figmaUrls };
+      }
+      return { type: "raw", content: output };
+    }
+
+    case "improve-spec": {
+      const markdownJson = extractJsonWithKey(output, "markdown");
+      if (markdownJson) {
+        try {
+          const data = JSON.parse(markdownJson) as { markdown: string; summary?: string };
+          if (typeof data.markdown === "string" && data.markdown.length > 0) {
+            return { type: "spec", markdown: data.markdown, summary: data.summary };
+          }
+        } catch { /* fall through */ }
       }
       return { type: "raw", content: output };
     }

@@ -56,11 +56,15 @@ export async function GET(request: NextRequest) {
     return response;
   }
 
-  // 신규 OAuth 유저 → 온보딩으로
+  // 신규 OAuth 유저 → 온보딩으로 (세션 쿠키를 새 response에 복사)
   const onboardingUrl = new URL("/onboarding", request.url);
   onboardingUrl.searchParams.set(
     "redirect",
     new URL(redirect, request.url).pathname
   );
-  return NextResponse.redirect(onboardingUrl);
+  const onboardingResponse = NextResponse.redirect(onboardingUrl);
+  for (const cookie of response.cookies.getAll()) {
+    onboardingResponse.cookies.set(cookie.name, cookie.value, cookie);
+  }
+  return onboardingResponse;
 }
