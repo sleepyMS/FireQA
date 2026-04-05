@@ -72,10 +72,7 @@ export async function DELETE(
       return NextResponse.json({ error: "에이전트를 찾을 수 없습니다." }, { status: 404 });
     }
 
-    await prisma.agentConnection.update({
-      where: { id },
-      data: { status: AgentConnectionStatus.OFFLINE },
-    });
+    await prisma.agentConnection.delete({ where: { id } });
 
     logActivity({
       organizationId: user.organizationId,

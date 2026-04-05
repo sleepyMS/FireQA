@@ -1,6 +1,6 @@
 {
   "name": "fireqa-agent",
-  "version": "0.1.1",
+  "version": "0.1.5",
   "description": "FireQA Agent CLI — connect your AI CLI (Claude Code, Codex, Gemini) to FireQA",
   "type": "module",
   "bin": {

@@ -20,7 +20,7 @@ export default async function AgentPage({
 
   const [connections, recentTasks] = await Promise.all([
     prisma.agentConnection.findMany({
-      where: { organizationId },
+      where: { organizationId, status: { not: "offline" } },
       orderBy: { lastHeartbeat: "desc" },
       take: 10,
       select: {

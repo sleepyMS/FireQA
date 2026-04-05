@@ -1,39 +1,33 @@
 "use client";
-import useSWR from "swr";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { X, Zap } from "lucide-react";
-import { useExecutionMode } from "@/hooks/use-execution-mode";
-import type { AgentStatusResponse } from "@/components/execution-mode-selector";
+import { useAIConfig } from "@/hooks/use-ai-config";
 
-const fetcher = (url: string) => fetch(url).then(r => r.json());
 const DISMISS_KEY = "fireqa:agentBannerDismissed";
 
 export function AgentStatusBanner({ orgSlug }: { orgSlug: string }) {
-  const { executionMode } = useExecutionMode();
+  const { config } = useAIConfig();
   const [dismissed, setDismissed] = useState(true);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (sessionStorage.getItem(DISMISS_KEY) !== "1") setDismissed(false);
   }, []);
-
-  const { data } = useSWR<AgentStatusResponse>(
-    executionMode === "agent" ? "/api/agent/status" : null,
-    fetcher,
-    { refreshInterval: 30000, revalidateOnFocus: true }
-  );
 
   function handleDismiss() {
     sessionStorage.setItem(DISMISS_KEY, "1");
     setDismissed(true);
   }
 
-  // 에이전트 모드가 아니거나, 닫혔거나, 데이터 없거나, 온라인이면 숨김
-  if (executionMode !== "agent" || dismissed || !data || data.onlineCount > 0) return null;
+  // 에이전트 모드가 아니거나, 닫혔거나, 에이전트가 온라인이면 숨김
+  const agentOffline =
+    config.executionMode === "agent" &&
+    (!config.agentConnection || config.agentConnection.status !== "online");
+
+  if (!agentOffline || dismissed) return null;
 
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
+    <div className="mb-4 flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
       <Zap className="h-4 w-4 shrink-0" />
       <span className="flex-1">
         에이전트가 연결되지 않았습니다. AI 기능을 사용하려면 에이전트를 먼저 실행하세요.

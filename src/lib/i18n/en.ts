@@ -586,6 +586,10 @@ export const en: Messages = {
     agentSubmitting: "Sending to agent...",
     agentTaskError: "Failed to create agent task.",
     networkError: "A network error occurred.",
+    figmaExportBanner: "Exporting to Figma is only available in agent mode.",
+    figmaFileKeyLabel: "Figma File Key (optional)",
+    figmaFileKeyPlaceholder: "e.g. abc123DEF456",
+    figmaFileKeyHelp: "The key after /file/ in your Figma URL. If provided, results will be pushed to Figma automatically.",
   },
   wireframes: {
     pageTitle: "Generate Wireframes",
@@ -612,6 +616,10 @@ export const en: Messages = {
     agentSubmitting: "Sending to agent...",
     agentTaskError: "Failed to create agent task.",
     networkError: "A network error occurred.",
+    figmaExportBanner: "Exporting to Figma is only available in agent mode.",
+    figmaFileKeyLabel: "Figma File Key (optional)",
+    figmaFileKeyPlaceholder: "e.g. abc123DEF456",
+    figmaFileKeyHelp: "The key after /file/ in your Figma URL. If provided, results will be pushed to Figma automatically.",
   },
   improve: {
     pageTitle: "Improve Spec",

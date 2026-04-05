@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { failJob } from "@/lib/api/create-generation-job";
 import { buildGenerationPrompt } from "@/lib/agent/build-generation-prompt";
-import { AgentConnectionStatus, AgentTaskStatus } from "@/types/agent";
+import { AgentTaskStatus } from "@/types/agent";
 import type { JobType } from "@/types/enums";
 
 const JOB_TYPE_TO_TASK_TYPE: Record<string, string> = {
@@ -19,15 +19,19 @@ export async function handleAgentMode(params: {
   jobType: JobType;
   systemPrompt: string;
   auth: { userId: string; organizationId: string };
+  figmaFileKey?: string;
+  model?: string;
+  agentConnectionId?: string;
 }): Promise<NextResponse> {
-  const { jobId, projectId, parsedText, jobType, systemPrompt, auth } = params;
+  const { jobId, projectId, parsedText, jobType, systemPrompt, auth, figmaFileKey, model, agentConnectionId } = params;
 
-  // 에이전트 온라인 확인
+  // 에이전트 활성 확인: status 필드 대신 heartbeat 시각으로 판단 (30초 이내)
+  // status 필드는 크론 없이는 stale할 수 있으므로 직접 체크
+  const freshThreshold = new Date(Date.now() - 30_000);
   const onlineAgent = await prisma.agentConnection.findFirst({
-    where: {
-      organizationId: auth.organizationId,
-      status: AgentConnectionStatus.ONLINE,
-    },
+    where: agentConnectionId
+      ? { id: agentConnectionId, organizationId: auth.organizationId, lastHeartbeat: { gt: freshThreshold } }
+      : { organizationId: auth.organizationId, lastHeartbeat: { gt: freshThreshold } },
     select: { id: true },
   });
 
@@ -40,7 +44,7 @@ export async function handleAgentMode(params: {
   }
 
   const taskType = JOB_TYPE_TO_TASK_TYPE[jobType];
-  const prompt = buildGenerationPrompt(taskType, systemPrompt, parsedText);
+  const prompt = buildGenerationPrompt(taskType, systemPrompt, parsedText, figmaFileKey);
 
   // AgentTask 생성 (context에 generationJobId 포함)
   const agentTask = await prisma.agentTask.create({
@@ -51,7 +55,7 @@ export async function handleAgentMode(params: {
       type: taskType,
       status: AgentTaskStatus.PENDING,
       prompt,
-      context: JSON.stringify({ generationJobId: jobId }),
+      context: JSON.stringify({ generationJobId: jobId, ...(figmaFileKey ? { figmaFileKey } : {}), ...(model ? { model } : {}) }),
       timeoutMs: 600_000, // 10분
     },
     select: { id: true },

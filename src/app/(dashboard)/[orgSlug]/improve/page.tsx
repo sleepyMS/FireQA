@@ -8,8 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dropzone } from "@/components/upload/dropzone";
 import { useSSE } from "@/hooks/use-sse";
 import { useAgentGenerate } from "@/hooks/use-agent-generate";
-import { useExecutionMode } from "@/hooks/use-execution-mode";
-import { useModel } from "@/hooks/use-model";
+import { useAIConfig } from "@/hooks/use-ai-config";
+import { AIConfigBanner } from "@/components/ai-config-banner";
 import { GenerationProgress } from "@/components/generation-progress";
 import { GenerationError } from "@/components/generation-error";
 import { RecentJobsPanel } from "@/components/recent-jobs-panel";
@@ -30,8 +30,8 @@ export default function ImprovePage() {
     useState<ProjectSelection | null>(null);
   const [file, setFile] = useState<File | null>(null);
 
-  const { executionMode } = useExecutionMode();
-  const { selectedModel } = useModel();
+  const { config } = useAIConfig();
+  const executionMode = config.executionMode;
   const sse = useSSE<SpecImproveResult>("/api/improve");
   const agentGenerate = useAgentGenerate("/api/improve");
 
@@ -76,7 +76,10 @@ export default function ImprovePage() {
     }
     formData.append("type", "spec-improve");
     if (executionMode === "server") {
-      formData.append("model", selectedModel);
+      formData.append("model", config.serverModel);
+    } else {
+      if (config.agentModel) formData.append("agentModel", config.agentModel);
+      if (config.agentConnectionId) formData.append("agentConnectionId", config.agentConnectionId);
     }
 
     if (executionMode === "agent") {
@@ -128,6 +131,8 @@ export default function ImprovePage() {
         <h2 className="text-2xl font-bold tracking-tight">{t.improve.pageTitle}</h2>
         <p className="text-muted-foreground">{t.improve.pageDescription}</p>
       </div>
+
+      <AIConfigBanner orgSlug={orgSlug ?? ""} />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-4">

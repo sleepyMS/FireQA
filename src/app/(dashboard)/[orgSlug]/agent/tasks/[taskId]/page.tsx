@@ -110,7 +110,7 @@ export default async function AgentTaskDetailPage({
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* 로그 뷰어 (좌측, 2/3) */}
         <div className="lg:col-span-2">
-          <Card>
+          <Card className="pb-0">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">실행 로그</CardTitle>
             </CardHeader>

@@ -83,7 +83,6 @@ export async function startAgent(store: ConfigStore): Promise<void> {
 
   // 이전 실행에서 미전송된 출력 데이터 재전송 시도
   await api.flushPendingOutputs().catch(() => {});
-  console.log("미전송 데이터 확인 완료");
 
   const cleanup = async () => {
     console.log("\n에이전트 종료 중...");
@@ -108,10 +107,19 @@ export async function startAgent(store: ConfigStore): Promise<void> {
           }
         }
       }
-    } catch {
+    } catch (err) {
       heartbeatFailures++;
-      if (heartbeatFailures > 3) {
-        console.warn(`heartbeat 연속 실패 (${heartbeatFailures}회)`);
+      const msg = err instanceof Error ? err.message : String(err);
+      if (heartbeatFailures === 1) {
+        console.warn(`heartbeat 실패: ${msg}`);
+      } else if (heartbeatFailures > 3) {
+        console.warn(`heartbeat 연속 실패 (${heartbeatFailures}회): ${msg}`);
+      }
+      // 404: 서버에서 연결이 삭제됨 → 재시작 필요
+      if (msg.includes("404") && heartbeatFailures === 1) {
+        console.error("서버에서 연결 정보가 삭제되었습니다. 에이전트를 재시작하세요.");
+        clearInterval(heartbeatTimer);
+        process.exit(1);
       }
     }
   }, 10_000);
@@ -214,6 +222,7 @@ async function executeTask(
     const result = await spawnCli(config.cliType, config.cli, task.prompt, {
       sessionId: task.sessionId ?? undefined,
       mcpTools: task.mcpTools,
+      model: task.context?.model as string | undefined,
       onChunk: (chunk) => { chunkBuffer.push(chunk); },
       signal: controller.signal,
     });

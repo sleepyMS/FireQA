@@ -1,14 +1,14 @@
 import { prisma } from "@/lib/db";
 import { withApiHandler } from "@/lib/api";
+import { AgentConnectionStatus } from "@/types/agent";
 
-// GET — 대시보드용 connections + tasks를 단일 응답으로 반환 (HTTP 라운드트립 절감)
 export const GET = withApiHandler(
   async ({ user }) => {
     const organizationId = user.organizationId;
 
     const [connections, tasks] = await Promise.all([
       prisma.agentConnection.findMany({
-        where: { organizationId },
+        where: { organizationId, status: { not: AgentConnectionStatus.OFFLINE } },
         orderBy: { lastHeartbeat: "desc" },
         take: 10,
         select: {

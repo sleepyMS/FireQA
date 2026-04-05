@@ -81,20 +81,25 @@ export function buildGenerationPrompt(
   taskType: string,
   systemPrompt: string,
   parsedText: string,
+  figmaFileKey?: string,
 ): string {
+  const figmaSuffix = figmaFileKey
+    ? `\n\n---\n\nFigma 파일 키: ${figmaFileKey}\n생성 결과를 Figma MCP를 사용하여 이 파일에 추가하라.`
+    : "";
+
   switch (taskType) {
     case "tc-generate":
       return [systemPrompt, buildTestCaseUserPrompt(parsedText), TC_OUTPUT_FORMAT].join("\n\n---\n\n");
 
     case "diagram-generate":
-      return [systemPrompt, buildDiagramUserPrompt(parsedText), DIAGRAM_OUTPUT_FORMAT].join("\n\n---\n\n");
+      return [systemPrompt, buildDiagramUserPrompt(parsedText), DIAGRAM_OUTPUT_FORMAT].join("\n\n---\n\n") + figmaSuffix;
 
     case "wireframe-generate":
       return [
         systemPrompt,
         `아래 기획 문서를 분석하여 화면 와이어프레임을 설계하세요.\n\n## 기획 문서:\n${parsedText}`,
         WIREFRAME_OUTPUT_FORMAT,
-      ].join("\n\n---\n\n");
+      ].join("\n\n---\n\n") + figmaSuffix;
 
     case "improve-spec":
       return [

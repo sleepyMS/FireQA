@@ -99,14 +99,23 @@ export function AgentTaskLogViewer({
   }, [taskId, initialStatus]);
 
   return (
-    <div className="rounded-b-lg bg-zinc-950 overflow-y-auto max-h-[600px] p-4 font-mono text-xs">
+    <div className="rounded-b-xl bg-zinc-950 overflow-y-auto max-h-[600px] p-4 font-mono text-xs">
       {/* 연결 중 표시 */}
       {connecting && (
         <p className="text-zinc-400 animate-pulse">연결 중...</p>
       )}
 
       {/* 로그 없음 상태 */}
-      {!connecting && chunks.length === 0 && !done && (
+      {!connecting && chunks.length === 0 && !done && initialStatus === "pending" && (
+        <div className="space-y-1">
+          <p className="text-yellow-400">⏳ 에이전트 대기 중...</p>
+          <p className="text-zinc-500 text-[11px]">
+            에이전트가 오프라인이거나 아직 작업을 수령하지 않았습니다.
+            터미널에서 <span className="text-zinc-300">npx fireqa-agent@latest start</span> 를 실행하세요.
+          </p>
+        </div>
+      )}
+      {!connecting && chunks.length === 0 && !done && status !== "pending" && (
         <p className="text-zinc-500">
           로그가 없습니다. 에이전트가 작업을 시작하면 여기에 출력됩니다.
         </p>

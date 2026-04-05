@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import { JobStatus } from "@/types/enums";
 import { useLocale } from "@/lib/i18n/locale-provider";
+import { AgentTaskLogViewer } from "@/app/(dashboard)/[orgSlug]/agent/tasks/[taskId]/log-viewer";
 
 interface JobStatusDisplayProps {
   status: string;
@@ -45,9 +46,28 @@ export function JobStatusDisplay({
   }, [status, router]);
 
   if (status === JobStatus.PROCESSING) {
-    const logHref = agentTaskId && orgSlug
-      ? `/${orgSlug}/agent/tasks/${agentTaskId}`
-      : null;
+    if (agentTaskId && orgSlug) {
+      return (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between px-1">
+            <p className="text-sm text-muted-foreground">{loadingMessage ?? t.common.loading}</p>
+            <Link
+              href={`/${orgSlug}/agent/tasks/${agentTaskId}`}
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ExternalLink className="h-3 w-3" />
+              전체 보기
+            </Link>
+          </div>
+          <AgentTaskLogViewer
+            taskId={agentTaskId}
+            initialStatus={status}
+            orgSlug={orgSlug}
+            initialChunks={[]}
+          />
+        </div>
+      );
+    }
 
     return (
       <div className="flex items-center justify-center py-20 text-muted-foreground">
@@ -57,15 +77,6 @@ export function JobStatusDisplay({
           <p className="mt-2 text-xs text-muted-foreground/60">
             {t.jobStatus.autoShowResult}
           </p>
-          {logHref && (
-            <Link
-              href={logHref}
-              className="mt-3 inline-flex items-center gap-1 text-xs text-primary hover:underline"
-            >
-              <ExternalLink className="h-3 w-3" />
-              에이전트 실행 로그 보기
-            </Link>
-          )}
         </div>
       </div>
     );

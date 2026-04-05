@@ -29,20 +29,22 @@ export const CLI_ADAPTERS: Record<CliType, {
   },
 };
 
-function buildArgs(cliType: CliType, prompt: string, sessionId?: string): { args: string[]; stdinPrompt: string | null } {
+function buildArgs(cliType: CliType, prompt: string, sessionId?: string, model?: string): { args: string[]; stdinPrompt: string | null } {
   switch (cliType) {
     case "claude":
       return {
         args: [
-          "--print", prompt,
+          "--print",
           "--output-format", "stream-json",
+          "--verbose",
+          ...(model ? ["--model", model] : []),
           ...(sessionId ? ["--resume", sessionId] : []),
         ],
-        stdinPrompt: null,
+        stdinPrompt: prompt,
       };
 
     case "codex": {
-      const args = ["exec", "--json"];
+      const args = ["exec", "--json", ...(model ? ["--model", model] : [])];
       if (sessionId) args.push("resume", sessionId, "-");
       else args.push("-");
       return { args, stdinPrompt: prompt };
@@ -54,6 +56,7 @@ function buildArgs(cliType: CliType, prompt: string, sessionId?: string): { args
           "--output-format", "stream-json",
           "--approval-mode", "yolo",
           "--sandbox=none",
+          ...(model ? ["--model", model] : []),
           "--prompt", prompt,
           ...(sessionId ? ["--resume", sessionId] : []),
         ],
@@ -75,12 +78,13 @@ export async function spawnCli(
   options?: {
     sessionId?: string;
     mcpTools?: string[];
+    model?: string;
     onChunk?: (chunk: ParsedChunk) => void;
     signal?: AbortSignal;
     env?: Record<string, string>;
   }
 ): Promise<SpawnResult> {
-  const { args, stdinPrompt } = buildArgs(cliType, prompt, options?.sessionId);
+  const { args, stdinPrompt } = buildArgs(cliType, prompt, options?.sessionId, options?.model);
 
   return new Promise((resolve, reject) => {
     const child: ChildProcess = spawn(command, args, {
@@ -90,6 +94,8 @@ export async function spawnCli(
 
     if (stdinPrompt) {
       child.stdin?.write(stdinPrompt);
+      child.stdin?.end();
+    } else {
       child.stdin?.end();
     }
 

@@ -2,21 +2,24 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams, useParams } from "next/navigation";
+import Link from "next/link";
 import {
   Smartphone,
   Monitor,
   Sparkles,
   Shuffle,
   FileText,
+  Info,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Dropzone } from "@/components/upload/dropzone";
 import { cn } from "@/lib/utils";
 import { useSSE } from "@/hooks/use-sse";
 import { useAgentGenerate } from "@/hooks/use-agent-generate";
-import { useExecutionMode } from "@/hooks/use-execution-mode";
-import { useModel } from "@/hooks/use-model";
+import { useAIConfig } from "@/hooks/use-ai-config";
+import { AIConfigBanner } from "@/components/ai-config-banner";
 import { GenerationProgress } from "@/components/generation-progress";
 import { GenerationError } from "@/components/generation-error";
 import { RecentJobsPanel } from "@/components/recent-jobs-panel";
@@ -46,8 +49,9 @@ export default function WireframesPage() {
     useState<ProjectSelection | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [screenTypeMode, setScreenTypeMode] = useState<ScreenTypeValue>("auto");
-  const { executionMode } = useExecutionMode();
-  const { selectedModel } = useModel();
+  const [figmaFileKey, setFigmaFileKey] = useState("");
+  const { config } = useAIConfig();
+  const executionMode = config.executionMode;
 
   const sse = useSSE("/api/wireframes");
   const agentGenerate = useAgentGenerate("/api/wireframes");
@@ -92,8 +96,14 @@ export default function WireframesPage() {
       formData.append("projectName", projectSelection.name);
     }
     formData.append("screenTypeMode", screenTypeMode);
+    if (figmaFileKey.trim()) {
+      formData.append("figmaFileKey", figmaFileKey.trim());
+    }
     if (executionMode === "server") {
-      formData.append("model", selectedModel);
+      formData.append("model", config.serverModel);
+    } else {
+      if (config.agentModel) formData.append("agentModel", config.agentModel);
+      if (config.agentConnectionId) formData.append("agentConnectionId", config.agentConnectionId);
     }
 
     if (executionMode === "agent") {
@@ -156,6 +166,20 @@ export default function WireframesPage() {
         <h2 className="text-2xl font-bold tracking-tight">{t.wireframes.pageTitle}</h2>
         <p className="text-muted-foreground">{t.wireframes.pageDescription}</p>
       </div>
+
+      <AIConfigBanner orgSlug={orgSlug ?? ""} />
+
+      {executionMode === "server" && (
+        <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30 px-4 py-3 text-sm text-blue-800 dark:text-blue-300">
+          <Info className="h-4 w-4 shrink-0" />
+          <span>
+            {t.wireframes.figmaExportBanner}{" "}
+            <Link href={`/${orgSlug}/account`} className="underline">
+              에이전트 설정하기
+            </Link>
+          </span>
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-4">
@@ -225,6 +249,21 @@ export default function WireframesPage() {
               </div>
             </CardContent>
           </Card>
+
+          {executionMode === "agent" && (
+            <div className="space-y-1.5 rounded-lg border border-dashed px-4 py-3">
+              <label htmlFor="figmaFileKey" className="text-sm font-medium">
+                {t.wireframes.figmaFileKeyLabel}
+              </label>
+              <Input
+                id="figmaFileKey"
+                value={figmaFileKey}
+                onChange={(e) => setFigmaFileKey(e.target.value)}
+                placeholder={t.wireframes.figmaFileKeyPlaceholder}
+              />
+              <p className="text-xs text-muted-foreground">{t.wireframes.figmaFileKeyHelp}</p>
+            </div>
+          )}
 
           <Button
             className="w-full"

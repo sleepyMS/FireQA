@@ -586,6 +586,10 @@ export const ko: Messages = {
     agentSubmitting: "에이전트에 전송 중...",
     agentTaskError: "에이전트 작업 생성에 실패했습니다.",
     networkError: "네트워크 오류가 발생했습니다.",
+    figmaExportBanner: "Figma로 내보내기는 에이전트 모드에서만 가능합니다.",
+    figmaFileKeyLabel: "Figma 파일 키 (선택)",
+    figmaFileKeyPlaceholder: "예: abc123DEF456",
+    figmaFileKeyHelp: "Figma 파일 URL에서 /file/ 뒤의 키입니다. 입력하면 결과를 Figma에 자동 추가합니다.",
   },
   wireframes: {
     pageTitle: "와이어프레임 생성",
@@ -612,6 +616,10 @@ export const ko: Messages = {
     agentSubmitting: "에이전트에 전송 중...",
     agentTaskError: "에이전트 작업 생성에 실패했습니다.",
     networkError: "네트워크 오류가 발생했습니다.",
+    figmaExportBanner: "Figma로 내보내기는 에이전트 모드에서만 가능합니다.",
+    figmaFileKeyLabel: "Figma 파일 키 (선택)",
+    figmaFileKeyPlaceholder: "예: abc123DEF456",
+    figmaFileKeyHelp: "Figma 파일 URL에서 /file/ 뒤의 키입니다. 입력하면 결과를 Figma에 자동 추가합니다.",
   },
   improve: {
     pageTitle: "기획서 개선",

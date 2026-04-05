@@ -586,6 +586,10 @@ export interface Messages {
     agentSubmitting: string;
     agentTaskError: string;
     networkError: string;
+    figmaExportBanner: string;
+    figmaFileKeyLabel: string;
+    figmaFileKeyPlaceholder: string;
+    figmaFileKeyHelp: string;
   };
   wireframes: {
     pageTitle: string;
@@ -612,6 +616,10 @@ export interface Messages {
     agentSubmitting: string;
     agentTaskError: string;
     networkError: string;
+    figmaExportBanner: string;
+    figmaFileKeyLabel: string;
+    figmaFileKeyPlaceholder: string;
+    figmaFileKeyHelp: string;
   };
   improve: {
     pageTitle: string;

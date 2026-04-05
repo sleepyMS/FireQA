@@ -2,14 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams, useParams } from "next/navigation";
-import { GitBranch, FileText } from "lucide-react";
+import Link from "next/link";
+import { GitBranch, FileText, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Dropzone } from "@/components/upload/dropzone";
 import { useSSE } from "@/hooks/use-sse";
 import { useAgentGenerate } from "@/hooks/use-agent-generate";
-import { useExecutionMode } from "@/hooks/use-execution-mode";
-import { useModel } from "@/hooks/use-model";
+import { useAIConfig } from "@/hooks/use-ai-config";
+import { AIConfigBanner } from "@/components/ai-config-banner";
 import { GenerationProgress } from "@/components/generation-progress";
 import { GenerationError } from "@/components/generation-error";
 import { RecentJobsPanel } from "@/components/recent-jobs-panel";
@@ -28,8 +30,9 @@ export default function DiagramsPage() {
   const [projectSelection, setProjectSelection] =
     useState<ProjectSelection | null>(null);
   const [file, setFile] = useState<File | null>(null);
-  const { executionMode } = useExecutionMode();
-  const { selectedModel } = useModel();
+  const [figmaFileKey, setFigmaFileKey] = useState("");
+  const { config } = useAIConfig();
+  const executionMode = config.executionMode;
 
   const sse = useSSE("/api/diagrams");
   const agentGenerate = useAgentGenerate("/api/diagrams");
@@ -74,8 +77,14 @@ export default function DiagramsPage() {
       formData.append("projectName", projectSelection.name);
     }
     formData.append("type", "diagrams");
+    if (figmaFileKey.trim()) {
+      formData.append("figmaFileKey", figmaFileKey.trim());
+    }
     if (executionMode === "server") {
-      formData.append("model", selectedModel);
+      formData.append("model", config.serverModel);
+    } else {
+      if (config.agentModel) formData.append("agentModel", config.agentModel);
+      if (config.agentConnectionId) formData.append("agentConnectionId", config.agentConnectionId);
     }
 
     if (executionMode === "agent") {
@@ -128,6 +137,20 @@ export default function DiagramsPage() {
         <p className="text-muted-foreground">{t.diagrams.pageDescription}</p>
       </div>
 
+      <AIConfigBanner orgSlug={orgSlug ?? ""} />
+
+      {executionMode === "server" && (
+        <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30 px-4 py-3 text-sm text-blue-800 dark:text-blue-300">
+          <Info className="h-4 w-4 shrink-0" />
+          <span>
+            {t.diagrams.figmaExportBanner}{" "}
+            <Link href={`/${orgSlug}/account`} className="underline">
+              에이전트 설정하기
+            </Link>
+          </span>
+        </div>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-4">
           <Card>
@@ -157,6 +180,21 @@ export default function DiagramsPage() {
               )}
             </CardContent>
           </Card>
+
+          {executionMode === "agent" && (
+            <div className="space-y-1.5 rounded-lg border border-dashed px-4 py-3">
+              <label htmlFor="figmaFileKey" className="text-sm font-medium">
+                {t.diagrams.figmaFileKeyLabel}
+              </label>
+              <Input
+                id="figmaFileKey"
+                value={figmaFileKey}
+                onChange={(e) => setFigmaFileKey(e.target.value)}
+                placeholder={t.diagrams.figmaFileKeyPlaceholder}
+              />
+              <p className="text-xs text-muted-foreground">{t.diagrams.figmaFileKeyHelp}</p>
+            </div>
+          )}
 
           <Button
             className="w-full"

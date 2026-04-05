@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
+import { useLayoutEffect, useState } from "react";
 import { Terminal, Clock, Wifi, WifiOff, Cloud, Server, Activity } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +41,15 @@ type HostedWorkersData = {
 };
 
 export function AgentDashboardClient({ orgSlug, initialConnections, initialTasks }: Props) {
+  const { mutate } = useSWRConfig();
+  // hydration 전: 서버와 클라이언트 첫 렌더를 동일하게 유지 (hydration mismatch 방지)
+  // hydration 후: SWR 캐시를 서버 데이터로 교체 → stale 캐시 플래시 방지
+  const [isHydrated, setIsHydrated] = useState(false);
+  useLayoutEffect(() => {
+    mutate(SWR_KEYS.agentDashboard, { connections: initialConnections, tasks: initialTasks }, false);
+    setIsHydrated(true);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const dashRefresh = useDynamicRefresh<DashboardData>({
     activeInterval: 10_000,
     idleInterval: 30_000,
@@ -72,8 +82,8 @@ export function AgentDashboardClient({ orgSlug, initialConnections, initialTasks
     }
   );
 
-  const connections = data?.connections ?? initialConnections;
-  const recentTasks = data?.tasks ?? initialTasks;
+  const connections = (isHydrated ? data?.connections : null) ?? initialConnections;
+  const recentTasks = (isHydrated ? data?.tasks : null) ?? initialTasks;
   const workers = workersData?.workers;
   const totalWorkers = workers
     ? workers.idle + workers.busy + workers.starting + workers.stopping + workers.error
@@ -113,7 +123,7 @@ export function AgentDashboardClient({ orgSlug, initialConnections, initialTasks
                   </p>
                   <p className="text-green-400">npx fireqa-agent login</p>
                   <p className="mt-3 text-zinc-500"># 2. 에이전트 시작</p>
-                  <p className="text-green-400">npx fireqa-agent start</p>
+                  <p className="text-green-400">npx fireqa-agent@latest start</p>
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">

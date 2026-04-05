@@ -9,7 +9,7 @@ const CLI_OPTIONS = [
     label: "Claude Code",
     installCmd: "npm install -g @anthropic-ai/claude-code",
     loginCmd: "claude auth login",
-    startCmd: "npx fireqa-agent start",
+    startCmd: "npx fireqa-agent@latest start",
     installUrl: "https://docs.anthropic.com/claude-code",
   },
   {
@@ -17,7 +17,7 @@ const CLI_OPTIONS = [
     label: "Codex CLI",
     installCmd: "npm install -g @openai/codex",
     loginCmd: "codex login",
-    startCmd: "npx fireqa-agent start --cli-type codex",
+    startCmd: "npx fireqa-agent@latest start --cli-type codex",
     installUrl: "https://github.com/openai/codex",
   },
   {
@@ -25,7 +25,7 @@ const CLI_OPTIONS = [
     label: "Gemini CLI",
     installCmd: "npm install -g @google/gemini-cli",
     loginCmd: "gemini auth",
-    startCmd: "npx fireqa-agent start --cli-type gemini",
+    startCmd: "npx fireqa-agent@latest start --cli-type gemini",
     installUrl: "https://github.com/google-gemini/gemini-cli",
   },
 ] as const;

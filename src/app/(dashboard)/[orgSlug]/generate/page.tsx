@@ -16,8 +16,8 @@ import { Dropzone } from "@/components/upload/dropzone";
 import { cn } from "@/lib/utils";
 import { useSSE } from "@/hooks/use-sse";
 import { useAgentGenerate } from "@/hooks/use-agent-generate";
-import { useExecutionMode } from "@/hooks/use-execution-mode";
-import { useModel } from "@/hooks/use-model";
+import { useAIConfig } from "@/hooks/use-ai-config";
+import { AIConfigBanner } from "@/components/ai-config-banner";
 import { GenerationProgress } from "@/components/generation-progress";
 import { GenerationError } from "@/components/generation-error";
 import { RecentJobsPanel } from "@/components/recent-jobs-panel";
@@ -53,8 +53,9 @@ export default function GeneratePage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(
     null
   );
-  const { executionMode } = useExecutionMode();
-  const { selectedModel } = useModel();
+  const { config } = useAIConfig();
+  const executionMode = config.executionMode;
+  const agentOffline = executionMode === "agent" && config.agentConnection?.status !== "online";
 
   const sse = useSSE("/api/generate");
   const agentGenerate = useAgentGenerate("/api/generate");
@@ -137,7 +138,10 @@ export default function GeneratePage() {
       formData.append("templateId", selectedTemplateId);
     }
     if (executionMode === "server") {
-      formData.append("model", selectedModel);
+      formData.append("model", config.serverModel);
+    } else {
+      if (config.agentModel) formData.append("agentModel", config.agentModel);
+      if (config.agentConnectionId) formData.append("agentConnectionId", config.agentConnectionId);
     }
 
     if (executionMode === "agent") {
@@ -191,6 +195,8 @@ export default function GeneratePage() {
           {t.generation.pageDescription}
         </p>
       </div>
+
+      <AIConfigBanner orgSlug={orgSlug ?? ""} />
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Left: Upload & Config */}
@@ -355,7 +361,8 @@ export default function GeneratePage() {
               !projectSelection ||
               sse.isStreaming ||
               agentGenerate.isSubmitting ||
-              (mode === "template" && !selectedTemplateId)
+              (mode === "template" && !selectedTemplateId) ||
+              agentOffline
             }
             onClick={handleGenerate}
           >

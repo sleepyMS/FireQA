@@ -3,10 +3,19 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { Check, CheckCircle2, ChevronRight, Copy, Loader2, Trash2, Wifi, WifiOff } from "lucide-react";
+import { Check, CheckCircle2, ChevronDown, ChevronRight, Copy, Loader2, Trash2, Wifi, WifiOff } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { AgentConnectionView } from "@/types/agent";
 
@@ -19,7 +28,7 @@ const CLI_OPTIONS = [
     vendor: "Anthropic",
     desc: "가장 강력한 코딩 AI. Anthropic 계정으로 무료 사용 가능.",
     loginCmd: "claude auth login",
-    startCmd: "npx fireqa-agent start",
+    startCmd: "npx fireqa-agent@latest start",
     installUrl: "https://docs.anthropic.com/claude-code",
   },
   {
@@ -28,7 +37,7 @@ const CLI_OPTIONS = [
     vendor: "OpenAI",
     desc: "OpenAI GPT 기반 CLI. OpenAI 계정 필요.",
     loginCmd: "codex login",
-    startCmd: "npx fireqa-agent start --cli-type codex",
+    startCmd: "npx fireqa-agent@latest start --cli-type codex",
     installUrl: "https://github.com/openai/codex",
   },
   {
@@ -37,7 +46,7 @@ const CLI_OPTIONS = [
     vendor: "Google",
     desc: "Google Gemini 기반 CLI. Google 계정으로 무료 사용 가능.",
     loginCmd: "gemini auth",
-    startCmd: "npx fireqa-agent start --cli-type gemini",
+    startCmd: "npx fireqa-agent@latest start --cli-type gemini",
     installUrl: "https://github.com/google-gemini/gemini-cli",
   },
 ] as const;
@@ -88,6 +97,37 @@ function CodeBlock({ lines }: { lines: { comment: string; cmd: string }[] }) {
   );
 }
 
+// ─── pm2 백그라운드 안내 ──────────────────────────────────────────────────────
+
+function Pm2Guide({ startCmd }: { startCmd: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="rounded-lg border border-dashed">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <span>터미널을 닫아도 에이전트를 유지하려면?</span>
+        <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
+      </button>
+      {open && (
+        <div className="border-t px-3 pb-3 pt-3 space-y-3">
+          <p className="text-xs text-muted-foreground">
+            <strong className="text-foreground">pm2</strong>를 사용하면 터미널을 닫아도 에이전트가 백그라운드에서 계속 실행됩니다.
+          </p>
+          <CodeBlock
+            lines={[
+              { comment: "pm2 설치 (최초 1회)", cmd: "npm install -g pm2" },
+              { comment: "백그라운드로 에이전트 시작", cmd: `pm2 start "npx fireqa-agent@latest start" --name fireqa-agent` },
+              { comment: "재부팅 후 자동 시작 설정 (선택)", cmd: "pm2 save && pm2 startup" },
+            ]}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── 단계 표시기 ────────────────────────────────────────────────────────────
 
 function StepIndicator({ current, done }: { current: number; done: boolean }) {
@@ -128,14 +168,25 @@ function StepIndicator({ current, done }: { current: number; done: boolean }) {
 
 // ─── 메인 컴포넌트 ───────────────────────────────────────────────────────────
 
-export default function SettingsAgent() {
+export default function SettingsAgent({
+  hideConnectionsList = false,
+  alwaysStartFresh = false,
+}: {
+  hideConnectionsList?: boolean;
+  /** true면 기존 연결이 있어도 step 1부터 시작 (새 에이전트 추가 전용) */
+  alwaysStartFresh?: boolean;
+}) {
   const { orgSlug } = useParams<{ orgSlug: string }>();
 
   const [step, setStep] = useState(1);
   const [selectedCli, setSelectedCli] = useState<CliType>("claude");
   const [connections, setConnections] = useState<AgentConnectionView[]>([]);
   const [loadingConnections, setLoadingConnections] = useState(true);
+  const [disconnectTarget, setDisconnectTarget] = useState<AgentConnectionView | null>(null);
+  const [disconnecting, setDisconnecting] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // step 3 진입 시 이미 온라인인 연결 ID 스냅샷 — 새 연결만 감지
+  const knownOnlineIdsRef = useRef<Set<string>>(new Set());
 
   const onlineConnections = connections.filter((c) => c.status === "online");
   const cli = CLI_OPTIONS.find((c) => c.type === selectedCli)!;
@@ -149,12 +200,15 @@ export default function SettingsAgent() {
   }
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadConnections()
-      .then((list) => { if (list.some((c) => c.status === "online")) setStep(4); })
+      .then((list) => {
+        // 새 에이전트 추가 모드(alwaysStartFresh)에서는 기존 연결과 무관하게 step 1 유지
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        if (!alwaysStartFresh && list.some((c) => c.status === "online")) setStep(4);
+      })
       .catch(() => {})
       .finally(() => setLoadingConnections(false));
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // step 3 진입/이탈 시 polling 관리
   useEffect(() => {
@@ -162,26 +216,47 @@ export default function SettingsAgent() {
       if (pollRef.current) clearInterval(pollRef.current);
       return;
     }
+    // step 3 진입 시 현재 온라인 연결 ID를 스냅샷 (기존 연결로 오탐 방지)
+    knownOnlineIdsRef.current = new Set(
+      connections.filter((c) => c.status === "online").map((c) => c.id)
+    );
     pollRef.current = setInterval(async () => {
       try {
         const list = await loadConnections();
-        if (list.some((c) => c.status === "online")) {
+        const hasNew = list.some(
+          (c) => c.status === "online" && !knownOnlineIdsRef.current.has(c.id)
+        );
+        if (hasNew) {
           clearInterval(pollRef.current!);
           setStep(4);
         }
       } catch {}
     }, 2500);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, [step]);
+  }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function handleDisconnect(id: string) {
-    if (!confirm("이 에이전트 연결을 해제하시겠습니까?")) return;
-    await fetch(`/api/agent/connections/${id}`, { method: "DELETE" });
-    setConnections((prev) => {
-      const updated = prev.filter((c) => c.id !== id);
-      if (!updated.some((c) => c.status === "online") && step === 4) setStep(3);
-      return updated;
-    });
+  async function confirmDisconnect() {
+    if (!disconnectTarget) return;
+    setDisconnecting(true);
+    try {
+      const res = await fetch(`/api/agent/connections/${disconnectTarget.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error ?? "연결 해제에 실패했습니다.");
+        return;
+      }
+      setConnections((prev) => {
+        const updated = prev.filter((c) => c.id !== disconnectTarget.id);
+        if (!updated.some((c) => c.status === "online") && step === 4) setStep(3);
+        return updated;
+      });
+      toast.success(`${disconnectTarget.name} 연결이 해제되었습니다.`);
+    } catch {
+      toast.error("네트워크 오류가 발생했습니다.");
+    } finally {
+      setDisconnecting(false);
+      setDisconnectTarget(null);
+    }
   }
 
   const isConnected = step === 4 && onlineConnections.length > 0;
@@ -266,6 +341,7 @@ export default function SettingsAgent() {
                   { comment: "에이전트 시작", cmd: cli.startCmd },
                 ]}
               />
+              <Pm2Guide startCmd={cli.startCmd} />
               <div className="flex items-center gap-2 rounded-md border border-dashed px-3 py-2.5 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin shrink-0" />
                 <span>에이전트 연결 대기 중...</span>
@@ -309,7 +385,7 @@ export default function SettingsAgent() {
         </CardContent>
       </Card>
 
-      {connections.length > 0 && (
+      {!hideConnectionsList && connections.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">연결 목록</CardTitle>
@@ -336,7 +412,7 @@ export default function SettingsAgent() {
                     >
                       {conn.status === "online" ? "온라인" : "오프라인"}
                     </Badge>
-                    <Button variant="ghost" size="icon" onClick={() => handleDisconnect(conn.id)} title="연결 해제">
+                    <Button variant="ghost" size="icon" onClick={() => setDisconnectTarget(conn)} title="연결 해제">
                       <Trash2 className="h-4 w-4 text-muted-foreground" />
                     </Button>
                   </div>
@@ -346,6 +422,25 @@ export default function SettingsAgent() {
           </CardContent>
         </Card>
       )}
+
+      <Dialog open={!!disconnectTarget} onOpenChange={(v) => { if (!v && !disconnecting) setDisconnectTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>에이전트 연결 해제</DialogTitle>
+            <DialogDescription>
+              <span className="font-medium text-foreground">{disconnectTarget?.name}</span> 연결을 해제하시겠습니까?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDisconnectTarget(null)} disabled={disconnecting}>
+              취소
+            </Button>
+            <Button variant="destructive" onClick={confirmDisconnect} disabled={disconnecting}>
+              {disconnecting ? "해제 중..." : "연결 해제"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -26,6 +26,9 @@ export async function POST(request: NextRequest) {
   const screenTypeMode = (formData.get("screenTypeMode") as string) || "auto";
   const providerParam = (formData.get("model") ?? formData.get("provider")) as string | null;
   const executionMode = formData.get("executionMode") as string | null;
+  const figmaFileKey = formData.get("figmaFileKey") as string | null;
+  const agentModel = formData.get("agentModel") as string | null;
+  const agentConnectionId = formData.get("agentConnectionId") as string | null;
 
   // projectId 또는 projectName 중 하나는 반드시 필요
   if (!file || (!projectId && !projectName)) {
@@ -63,6 +66,9 @@ export async function POST(request: NextRequest) {
       jobType: JobType.WIREFRAMES,
       systemPrompt: WIREFRAME_SYSTEM_PROMPT,
       auth: { userId: user.userId, organizationId: user.organizationId },
+      figmaFileKey: figmaFileKey || undefined,
+      model: agentModel || undefined,
+      agentConnectionId: agentConnectionId || undefined,
     });
   }
 

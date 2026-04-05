@@ -44,16 +44,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const connection = await prisma.agentConnection.create({
-      data: {
-        organizationId: user.organizationId,
-        userId: user.userId,
-        name: name.trim(),
-        status: AgentConnectionStatus.ONLINE,
-        lastHeartbeat: new Date(),
-        metadata: JSON.stringify(metadata ?? {}),
-      },
+    // 동일 이름+조직의 기존 연결 재사용 (재시작 시 중복 생성 방지)
+    const existing = await prisma.agentConnection.findFirst({
+      where: { organizationId: user.organizationId, name: name.trim() },
     });
+
+    const connection = existing
+      ? await prisma.agentConnection.update({
+          where: { id: existing.id },
+          data: {
+            status: AgentConnectionStatus.ONLINE,
+            lastHeartbeat: new Date(),
+            metadata: JSON.stringify(metadata ?? {}),
+            userId: user.userId,
+          },
+        })
+      : await prisma.agentConnection.create({
+          data: {
+            organizationId: user.organizationId,
+            userId: user.userId,
+            name: name.trim(),
+            status: AgentConnectionStatus.ONLINE,
+            lastHeartbeat: new Date(),
+            metadata: JSON.stringify(metadata ?? {}),
+          },
+        });
 
     logActivity({
       organizationId: user.organizationId,
@@ -81,7 +96,7 @@ export async function GET(request: NextRequest) {
     }
 
     const connections = await prisma.agentConnection.findMany({
-      where: { organizationId: user.organizationId },
+      where: { organizationId: user.organizationId, status: { not: AgentConnectionStatus.OFFLINE } },
       orderBy: { lastHeartbeat: "desc" },
       select: {
         id: true,

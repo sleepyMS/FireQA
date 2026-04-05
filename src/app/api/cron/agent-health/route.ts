@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { verifyCronSecret } from "@/lib/auth/verify-cron-secret";
+import { AgentConnectionStatus, AgentTaskStatus } from "@/types/agent";
 
 export async function GET(request: NextRequest) {
   const denied = verifyCronSecret(request);
@@ -8,52 +9,57 @@ export async function GET(request: NextRequest) {
 
   const now = new Date();
 
-  // 1. Mark agents offline if heartbeat > 30s ago
   const offlineThreshold = new Date(now.getTime() - 30_000);
   const offlineResult = await prisma.agentConnection.updateMany({
     where: {
-      status: "online",
+      status: AgentConnectionStatus.ONLINE,
       OR: [
         { lastHeartbeat: { lt: offlineThreshold } },
         { lastHeartbeat: null },
       ],
     },
-    data: { status: "offline" },
+    data: { status: AgentConnectionStatus.OFFLINE },
   });
 
-  // 2. Return ASSIGNED tasks stuck > 2 minutes to PENDING
   const assignedThreshold = new Date(now.getTime() - 2 * 60_000);
   const pendingResult = await prisma.agentTask.updateMany({
     where: {
-      status: "assigned",
+      status: AgentTaskStatus.ASSIGNED,
       updatedAt: { lt: assignedThreshold },
     },
-    data: { status: "pending", connectionId: null },
+    data: { status: AgentTaskStatus.PENDING, connectionId: null },
   });
 
-  // 3. Timeout RUNNING tasks that exceeded timeoutMs
-  // This requires per-row logic since timeoutMs differs per task.
-  // Fetch and update individually:
   const runningTasks = await prisma.agentTask.findMany({
-    where: { status: "running", startedAt: { not: null } },
+    where: { status: AgentTaskStatus.RUNNING, startedAt: { not: null } },
     select: { id: true, startedAt: true, timeoutMs: true },
   });
 
   let timedOutCount = 0;
   for (const task of runningTasks) {
-    if (task.startedAt) {
-      const deadline = new Date(task.startedAt.getTime() + task.timeoutMs);
-      if (now > deadline) {
-        await prisma.agentTask.update({
-          where: { id: task.id },
-          data: {
-            status: "timed_out",
-            completedAt: now,
-            errorMessage: "작업 시간이 초과되었습니다.",
-          },
-        });
-        timedOutCount++;
-      }
+    if (task.startedAt && now > new Date(task.startedAt.getTime() + task.timeoutMs)) {
+      await prisma.agentTask.update({
+        where: { id: task.id },
+        data: { status: AgentTaskStatus.TIMED_OUT, completedAt: now, errorMessage: "작업 시간이 초과되었습니다." },
+      });
+      timedOutCount++;
+    }
+  }
+
+  // timeoutMs varies per task, so we fetch and filter per-row
+  const pendingTasks = await prisma.agentTask.findMany({
+    where: { status: AgentTaskStatus.PENDING },
+    select: { id: true, createdAt: true, timeoutMs: true },
+  });
+
+  let pendingTimedOutCount = 0;
+  for (const task of pendingTasks) {
+    if (now > new Date(task.createdAt.getTime() + task.timeoutMs)) {
+      await prisma.agentTask.update({
+        where: { id: task.id },
+        data: { status: AgentTaskStatus.TIMED_OUT, completedAt: now, errorMessage: "에이전트가 연결되지 않아 작업이 시간 초과되었습니다." },
+      });
+      pendingTimedOutCount++;
     }
   }
 
@@ -61,5 +67,6 @@ export async function GET(request: NextRequest) {
     agentsMarkedOffline: offlineResult.count,
     tasksReturnedToPending: pendingResult.count,
     tasksTimedOut: timedOutCount,
+    pendingTimedOut: pendingTimedOutCount,
   });
 }
