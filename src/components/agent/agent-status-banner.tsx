@@ -1,6 +1,6 @@
 "use client";
 import useSWR from "swr";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { X, Zap } from "lucide-react";
 import type { AgentStatusResponse } from "@/components/execution-mode-selector";
@@ -9,10 +9,12 @@ const fetcher = (url: string) => fetch(url).then(r => r.json());
 const DISMISS_KEY = "fireqa:agentBannerDismissed";
 
 export function AgentStatusBanner({ orgSlug }: { orgSlug: string }) {
-  const [dismissed, setDismissed] = useState(() => {
-    if (typeof window === "undefined") return true;
-    return sessionStorage.getItem(DISMISS_KEY) === "1";
-  });
+  const [dismissed, setDismissed] = useState(true);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (sessionStorage.getItem(DISMISS_KEY) !== "1") setDismissed(false);
+  }, []);
   const { data } = useSWR<AgentStatusResponse>("/api/agent/status", fetcher, {
     refreshInterval: 30000,
     revalidateOnFocus: true,
