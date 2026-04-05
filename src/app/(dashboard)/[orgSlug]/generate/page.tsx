@@ -16,7 +16,6 @@ import { Dropzone } from "@/components/upload/dropzone";
 import { cn } from "@/lib/utils";
 import { useSSE } from "@/hooks/use-sse";
 import { useAgentGenerate } from "@/hooks/use-agent-generate";
-import { ExecutionModeSelector } from "@/components/execution-mode-selector";
 import { useExecutionMode } from "@/hooks/use-execution-mode";
 import { useModel } from "@/hooks/use-model";
 import { GenerationProgress } from "@/components/generation-progress";
@@ -345,19 +344,6 @@ export default function GeneratePage() {
                   )}
                 </div>
               )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">실행 방식</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ExecutionModeSelector
-                value={executionMode}
-                onChange={setExecutionMode}
-                disabled={sse.isStreaming || agentGenerate.isSubmitting}
-              />
             </CardContent>
           </Card>
 
