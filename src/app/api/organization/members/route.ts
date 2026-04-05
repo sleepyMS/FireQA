@@ -1,23 +1,20 @@
-import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { withApiHandler } from "@/lib/api";
 
-export async function GET(request: NextRequest) {
-  try {
-    const user = await getCurrentUser(request);
-    if (!user) {
-      return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
-    }
-
+export const GET = withApiHandler(
+  async ({ user }) => {
     const memberships = await prisma.organizationMembership.findMany({
       where: { organizationId: user.organizationId },
-      include: {
-        user: { select: { id: true, name: true, email: true, createdAt: true } },
+      select: {
+        role: true,
+        joinedAt: true,
+        user: { select: { id: true, name: true, email: true } },
       },
       orderBy: { joinedAt: "asc" },
+      take: 200,
     });
 
-    return NextResponse.json({
+    return {
       members: memberships.map((m) => ({
         id: m.user.id,
         name: m.user.name ?? m.user.email,
@@ -25,9 +22,6 @@ export async function GET(request: NextRequest) {
         role: m.role,
         createdAt: m.joinedAt,
       })),
-    });
-  } catch (error) {
-    console.error("멤버 목록 조회 오류:", error);
-    return NextResponse.json({ error: "멤버 목록 조회에 실패했습니다." }, { status: 500 });
-  }
-}
+    };
+  },
+);

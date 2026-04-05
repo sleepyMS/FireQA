@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Loader2, X, FileSearch, Brain, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Stage } from "@/types/sse";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 interface GenerationProgressProps {
   stage: string;
@@ -16,16 +17,6 @@ interface GenerationProgressProps {
   onCancel: () => void;
 }
 
-const STAGE_ICONS: Record<string, React.ReactNode> = {
-  connecting: <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />,
-  [Stage.PARSING]: <FileSearch className="h-5 w-5 text-blue-500" />,
-  [Stage.GENERATING]: <Brain className="h-5 w-5 text-purple-500 animate-pulse" />,
-  [Stage.SANITIZING]: <Loader2 className="h-5 w-5 animate-spin text-orange-500" />,
-  [Stage.SAVING]: <Save className="h-5 w-5 text-green-500" />,
-  [Stage.FIXING]: <Loader2 className="h-5 w-5 animate-spin text-orange-500" />,
-  [Stage.IMPROVING]: <Brain className="h-5 w-5 text-purple-500 animate-pulse" />,
-};
-
 export function GenerationProgress({
   stage,
   message,
@@ -34,6 +25,22 @@ export function GenerationProgress({
   charsReceived,
   onCancel,
 }: GenerationProgressProps) {
+  const { t } = useLocale();
+
+  // Must be inside component to access t; memoized so icons are not recreated on every render
+  const STAGE_ICONS = useMemo<Record<string, React.ReactNode>>(
+    () => ({
+      connecting: <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />,
+      [Stage.PARSING]: <FileSearch className="h-5 w-5 text-blue-500" />,
+      [Stage.GENERATING]: <Brain className="h-5 w-5 text-purple-500 animate-pulse" />,
+      [Stage.SANITIZING]: <Loader2 className="h-5 w-5 animate-spin text-orange-500" />,
+      [Stage.SAVING]: <Save className="h-5 w-5 text-green-500" />,
+      [Stage.FIXING]: <Loader2 className="h-5 w-5 animate-spin text-orange-500" />,
+      [Stage.IMPROVING]: <Brain className="h-5 w-5 text-purple-500 animate-pulse" />,
+    }),
+    [],
+  );
+
   const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
@@ -49,9 +56,7 @@ export function GenerationProgress({
 
   const minutes = Math.floor(elapsed / 60);
   const seconds = elapsed % 60;
-  const timeStr = minutes > 0
-    ? `${minutes}분 ${seconds}초`
-    : `${seconds}초`;
+  const timeStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
 
   const icon = STAGE_ICONS[stage] || <Loader2 className="h-5 w-5 animate-spin text-primary" />;
 
@@ -70,14 +75,14 @@ export function GenerationProgress({
 
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <div className="flex items-center gap-3">
-              <span>{timeStr} 경과</span>
+              <span>{timeStr} {t.generation.elapsed}</span>
               {charsReceived > 0 && (
-                <span>{(charsReceived / 1024).toFixed(1)} KB 수신</span>
+                <span>{(charsReceived / 1024).toFixed(1)} {t.generation.kbReceived}</span>
               )}
             </div>
             {chunkInfo && (
               <span>
-                청크 {chunkInfo.index}/{chunkInfo.total}
+                {t.generation.chunk} {chunkInfo.index}/{chunkInfo.total}
               </span>
             )}
           </div>
@@ -85,7 +90,7 @@ export function GenerationProgress({
           <div className="flex justify-center">
             <Button variant="ghost" size="sm" onClick={onCancel} className="text-muted-foreground">
               <X className="mr-1 h-3.5 w-3.5" />
-              취소
+              {t.common.cancel}
             </Button>
           </div>
         </div>

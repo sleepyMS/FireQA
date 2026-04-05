@@ -26,6 +26,13 @@ model Organization {
   invitations       Invitation[]
   subscription      Subscription?
   webhookEndpoints  WebhookEndpoint[]
+  agentConnections     AgentConnection[]
+  agentTasks           AgentTask[]
+  creditBalance        CreditBalance?
+  creditTransactions   CreditTransaction[]
+  userApiKeys          UserApiKey[]
+  testRuns             TestRun[]
+  testExecutions       TestExecution[]
 }
 
 model Subscription {
@@ -65,6 +72,9 @@ model User {
   invitationsAccepted  Invitation[]      @relation("AcceptedInvite")
   resultVersions       ResultVersion[]   @relation("ResultVersionCreator")
   diagramVersions      DiagramVersion[]  @relation("DiagramVersionCreator")
+  agentConnections     AgentConnection[]
+  agentTasks           AgentTask[]       @relation("AgentTaskCreator")
+  testRuns             TestRun[]         @relation("TestRunCreator")
 
   @@index([supabaseId])
 }
@@ -109,6 +119,7 @@ model ApiToken {
   user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   name       String    @default("Figma Plugin") // 토큰 용도 식별
   tokenHash  String    @unique // SHA-256 해시로 저장
+  keyPrefix  String    @default("")  // 식별용 앞 8자 (e.g. "fqa_a1b2")
   lastUsedAt DateTime?
   expiresAt  DateTime?
   createdAt  DateTime  @default(now())
@@ -146,6 +157,8 @@ model Project {
   deletedAt      DateTime?
   uploads        Upload[]
   jobs           GenerationJob[]
+  agentTasks     AgentTask[]
+  testRuns       TestRun[]
 
   @@index([organizationId, status]) // 조직별 활성/보관/삭제 프로젝트 필터링 성능 최적화
   @@index([deletedAt]) // 삭제된 프로젝트 조회 및 정리 작업 성능 최적화
@@ -187,6 +200,7 @@ model GenerationJob {
 
   resultVersions  ResultVersion[]
   diagramVersions DiagramVersion[]
+  testRuns        TestRun[]
 
   @@index([userId])
   @@index([userId, createdAt(sort: Desc)])
@@ -297,7 +311,25 @@ model WebhookEndpoint {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
+  deliveries       WebhookDelivery[]
+
   @@index([organizationId])
+}
+
+model WebhookDelivery {
+  id             String          @id @default(cuid())
+  endpointId     String
+  endpoint       WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  event          String
+  requestBody    String
+  responseStatus Int?
+  responseBody   String?
+  success        Boolean
+  attempts       Int             @default(1)
+  lastAttemptAt  DateTime        @default(now())
+  createdAt      DateTime        @default(now())
+
+  @@index([endpointId, createdAt])
 }
 
 model QATemplate {
@@ -308,11 +340,206 @@ model QATemplate {
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   sheetConfig    String       @default("[]") // JSON
   columnConfig   String       @default("{}") // JSON
-  constraints    String       @default("") // 제약조건 (최우선 준수)
-  requirements   String       @default("") // 요구사항 (희망 사항)
-  isDefault      Boolean      @default(false)
+  constraints          String       @default("") // 제약조건 (최우선 준수)
+  requirements         String       @default("") // 요구사항 (희망 사항)
+  systemPromptOverride String?      // 사용자 커스텀 시스템 프롬프트
+  promptMode           String       @default("append") // "append" | "replace"
+  isDefault            Boolean      @default(false)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
   @@index([organizationId])
+}
+
+// ─── 에이전트 ───
+
+model AgentConnection {
+  id            String   @id @default(cuid())
+  organizationId String
+  userId        String
+  name          String
+  type          String   @default("self_hosted") // "self_hosted" | "hosted"
+  status        String   @default("offline")     // "online" | "offline"
+  lastHeartbeat DateTime?
+  metadata      String   @default("{}")           // JSON: { cli, os, version }
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks         AgentTask[]
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+}
+
+model AgentTask {
+  id             String   @id @default(cuid())
+  organizationId String
+  projectId      String?
+  connectionId   String?
+  createdById    String
+
+  type           String   // "tc-generate" | "diagram-generate" | "wireframe-generate" | "improve-spec" | "custom"
+  status         String   @default("pending") // "pending" | "assigned" | "running" | "completed" | "failed" | "cancelled" | "timed_out"
+  priority       Int      @default(0)
+
+  prompt         String
+  context        String   @default("{}") // JSON
+  mcpTools       String   @default("[]") // JSON
+
+  sessionId      String?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  timeoutMs      Int      @default(300000)
+
+  result         String?  // JSON
+  outputLog        String?
+  outputChunkCount Int      @default(0)
+  errorMessage     String?
+
+  mode           String   @default("self_hosted") // "self_hosted" | "hosted"
+  creditsUsed    Int?
+  useOwnApiKey   Boolean  @default(false)
+  flyMachineId   String?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project        Project?         @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  connection     AgentConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  createdBy      User             @relation("AgentTaskCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status])
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([connectionId])
+}
+
+// ─── 크레딧 & 호스티드 워커 ───
+
+model CreditBalance {
+  id             String       @id @default(cuid())
+  organizationId String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  balance        Int          @default(0)
+  monthlyQuota   Int          @default(0)
+  quotaResetAt   DateTime?
+  updatedAt      DateTime     @updatedAt
+}
+
+model CreditTransaction {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  amount         Int          // 양수: 충전, 음수: 차감
+  type           String       // "plan_grant" | "purchase" | "task_debit" | "refund" | "monthly_reset"
+  taskId         String?
+  description    String?
+  balanceAfter   Int
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([taskId])
+}
+
+model CreditPackage {
+  id            String   @id @default(cuid())
+  name          String
+  credits       Int
+  priceInCents  Int
+  stripePriceId String   @unique
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+}
+
+model HostedWorker {
+  id              String    @id @default(cuid())
+  flyMachineId    String    @unique
+  flyAppName      String
+  status          String    @default("idle") // "idle" | "busy" | "starting" | "stopping" | "dead"
+  currentTaskId   String?   @unique
+  region          String    @default("nrt")
+  lastHealthCheck DateTime?
+  startedAt       DateTime  @default(now())
+  stoppedAt       DateTime?
+  metadata        String    @default("{}")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([status])
+}
+
+model UserApiKey {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  provider       String       @default("anthropic")
+  encryptedKey   String
+  keyPrefix      String
+  createdById    String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([organizationId, provider])
+  @@index([organizationId])
+}
+
+// ─── 테스트 실행/추적 ───
+
+model TestRun {
+  id              String        @id @default(cuid())
+  generationJobId String
+  generationJob   GenerationJob @relation(fields: [generationJobId], references: [id], onDelete: Cascade)
+
+  projectId      String
+  project        Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdById    String?
+  createdBy      User?         @relation("TestRunCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  testCasesSnapshot String     // JSON: 실행 시점의 TC 스냅샷
+
+  status         String        @default("in_progress") // "in_progress" | "completed" | "aborted"
+
+  startedAt      DateTime      @default(now())
+  completedAt    DateTime?
+  abortedAt      DateTime?
+
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  executions     TestExecution[]
+
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([projectId, createdAt(sort: Desc)])
+  @@index([generationJobId])
+  @@index([status])
+}
+
+model TestExecution {
+  id             String       @id @default(cuid())
+
+  testRunId      String
+  testRun        TestRun      @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  tcId           String       // TC 식별자 (snapshot의 tcId 값)
+
+  status         String       @default("pending") // "pending" | "passed" | "failed" | "skipped" | "blocked"
+
+  note           String?      // 사용자 메모/실패 원인
+  screenshotPath String?      // Phase 4 이후 지원
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([testRunId, tcId])
+  @@index([testRunId, status])
+  @@index([organizationId, tcId])
 }

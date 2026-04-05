@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/templates" });
 
 // GET /api/templates - 템플릿 목록
 export async function GET(request: NextRequest) {
@@ -21,7 +25,7 @@ export async function GET(request: NextRequest) {
     });
     return NextResponse.json({ templates });
   } catch (error) {
-    console.error("템플릿 조회 오류:", error);
+    logger.error("템플릿 조회 오류", { error });
     return NextResponse.json(
       { error: "템플릿 조회에 실패했습니다." },
       { status: 500 }
@@ -38,7 +42,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, description, sheets, columns, constraints, requirements } = body;
+    const { name, description, sheets, columns, constraints, requirements, systemPromptOverride, promptMode } = body;
 
     if (!name || !sheets || sheets.length === 0) {
       return NextResponse.json(
@@ -56,12 +60,14 @@ export async function POST(request: NextRequest) {
         columnConfig: JSON.stringify(columns || []),
         constraints: constraints || "",
         requirements: requirements || "",
+        systemPromptOverride: systemPromptOverride?.trim() || null,
+        promptMode: promptMode === "replace" ? "replace" : "append",
       },
     });
 
     return NextResponse.json({ template });
   } catch (error) {
-    console.error("템플릿 생성 오류:", error);
+    logger.error("템플릿 생성 오류", { error });
     return NextResponse.json(
       { error: "템플릿 생성에 실패했습니다." },
       { status: 500 }
@@ -79,15 +85,19 @@ export async function DELETE(request: NextRequest) {
 
     const { id } = await request.json();
 
-    const template = await prisma.qATemplate.findUnique({ where: { id } });
-    if (!template || template.organizationId !== user.organizationId) {
-      return NextResponse.json({ error: "템플릿을 찾을 수 없습니다." }, { status: 404 });
+    try {
+      await prisma.qATemplate.delete({
+        where: { id, organizationId: user.organizationId },
+      });
+      return NextResponse.json({ success: true });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+        return NextResponse.json({ error: "템플릿을 찾을 수 없습니다." }, { status: 404 });
+      }
+      throw error;
     }
-
-    await prisma.qATemplate.delete({ where: { id } });
-    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("템플릿 삭제 오류:", error);
+    logger.error("템플릿 삭제 오류", { error });
     return NextResponse.json(
       { error: "템플릿 삭제에 실패했습니다." },
       { status: 500 }

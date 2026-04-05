@@ -19,6 +19,7 @@ import { GenerationProgress } from "@/components/generation-progress";
 import { GenerationError } from "@/components/generation-error";
 import { RecentJobsPanel } from "@/components/recent-jobs-panel";
 import { ProjectSelector } from "@/components/projects/project-selector";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 interface Template {
   id: string;
@@ -37,6 +38,7 @@ export default function GeneratePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { orgSlug } = useParams<{ orgSlug?: string }>();
+  const { t } = useLocale();
   const [projectSelection, setProjectSelection] =
     useState<ProjectSelection | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -138,9 +140,9 @@ export default function GeneratePage() {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">TC 자동 생성</h2>
+          <h2 className="text-2xl font-bold tracking-tight">{t.generation.pageTitle}</h2>
           <p className="text-muted-foreground">
-            {projectSelection?.name} — AI가 테스트케이스를 생성하고 있습니다.
+            {projectSelection?.name} — {t.generation.streamingDescription}
           </p>
         </div>
         <GenerationProgress
@@ -159,7 +161,7 @@ export default function GeneratePage() {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">TC 자동 생성</h2>
+          <h2 className="text-2xl font-bold tracking-tight">{t.generation.pageTitle}</h2>
         </div>
         <GenerationError error={sse.error} />
       </div>
@@ -169,9 +171,9 @@ export default function GeneratePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">TC 자동 생성</h2>
+        <h2 className="text-2xl font-bold tracking-tight">{t.generation.pageTitle}</h2>
         <p className="text-muted-foreground">
-          기획 문서를 업로드하면 AI가 테스트케이스를 자동으로 생성합니다.
+          {t.generation.pageDescription}
         </p>
       </div>
 
@@ -180,7 +182,7 @@ export default function GeneratePage() {
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">1. 프로젝트 이름</CardTitle>
+              <CardTitle className="text-base">{t.generation.step1}</CardTitle>
             </CardHeader>
             <CardContent>
               <ProjectSelector
@@ -193,7 +195,7 @@ export default function GeneratePage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">2. 기획 문서 업로드</CardTitle>
+              <CardTitle className="text-base">{t.generation.step2}</CardTitle>
             </CardHeader>
             <CardContent>
               <Dropzone onFileSelected={handleFileSelected} />
@@ -209,7 +211,7 @@ export default function GeneratePage() {
           {/* Mode Selection */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">3. 생성 모드</CardTitle>
+              <CardTitle className="text-base">{t.generation.step3}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {/* Mode Toggle */}
@@ -236,9 +238,9 @@ export default function GeneratePage() {
                     )}
                   />
                   <div>
-                    <p className="font-medium">AI 자율</p>
+                    <p className="font-medium">{t.generation.modeAuto}</p>
                     <p className="text-xs text-muted-foreground">
-                      AI가 문서를 분석해 구조 결정
+                      {t.generation.modeAutoDesc}
                     </p>
                   </div>
                 </button>
@@ -261,9 +263,9 @@ export default function GeneratePage() {
                     )}
                   />
                   <div>
-                    <p className="font-medium">템플릿 사용</p>
+                    <p className="font-medium">{t.generation.modeTemplate}</p>
                     <p className="text-xs text-muted-foreground">
-                      지정한 형식에 맞춰 생성
+                      {t.generation.modeTemplateDesc}
                     </p>
                   </div>
                 </button>
@@ -274,12 +276,12 @@ export default function GeneratePage() {
                 <div className="space-y-2">
                   {templates.length === 0 ? (
                     <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
-                      <p>저장된 템플릿이 없습니다.</p>
+                      <p>{t.generation.noTemplates}</p>
                       <Link
                         href={`${orgSlug ? `/${orgSlug}` : ""}/templates`}
                         className="mt-1 inline-block text-xs text-primary underline"
                       >
-                        템플릿 만들러 가기
+                        {t.generation.goCreateTemplate}
                       </Link>
                     </div>
                   ) : (
@@ -343,8 +345,8 @@ export default function GeneratePage() {
           >
             <Upload className="mr-2 h-4 w-4" />
             {mode === "auto"
-              ? "AI 자율로 TC 생성하기"
-              : `"${selectedTemplate?.name || "템플릿"}" 기준으로 TC 생성하기`}
+              ? t.generation.generateAuto
+              : `"${selectedTemplate?.name || t.nav.templates}" ${t.generation.generateTemplate}`}
           </Button>
         </div>
 
@@ -352,7 +354,7 @@ export default function GeneratePage() {
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">문서 미리보기</CardTitle>
+              <CardTitle className="text-base">{t.generation.docPreviewTitle}</CardTitle>
             </CardHeader>
             <CardContent>
               {parsedPreview ? (
@@ -363,7 +365,7 @@ export default function GeneratePage() {
                 <div className="flex flex-col items-center justify-center py-20 text-center text-muted-foreground">
                   <FileText className="mb-4 h-12 w-12 opacity-50" />
                   <p className="text-sm">
-                    기획 문서를 업로드하면 내용이 여기에 표시됩니다.
+                    {t.generation.docPreviewEmpty}
                   </p>
                 </div>
               )}

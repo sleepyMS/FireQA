@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 interface CommentFormProps {
   placeholder?: string;
@@ -13,14 +14,18 @@ interface CommentFormProps {
 }
 
 export function CommentForm({
-  placeholder = "코멘트를 입력하세요...",
+  placeholder,
   onSubmit,
   disabled = false,
   initialValue = "",
-  submitLabel = "등록",
+  submitLabel,
 }: CommentFormProps) {
+  const { t } = useLocale();
   const [body, setBody] = useState(initialValue);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const resolvedPlaceholder = placeholder ?? t.comments.placeholder;
+  const resolvedSubmitLabel = submitLabel ?? t.comments.register;
 
   const MAX_CHARS = 10000;
   const COUNTER_THRESHOLD = 8000;
@@ -35,7 +40,7 @@ export function CommentForm({
       await onSubmit(trimmed);
       setBody("");
     } catch (err) {
-      console.error("코멘트 제출 오류:", err);
+      console.error("comment submit error:", err);
     } finally {
       setIsSubmitting(false);
     }
@@ -44,7 +49,7 @@ export function CommentForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-2">
       <Textarea
-        placeholder={placeholder}
+        placeholder={resolvedPlaceholder}
         value={body}
         onChange={(e) => setBody(e.target.value.slice(0, MAX_CHARS))}
         disabled={disabled || isSubmitting}
@@ -54,7 +59,7 @@ export function CommentForm({
       <div className="flex items-center justify-between">
         {body.length > COUNTER_THRESHOLD ? (
           <span className="text-xs text-muted-foreground">
-            {body.length.toLocaleString()} / {MAX_CHARS.toLocaleString()}자
+            {body.length.toLocaleString()} / {MAX_CHARS.toLocaleString()}
           </span>
         ) : (
           <span />
@@ -64,7 +69,7 @@ export function CommentForm({
           size="sm"
           disabled={!body.trim() || disabled || isSubmitting}
         >
-          {isSubmitting ? "제출 중..." : submitLabel}
+          {isSubmitting ? t.comments.submitting : resolvedSubmitLabel}
         </Button>
       </div>
     </form>

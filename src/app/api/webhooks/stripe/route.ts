@@ -3,6 +3,9 @@ import { stripe } from "@/lib/billing/stripe";
 import { prisma } from "@/lib/db";
 import { invalidateOrgPlanCache } from "@/lib/billing/get-org-plan";
 import type Stripe from "stripe";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/webhooks/stripe" });
 
 // Stripe 웹훅은 raw body가 필요하므로 Next.js 파싱 비활성화
 export const runtime = "nodejs";
@@ -97,11 +100,26 @@ export async function POST(request: NextRequest) {
       case "customer.subscription.deleted":
         await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
         break;
+      case "checkout.session.completed": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        if (session.metadata?.type === "credit_purchase") {
+          const orgId = session.metadata.organizationId;
+          const credits = parseInt(session.metadata.credits ?? "0", 10);
+          if (orgId && credits > 0) {
+            const { addCredits } = await import("@/lib/billing/credits");
+            await addCredits(orgId, credits, {
+              type: "purchase",
+              description: `${credits} 크레딧 구매`,
+            });
+          }
+        }
+        break;
+      }
       default:
         break;
     }
   } catch (error) {
-    console.error("웹훅 처리 오류:", event.type, error);
+    logger.error("웹훅 처리 오류", { eventType: event.type, error });
     return NextResponse.json({ error: "웹훅 처리에 실패했습니다." }, { status: 500 });
   }
 

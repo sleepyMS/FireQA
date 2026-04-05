@@ -3,6 +3,9 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { requireRole } from "@/lib/auth/require-role";
 import { UserRole } from "@/types/enums";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/organization/transfer" });
 
 export async function POST(request: NextRequest) {
   try {
@@ -62,7 +65,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("소유권 이전 오류:", error);
+    logger.error("소유권 이전 오류", { error });
     return NextResponse.json({ error: "소유권 이전에 실패했습니다." }, { status: 500 });
   }
 }

@@ -27,7 +27,13 @@ export async function GET(request: NextRequest) {
       status: InviteStatus.PENDING,
       expiresAt: { gt: new Date() },
     },
-    include: {
+    select: {
+      id: true,
+      email: true,
+      role: true,
+      status: true,
+      expiresAt: true,
+      createdAt: true,
       invitedBy: { select: { name: true, email: true } },
     },
     orderBy: { createdAt: "desc" },
@@ -82,6 +88,7 @@ export async function POST(request: NextRequest) {
         status: InviteStatus.PENDING,
         expiresAt: { gt: new Date() },
       },
+      select: { id: true },
     });
     if (existing) {
       return NextResponse.json(

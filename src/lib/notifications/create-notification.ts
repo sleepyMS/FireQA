@@ -1,4 +1,7 @@
 import { prisma } from "@/lib/db";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "notifications" });
 
 export function createNotification(params: {
   userId: string;
@@ -19,5 +22,5 @@ export function createNotification(params: {
         metadata: JSON.stringify(params.metadata ?? {}),
       },
     })
-    .catch(console.error);
+    .catch((err) => logger.error("알림 생성 실패", { error: err }));
 }

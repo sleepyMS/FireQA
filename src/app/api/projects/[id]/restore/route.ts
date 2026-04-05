@@ -5,6 +5,9 @@ import { requireRole } from "@/lib/auth/require-role";
 import { UserRole, ActivityAction } from "@/types/enums";
 import { getOrgProject } from "@/lib/projects/get-org-project";
 import { logActivity } from "@/lib/activity/log-activity";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/projects/restore" });
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -42,7 +45,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("프로젝트 복구 오류:", error);
+    logger.error("프로젝트 복구 오류", { error });
     return NextResponse.json({ error: "복구에 실패했습니다." }, { status: 500 });
   }
 }

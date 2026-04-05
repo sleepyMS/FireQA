@@ -3,6 +3,9 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { JobType } from "@/types/enums";
 import { sanitizeFilename } from "@/lib/utils/sanitize-filename";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/export/mermaid" });
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,7 +21,11 @@ export async function GET(request: NextRequest) {
 
     const job = await prisma.generationJob.findUnique({
       where: { id: jobId },
-      include: { project: { select: { organizationId: true, name: true } } },
+      select: {
+        type: true,
+        result: true,
+        project: { select: { organizationId: true, name: true } },
+      },
     });
 
     if (!job || job.project.organizationId !== user.organizationId) {
@@ -61,7 +68,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Mermaid 내보내기 오류:", error);
+    logger.error("Mermaid 내보내기 오류", { error });
     return NextResponse.json(
       { error: "Mermaid 내보내기에 실패했습니다." },
       { status: 500 }

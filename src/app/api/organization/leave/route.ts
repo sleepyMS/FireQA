@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, invalidateCachedUser } from "@/lib/auth/get-current-user";
 import { UserRole } from "@/types/enums";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/organization/leave" });
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,7 +24,7 @@ export async function POST(request: NextRequest) {
       // 삭제 후 이동할 조직 탐색 (다른 조직이 있으면 거기로, 없으면 온보딩)
       const remaining = await prisma.organizationMembership.findFirst({
         where: { userId: user.userId },
-        include: { organization: { select: { slug: true } } },
+        select: { organization: { select: { slug: true } } },
       });
       const redirectTo = remaining ? `/${remaining.organization.slug}/dashboard` : "/onboarding";
 
@@ -42,7 +45,7 @@ export async function POST(request: NextRequest) {
 
       const remaining = await tx.organizationMembership.findFirst({
         where: { userId: user.userId },
-        include: { organization: { select: { slug: true } } },
+        select: { organizationId: true, organization: { select: { slug: true } } },
       });
 
       await tx.user.update({
@@ -58,7 +61,7 @@ export async function POST(request: NextRequest) {
     const redirectTo = remainingSlug ? `/${remainingSlug}/dashboard` : "/onboarding";
     return NextResponse.json({ success: true, redirectTo });
   } catch (error) {
-    console.error("조직 탈퇴 오류:", error);
+    logger.error("조직 탈퇴 오류", { error });
     return NextResponse.json({ error: "조직 탈퇴에 실패했습니다." }, { status: 500 });
   }
 }

@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth/get-current-user";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/user/memberships" });
 
 export async function GET() {
   try {
@@ -41,7 +44,7 @@ export async function GET() {
       })),
     });
   } catch (error) {
-    console.error("멤버십 조회 오류:", error);
+    logger.error("멤버십 조회 오류", { error });
     return NextResponse.json({ error: "멤버십 조회에 실패했습니다." }, { status: 500 });
   }
 }

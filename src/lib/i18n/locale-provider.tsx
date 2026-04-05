@@ -5,6 +5,14 @@ import type { Locale, Messages } from "./messages";
 import { ko } from "./ko";
 import { en } from "./en";
 
+/** Replace `{key}` placeholders in a translation string with values. */
+export function interp(template: string, vars: Record<string, string>): string {
+  return Object.entries(vars).reduce(
+    (s, [k, v]) => s.replace(`{${k}}`, v),
+    template,
+  );
+}
+
 const LOCALE_COOKIE = "fireqa-locale";
 const dictionaries: Record<Locale, Messages> = { ko, en };
 

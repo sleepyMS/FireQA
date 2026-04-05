@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/notifications/count" });
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,7 +18,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ count });
   } catch (error) {
-    console.error("알림 카운트 조회 오류:", error);
+    logger.error("알림 카운트 조회 오류", { error });
     return NextResponse.json({ error: "알림 카운트 조회에 실패했습니다." }, { status: 500 });
   }
 }

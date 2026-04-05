@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
+import { BottomNav } from "@/components/layout/bottom-nav";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { UserProvider } from "@/lib/auth/user-provider";
 import { CurrentProjectProvider } from "@/lib/current-project-context";
@@ -41,6 +42,12 @@ export default async function DashboardLayout({
   return (
     <CurrentProjectProvider>
     <UserProvider value={user}>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:p-4 focus:bg-background focus:text-foreground"
+      >
+        본문 바로가기
+      </a>
       <div className="flex h-full min-h-screen">
         <Sidebar
           initialMemberships={initialMemberships}
@@ -48,8 +55,9 @@ export default async function DashboardLayout({
         />
         <div className="flex min-w-0 flex-1 flex-col lg:pl-60">
           <Header initialNotificationCount={unreadNotificationCount} orgName={activeOrgName} />
-          <main className="min-w-0 flex-1 overflow-hidden p-6">{children}</main>
+          <main id="main-content" role="main" className="min-w-0 flex-1 overflow-hidden p-6 pb-20 md:pb-6">{children}</main>
         </div>
+        <BottomNav />
       </div>
     </UserProvider>
     </CurrentProjectProvider>

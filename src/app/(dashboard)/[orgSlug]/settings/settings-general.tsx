@@ -16,11 +16,20 @@ import {
   DialogTitle,
   DialogClose,
 } from "@/components/ui/dialog";
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "@/components/ui/form";
 import { Key } from "lucide-react";
 import { getAvatarColor } from "@/lib/avatar-colors";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import type { Locale } from "@/lib/i18n/messages";
-import { SLUG_REGEX } from "@/lib/slug";
+import { updateOrganizationSchema } from "@/lib/api/schemas/organization";
+import { useFormAction } from "@/lib/hooks/use-form-action";
 
 interface OrgInfo {
   id: string;
@@ -36,9 +45,6 @@ export default function SettingsGeneral() {
   const router = useRouter();
   const [org, setOrg] = useState<OrgInfo | null>(null);
   const [loading, setLoading] = useState(true);
-  const [name, setName] = useState("");
-  const [slug, setSlug] = useState("");
-  const [saving, setSaving] = useState(false);
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [deleteConfirmName, setDeleteConfirmName] = useState("");
@@ -48,10 +54,33 @@ export default function SettingsGeneral() {
   const [tokenLoading, setTokenLoading] = useState(false);
 
   const { t, locale, setLocale } = useLocale();
-  const isDirty = org !== null && (name !== org.name || slug !== org.slug);
+  const sg = t.settings.general;
+
+  const { form, onSubmit, isSubmitting } = useFormAction({
+    schema: updateOrganizationSchema,
+    defaultValues: { name: "", slug: "" },
+    action: (data) =>
+      fetch("/api/organization", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }),
+    onSuccess: (data) => {
+      const d = data as Partial<OrgInfo>;
+      setOrg((prev) => (prev ? { ...prev, ...d } : prev));
+      if (d.slug && d.slug !== org?.slug) {
+        router.push(`/${d.slug}/settings`);
+      } else {
+        toast.success(sg.savedOk);
+      }
+    },
+  });
+
+  const watchedName = form.watch("name");
+  const watchedSlug = form.watch("slug");
+  const isDirty = org !== null && (watchedName !== org.name || watchedSlug !== org.slug);
   const isOwner = org?.role === "owner";
   const isAlone = (org?.memberCount ?? 0) <= 1;
-  const slugValid = SLUG_REGEX.test(slug);
 
   useEffect(() => {
     Promise.all([
@@ -60,42 +89,12 @@ export default function SettingsGeneral() {
     ])
       .then(([orgData, tokenData]) => {
         setOrg(orgData);
-        setName(orgData.name);
-        setSlug(orgData.slug);
+        form.reset({ name: orgData.name, slug: orgData.slug });
         setPluginToken(tokenData);
       })
-      .catch(() => toast.error("조직 정보를 불러오지 못했습니다."))
+      .catch(() => toast.error(sg.loadFailed))
       .finally(() => setLoading(false));
-  }, []);
-
-  async function handleSave() {
-    if (!isDirty || !slugValid) return;
-    setSaving(true);
-    try {
-      const res = await fetch("/api/organization", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, slug }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        // setOrg 먼저 업데이트 후 슬러그가 바뀌었으면 새 URL로 이동
-        setOrg((prev) => (prev ? { ...prev, ...data } : prev));
-        if (data.slug && data.slug !== org?.slug) {
-          // 슬러그가 변경된 경우 새 URL로 리다이렉트 (toast 생략 — 페이지 이동 자체가 성공 신호)
-          router.push(`/${data.slug}/settings`);
-        } else {
-          toast.success("설정이 저장되었습니다.");
-        }
-      } else {
-        toast.error(data.error || "저장에 실패했습니다.");
-      }
-    } catch {
-      toast.error("네트워크 오류가 발생했습니다.");
-    } finally {
-      setSaving(false);
-    }
-  }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleGenerateToken() {
     setTokenLoading(true);
@@ -106,10 +105,10 @@ export default function SettingsGeneral() {
         setGeneratedToken(data.token);
         setPluginToken({ hasToken: true, lastUsedAt: null, createdAt: new Date().toISOString() });
       } else {
-        toast.error(data.error || "토큰 생성에 실패했습니다.");
+        toast.error(data.error || sg.tokenGenFailed);
       }
     } catch {
-      toast.error("네트워크 오류가 발생했습니다.");
+      toast.error(t.common.networkError);
     } finally {
       setTokenLoading(false);
     }
@@ -120,9 +119,9 @@ export default function SettingsGeneral() {
       await fetch("/api/user/plugin-token", { method: "DELETE" });
       setPluginToken({ hasToken: false, lastUsedAt: null, createdAt: null });
       setGeneratedToken(null);
-      toast.success("플러그인 토큰이 해제되었습니다.");
+      toast.success(sg.tokenRevoked);
     } catch {
-      toast.error("해제에 실패했습니다.");
+      toast.error(sg.tokenRevokeFailed);
     }
   }
 
@@ -139,14 +138,13 @@ export default function SettingsGeneral() {
       const res = await fetch("/api/organization/leave", { method: "POST" });
       const data = await res.json();
       if (res.ok) {
-        toast.success("조직에서 나갔습니다.");
-        // "/" 경유 없이 서버가 계산한 다음 목적지로 바로 이동 (루프 방지)
+        toast.success(isOwner ? sg.deleteOk : sg.leaveOk);
         router.push(data.redirectTo ?? "/onboarding");
       } else {
-        toast.error(data.error || "조직 탈퇴에 실패했습니다.");
+        toast.error(data.error || (isOwner ? sg.deleteFailed : sg.leaveFailed));
       }
     } catch {
-      toast.error("네트워크 오류가 발생했습니다.");
+      toast.error(t.common.networkError);
     } finally {
       setLeaving(false);
       setLeaveOpen(false);
@@ -159,7 +157,7 @@ export default function SettingsGeneral() {
         <CardContent className="flex items-center justify-center py-20 text-muted-foreground">
           <div className="text-center">
             <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-            <p>로딩 중...</p>
+            <p>{t.common.loading}</p>
           </div>
         </CardContent>
       </Card>
@@ -184,59 +182,67 @@ export default function SettingsGeneral() {
               {isDirty && (
                 <span
                   className="h-1.5 w-1.5 rounded-full bg-amber-400"
-                  title="저장되지 않은 변경사항"
+                  title={sg.unsavedDot}
                 />
               )}
             </div>
             <p className="text-sm text-muted-foreground">
-              {org?.slug} · 멤버 {org?.memberCount ?? 0}명
+              {org?.slug} · {sg.memberCount} {org?.memberCount ?? 0}
             </p>
           </div>
         </div>
-        <CardContent className="space-y-4 py-2">
-          <div className="space-y-2">
-            <Label>조직 이름</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label>슬러그</Label>
-            <Input
-              value={slug}
-              onChange={(e) => setSlug(e.target.value)}
-              className={
-                slug && !slugValid
-                  ? "border-destructive focus-visible:ring-destructive"
-                  : ""
-              }
-            />
-            {slug && !slugValid && (
-              <p className="text-xs text-destructive">
-                소문자, 숫자, 하이픈만 사용 가능합니다
-              </p>
-            )}
-            {slug && slugValid && (
-              <p className="text-xs text-emerald-600">올바른 형식입니다</p>
-            )}
-          </div>
-          {/* 팀 URL — 읽기 전용으로 현재 적용된 슬러그 기준의 URL 표시 */}
-          <div className="space-y-2">
-            <Label className="text-muted-foreground">현재 URL</Label>
-            <div className="flex items-center rounded-md border bg-muted/50 px-3 py-2 text-sm text-muted-foreground select-all">
-              <span className="text-muted-foreground/60">fireqa.com/</span>
-              <span className="font-medium text-foreground">{org?.slug ?? ""}</span>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              슬러그를 변경하면 URL도 바뀝니다. 저장 후 적용됩니다.
-            </p>
-          </div>
-          <div className="flex justify-end">
-            <Button
-              onClick={handleSave}
-              disabled={!isDirty || !slugValid || saving}
-            >
-              {saving ? "저장 중..." : "저장"}
-            </Button>
-          </div>
+        <CardContent className="py-2">
+          <Form {...form}>
+            <form onSubmit={onSubmit} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{sg.orgName}</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="slug"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{sg.slug}</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    {watchedSlug && !form.formState.errors.slug && (
+                      <p className="text-xs text-emerald-600">{sg.slugValid}</p>
+                    )}
+                  </FormItem>
+                )}
+              />
+              <div className="space-y-2">
+                <Label className="text-muted-foreground">{sg.currentUrl}</Label>
+                <div className="flex items-center rounded-md border bg-muted/50 px-3 py-2 text-sm text-muted-foreground select-all">
+                  <span className="text-muted-foreground/60">fireqa.com/</span>
+                  <span className="font-medium text-foreground">{org?.slug ?? ""}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {sg.slugChangeNote}
+                </p>
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  type="submit"
+                  disabled={!isDirty || isSubmitting}
+                >
+                  {isSubmitting ? t.common.saving : t.common.save}
+                </Button>
+              </div>
+            </form>
+          </Form>
         </CardContent>
       </Card>
 
@@ -269,9 +275,9 @@ export default function SettingsGeneral() {
             <Key className="h-4 w-4 text-purple-600" />
           </div>
           <div>
-            <p className="text-sm font-semibold">Figma 플러그인 연동</p>
+            <p className="text-sm font-semibold">{sg.figmaPluginTitle}</p>
             <p className="text-xs text-muted-foreground">
-              FigJam 플러그인에서 빠르게 연결할 토큰을 발급합니다
+              {sg.figmaPluginDesc}
             </p>
           </div>
         </div>
@@ -280,16 +286,16 @@ export default function SettingsGeneral() {
             <>
               {pluginToken?.hasToken && (
                 <div className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
-                  토큰이 발급되어 있습니다.{pluginToken.lastUsedAt ? ` 마지막 사용: ${new Date(pluginToken.lastUsedAt).toLocaleDateString("ko-KR")}` : ""}
+                  {sg.tokenIssued}{pluginToken.lastUsedAt ? ` ${sg.tokenLastUsed}: ${new Date(pluginToken.lastUsedAt).toLocaleDateString(locale === "ko" ? "ko-KR" : "en-US")}` : ""}
                 </div>
               )}
               <div className="flex gap-2">
                 <Button size="sm" onClick={handleGenerateToken} disabled={tokenLoading}>
-                  {tokenLoading ? "발급 중..." : pluginToken?.hasToken ? "토큰 재발급" : "토큰 발급하기"}
+                  {tokenLoading ? sg.tokenIssuing : pluginToken?.hasToken ? sg.tokenReissue : sg.tokenIssueBtn}
                 </Button>
                 {pluginToken?.hasToken && (
                   <Button size="sm" variant="outline" onClick={handleRevokeToken}>
-                    해제
+                    {sg.tokenRevoke}
                   </Button>
                 )}
               </div>
@@ -297,18 +303,18 @@ export default function SettingsGeneral() {
           ) : (
             <div className="space-y-2">
               <p className="text-xs font-medium text-amber-700">
-                이 토큰은 지금만 표시됩니다. 복사 후 플러그인에 붙여넣으세요.
+                {sg.tokenOnce}
               </p>
               <div className="flex gap-2">
                 <code className="flex-1 truncate rounded-md bg-muted px-3 py-2 text-xs font-mono">
                   {generatedToken}
                 </code>
                 <Button size="sm" variant="outline" onClick={handleCopyToken}>
-                  {tokenCopied ? "복사됨" : "복사"}
+                  {tokenCopied ? sg.tokenCopied : sg.tokenCopy}
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                플러그인 → 토큰으로 연결하기 → 붙여넣기
+                {sg.tokenPasteHint}
               </p>
             </div>
           )}
@@ -319,14 +325,14 @@ export default function SettingsGeneral() {
         <CardContent className="flex items-center justify-between py-4">
           <div>
             <p className="text-sm font-semibold text-destructive">
-              {isOwner ? "조직 삭제" : "조직 나가기"}
+              {isOwner ? sg.deleteOrg : sg.leaveOrg}
             </p>
             <p className="mt-0.5 text-xs text-muted-foreground">
               {isOwner && !isAlone
-                ? `조직원 ${org!.memberCount - 1}명을 포함한 모든 데이터가 영구 삭제됩니다`
+                ? sg.deleteOrgDesc.replace("{count}", String(org!.memberCount - 1))
                 : isOwner
-                  ? "조직과 모든 데이터가 영구 삭제됩니다"
-                  : "나가면 이 조직의 데이터에 접근할 수 없습니다"}
+                  ? sg.deleteOrgDescAlone
+                  : sg.leaveOrgDesc}
             </p>
           </div>
           <Button
@@ -334,7 +340,7 @@ export default function SettingsGeneral() {
             size="sm"
             onClick={() => setLeaveOpen(true)}
           >
-            {isOwner ? "삭제" : "나가기"}
+            {isOwner ? sg.deleteBtn : sg.leaveBtn}
           </Button>
         </CardContent>
       </Card>
@@ -342,19 +348,19 @@ export default function SettingsGeneral() {
       <Dialog open={leaveOpen} onOpenChange={(open) => { setLeaveOpen(open); if (!open) setDeleteConfirmName(""); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{isOwner ? "조직 삭제" : "조직 나가기"}</DialogTitle>
+            <DialogTitle>{isOwner ? sg.deleteOrg : sg.leaveOrg}</DialogTitle>
             <DialogDescription>
               {isOwner && !isAlone
-                ? `"${org?.name}" 조직원 ${org!.memberCount - 1}명을 포함한 모든 데이터가 영구 삭제됩니다. 이 작업은 되돌릴 수 없습니다.`
+                ? `"${org?.name}" ` + sg.deleteOrgDialogDescWithMembers.replace("{count}", String(org!.memberCount - 1))
                 : isOwner
-                  ? `"${org?.name}" 조직과 모든 데이터가 영구 삭제됩니다. 이 작업은 되돌릴 수 없습니다.`
-                  : `정말로 "${org?.name}" 조직을 나가시겠습니까? 이 작업은 되돌릴 수 없습니다.`}
+                  ? `"${org?.name}" ` + sg.deleteOrgDialogDescAlone
+                  : `"${org?.name}" ` + sg.leaveOrgDialogDesc}
             </DialogDescription>
           </DialogHeader>
           {isOwner && (
             <div className="space-y-2">
               <Label className="text-sm">
-                확인을 위해 조직 이름 <span className="font-semibold">{org?.name}</span>을 입력하세요
+                {sg.confirmNameLabel} <span className="font-semibold">{org?.name}</span>
               </Label>
               <Input
                 value={deleteConfirmName}
@@ -367,13 +373,13 @@ export default function SettingsGeneral() {
             </div>
           )}
           <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>취소</DialogClose>
+            <DialogClose render={<Button variant="outline" />}>{t.common.cancel}</DialogClose>
             <Button
               variant="destructive"
               onClick={handleLeave}
               disabled={leaving || (isOwner && deleteConfirmName !== org?.name)}
             >
-              {leaving ? "처리 중..." : isOwner ? "삭제" : "나가기"}
+              {leaving ? sg.processing : isOwner ? sg.deleteBtn : sg.leaveBtn}
             </Button>
           </DialogFooter>
         </DialogContent>

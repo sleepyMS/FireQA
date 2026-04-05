@@ -4,6 +4,9 @@ import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { requireRole, hasRole } from "@/lib/auth/require-role";
 import { UserRole, ActivityAction } from "@/types/enums";
 import { logActivity } from "@/lib/activity/log-activity";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/organization/members" });
 
 export async function PATCH(
   request: NextRequest,
@@ -60,7 +63,7 @@ export async function PATCH(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("역할 변경 오류:", error);
+    logger.error("역할 변경 오류", { error });
     return NextResponse.json({ error: "역할 변경에 실패했습니다." }, { status: 500 });
   }
 }
@@ -109,7 +112,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("멤버 제거 오류:", error);
+    logger.error("멤버 제거 오류", { error });
     return NextResponse.json({ error: "멤버 제거에 실패했습니다." }, { status: 500 });
   }
 }

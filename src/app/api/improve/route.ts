@@ -3,10 +3,11 @@ import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createGenerationJob, completeJob, failJob } from "@/lib/api/create-generation-job";
 import { checkRateLimit } from "@/lib/rate-limit/check-rate-limit";
 import { logActivity } from "@/lib/activity/log-activity";
-import { JobType, ActivityAction } from "@/types/enums";
+import { createNotification } from "@/lib/notifications/create-notification";
+import { JobType, ActivityAction, NotificationType } from "@/types/enums";
 import { Stage } from "@/types/sse";
-import { createSSEStream } from "@/lib/sse/create-sse-stream";
-import { streamOpenAIWithSchema } from "@/lib/sse/stream-openai";
+import { createSSEStream, sendStage } from "@/lib/sse/create-sse-stream";
+import { resolveProvider } from "@/lib/ai/resolve-provider";
 import {
   SPEC_IMPROVE_SYSTEM_PROMPT,
   buildSpecImproveUserPrompt,
@@ -23,6 +24,7 @@ export async function POST(request: NextRequest) {
   const file = formData.get("file") as File;
   const projectId = formData.get("projectId") as string | null;
   const projectName = formData.get("projectName") as string | null;
+  const providerParam = formData.get("provider") as string | null;
 
   // projectId 또는 projectName 중 하나는 반드시 필요
   if (!file || (!projectId && !projectName)) {
@@ -48,8 +50,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const STAGE_TOTAL = 4; // parsing → preparing → generating → saving
+
   return createSSEStream(async (writer) => {
-    writer.send({ type: "stage", stage: Stage.PARSING, message: "문서를 파싱하고 있습니다...", progress: 10 });
+    sendStage(writer, { stage: Stage.PARSING, message: "문서를 파싱하고 있습니다...", progress: 10, stageIndex: 1, stageTotal: STAGE_TOTAL });
 
     const { jobId, parsedText } = await createGenerationJob(file, projectInput, JobType.SPEC_IMPROVE, {
       userId: user.userId,
@@ -58,24 +62,35 @@ export async function POST(request: NextRequest) {
     writer.send({ type: "job_created", jobId });
 
     try {
+      sendStage(writer, { stage: Stage.PREPARING, message: "프롬프트를 준비하고 있습니다...", progress: 25, stageIndex: 2, stageTotal: STAGE_TOTAL });
+
       let input = parsedText;
       if (estimateTokens(parsedText) > 100000) {
         input = parsedText.slice(0, 60000);
       }
 
-      writer.send({ type: "stage", stage: Stage.GENERATING, message: "AI가 기획서를 생성하고 있습니다...", progress: 30 });
+      sendStage(writer, { stage: Stage.GENERATING, message: "AI가 기획서를 개선하고 있습니다...", progress: 40, stageIndex: 3, stageTotal: STAGE_TOTAL });
 
-      const { result, tokenUsage } = await streamOpenAIWithSchema<SpecImproveResult>({
+      const aiProvider = await resolveProvider(user.organizationId, providerParam);
+      const { result, tokenUsage } = await aiProvider.streamWithSchema<SpecImproveResult>({
         systemPrompt: SPEC_IMPROVE_SYSTEM_PROMPT,
         userPrompt: buildSpecImproveUserPrompt(input),
         jsonSchema: specImproveJsonSchema,
         writer,
         signal: request.signal,
+        progressRange: { min: 40, max: 90 },
       });
 
-      writer.send({ type: "stage", stage: Stage.SAVING, message: "결과를 저장하고 있습니다...", progress: 95 });
+      sendStage(writer, { stage: Stage.SAVING, message: "결과를 저장하고 있습니다...", progress: 95, stageIndex: 4, stageTotal: STAGE_TOTAL });
       await completeJob(jobId, result, tokenUsage, user.userId);
       logActivity({ organizationId: user.organizationId, actorId: user.userId, action: ActivityAction.GENERATION_COMPLETED, jobId, metadata: { type: "spec-improve" } });
+      createNotification({
+        userId: user.userId,
+        organizationId: user.organizationId,
+        type: NotificationType.GENERATION_COMPLETED,
+        title: "기획서 개선이 완료되었습니다",
+        linkUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/improve/${jobId}`,
+      });
 
       writer.send({ type: "complete", data: result, tokenUsage });
     } catch (err) {

@@ -5,6 +5,7 @@ import { CommentWithReplies } from "@/types/comment";
 import { CommentForm } from "./comment-form";
 import { CommentThread } from "./comment-thread";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 interface CommentSectionProps {
   jobId: string;
@@ -12,6 +13,7 @@ interface CommentSectionProps {
 }
 
 export function CommentSection({ jobId, currentUserId }: CommentSectionProps) {
+  const { t } = useLocale();
   const [comments, setComments] = useState<CommentWithReplies[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const controllerRef = useRef<AbortController | null>(null);
@@ -33,7 +35,7 @@ export function CommentSection({ jobId, currentUserId }: CommentSectionProps) {
       })
       .catch((err) => {
         if (err.name !== "AbortError") {
-          console.error("코멘트 로드 오류:", err);
+          console.error("comment load error:", err);
         }
       })
       .finally(() => {
@@ -75,19 +77,19 @@ export function CommentSection({ jobId, currentUserId }: CommentSectionProps) {
 
   return (
     <div className="space-y-6">
-      <h3 className="text-lg font-semibold">코멘트</h3>
+      <h3 className="text-lg font-semibold">{t.comments.title}</h3>
 
       <CommentForm
-        placeholder="새 코멘트를 입력하세요..."
+        placeholder={t.comments.placeholder}
         onSubmit={handleNewComment}
-        submitLabel="코멘트 등록"
+        submitLabel={t.comments.submit}
       />
 
       {initialLoading ? (
-        <p className="text-sm text-muted-foreground">코멘트를 불러오는 중...</p>
+        <p className="text-sm text-muted-foreground">{t.comments.loading}</p>
       ) : comments.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          아직 코멘트가 없습니다. 첫 번째로 의견을 남겨보세요.
+          {t.comments.empty}
         </p>
       ) : (
         <div className="space-y-6">

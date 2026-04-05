@@ -7,6 +7,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import useSWR, { useSWRConfig } from "swr";
 import { SWR_KEYS } from "@/lib/swr/keys";
 import { relativeTime } from "@/lib/date/relative-time";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 interface NotificationItem {
   id: string;
@@ -22,6 +23,7 @@ export function NotificationBell({ initialCount }: { initialCount?: number }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isOpenRef = useRef(false);
   const { mutate } = useSWRConfig();
+  const { t } = useLocale();
 
   const { data: countData } = useSWR<{ count: number }>(SWR_KEYS.notificationCount, {
     refreshInterval: 30_000,
@@ -30,7 +32,7 @@ export function NotificationBell({ initialCount }: { initialCount?: number }) {
   });
   const unreadCount = countData?.count ?? 0;
 
-  // 드롭다운이 열린 경우에만 알림 목록 fetch
+  // Fetch notification list only when dropdown is open
   const { data: notifData, isLoading: loading } = useSWR<{
     notifications: NotificationItem[];
     unreadCount: number;
@@ -50,11 +52,11 @@ export function NotificationBell({ initialCount }: { initialCount?: number }) {
         { revalidate: false }
       );
     } catch {
-      // 네트워크 오류 무시
+      // silently ignore network errors
     }
   }
 
-  // Realtime 구독 — INSERT 시 SWR 재검증으로 즉시 배지 갱신
+  // Realtime subscription — revalidate SWR on INSERT to update badge immediately
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
     let channel: ReturnType<typeof supabase.channel> | null = null;
@@ -81,7 +83,7 @@ export function NotificationBell({ initialCount }: { initialCount?: number }) {
     return () => { if (channel) supabase.removeChannel(channel); };
   }, [mutate]);
 
-  // 외부 클릭 시 닫기
+  // Close on outside click
   useEffect(() => {
     function handleMouseDown(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
@@ -98,7 +100,7 @@ export function NotificationBell({ initialCount }: { initialCount?: number }) {
       <button
         onClick={() => setIsOpen((prev) => { isOpenRef.current = !prev; return !prev; })}
         className="relative flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-        aria-label="알림"
+        aria-label={t.teams.notifications}
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
@@ -110,28 +112,28 @@ export function NotificationBell({ initialCount }: { initialCount?: number }) {
 
       {isOpen && (
         <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-lg border bg-background shadow-lg">
-          {/* 헤더 */}
+          {/* Header */}
           <div className="flex items-center justify-between border-b px-4 py-2.5">
-            <span className="text-sm font-semibold">알림</span>
+            <span className="text-sm font-semibold">{t.teams.notifications}</span>
             {unreadCount > 0 && (
               <button
                 onClick={markAllRead}
                 className="text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
-                모두 읽음
+                {t.teams.markAllRead}
               </button>
             )}
           </div>
 
-          {/* 내용 */}
+          {/* Content */}
           <div className="max-h-80 overflow-y-auto">
             {loading ? (
               <div className="flex items-center justify-center py-8">
-                <span className="text-sm text-muted-foreground">불러오는 중...</span>
+                <span className="text-sm text-muted-foreground">{t.teams.notificationsLoading}</span>
               </div>
             ) : notifications.length === 0 ? (
               <div className="flex items-center justify-center py-8">
-                <span className="text-sm text-muted-foreground">새로운 알림이 없습니다</span>
+                <span className="text-sm text-muted-foreground">{t.teams.noNotifications}</span>
               </div>
             ) : (
               <ul>

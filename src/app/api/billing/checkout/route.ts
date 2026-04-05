@@ -4,6 +4,9 @@ import { requireRole } from "@/lib/auth/require-role";
 import { UserRole } from "@/types/enums";
 import { stripe, STRIPE_PRICE_IDS } from "@/lib/billing/stripe";
 import { prisma } from "@/lib/db";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/billing/checkout" });
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,7 +40,10 @@ export async function POST(request: NextRequest) {
 
     const org = await prisma.organization.findUnique({
       where: { id: user.organizationId },
-      include: { subscription: true },
+      select: {
+        id: true,
+        subscription: { select: { stripeCustomerId: true } },
+      },
     });
 
     if (!org) {
@@ -71,7 +77,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ url: session.url });
   } catch (error) {
-    console.error("결제 세션 생성 오류:", error);
+    logger.error("결제 세션 생성 오류", { error });
     return NextResponse.json({ error: "결제 세션 생성에 실패했습니다." }, { status: 500 });
   }
 }

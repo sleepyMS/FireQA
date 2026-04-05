@@ -3,10 +3,11 @@ import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createGenerationJob, completeJob, failJob } from "@/lib/api/create-generation-job";
 import { checkRateLimit } from "@/lib/rate-limit/check-rate-limit";
 import { logActivity } from "@/lib/activity/log-activity";
-import { JobType, ActivityAction } from "@/types/enums";
+import { createNotification } from "@/lib/notifications/create-notification";
+import { JobType, ActivityAction, NotificationType } from "@/types/enums";
 import { Stage } from "@/types/sse";
-import { createSSEStream } from "@/lib/sse/create-sse-stream";
-import { streamOpenAIWithSchema } from "@/lib/sse/stream-openai";
+import { createSSEStream, sendStage } from "@/lib/sse/create-sse-stream";
+import { resolveProvider } from "@/lib/ai/resolve-provider";
 import {
   DIAGRAM_SYSTEM_PROMPT,
   buildDiagramUserPrompt,
@@ -24,6 +25,7 @@ export async function POST(request: NextRequest) {
   const file = formData.get("file") as File;
   const projectId = formData.get("projectId") as string | null;
   const projectName = formData.get("projectName") as string | null;
+  const providerParam = formData.get("provider") as string | null;
 
   // projectId 또는 projectName 중 하나는 반드시 필요
   if (!file || (!projectId && !projectName)) {
@@ -49,8 +51,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const STAGE_TOTAL = 5; // parsing → preparing → generating → sanitizing → saving
+
   return createSSEStream(async (writer) => {
-    writer.send({ type: "stage", stage: Stage.PARSING, message: "문서를 파싱하고 있습니다...", progress: 10 });
+    sendStage(writer, { stage: Stage.PARSING, message: "문서를 파싱하고 있습니다...", progress: 10, stageIndex: 1, stageTotal: STAGE_TOTAL });
 
     const { jobId, parsedText } = await createGenerationJob(file, projectInput, JobType.DIAGRAMS, {
       userId: user.userId,
@@ -59,22 +63,26 @@ export async function POST(request: NextRequest) {
     writer.send({ type: "job_created", jobId });
 
     try {
+      sendStage(writer, { stage: Stage.PREPARING, message: "프롬프트를 준비하고 있습니다...", progress: 25, stageIndex: 2, stageTotal: STAGE_TOTAL });
+
       let input = parsedText;
       if (estimateTokens(parsedText) > 100000) {
         input = parsedText.slice(0, 60000);
       }
 
-      writer.send({ type: "stage", stage: Stage.GENERATING, message: "AI가 다이어그램을 생성하고 있습니다...", progress: 30 });
+      sendStage(writer, { stage: Stage.GENERATING, message: "AI가 다이어그램을 생성하고 있습니다...", progress: 35, stageIndex: 3, stageTotal: STAGE_TOTAL });
 
-      const { result: raw, tokenUsage } = await streamOpenAIWithSchema<DiagramGenerationResult>({
+      const aiProvider = await resolveProvider(user.organizationId, providerParam);
+      const { result: raw, tokenUsage } = await aiProvider.streamWithSchema<DiagramGenerationResult>({
         systemPrompt: DIAGRAM_SYSTEM_PROMPT,
         userPrompt: buildDiagramUserPrompt(input),
         jsonSchema: diagramJsonSchema,
         writer,
         signal: request.signal,
+        progressRange: { min: 35, max: 80 },
       });
 
-      writer.send({ type: "stage", stage: Stage.SANITIZING, message: "다이어그램을 정리하고 있습니다...", progress: 85 });
+      sendStage(writer, { stage: Stage.SANITIZING, message: "다이어그램을 정리하고 있습니다...", progress: 85, stageIndex: 4, stageTotal: STAGE_TOTAL });
 
       // Mermaid 코드 후처리
       const result: DiagramGenerationResult = {
@@ -84,9 +92,16 @@ export async function POST(request: NextRequest) {
         })),
       };
 
-      writer.send({ type: "stage", stage: Stage.SAVING, message: "결과를 저장하고 있습니다...", progress: 95 });
+      sendStage(writer, { stage: Stage.SAVING, message: "결과를 저장하고 있습니다...", progress: 95, stageIndex: 5, stageTotal: STAGE_TOTAL });
       await completeJob(jobId, result, tokenUsage, user.userId);
       logActivity({ organizationId: user.organizationId, actorId: user.userId, action: ActivityAction.GENERATION_COMPLETED, jobId, metadata: { type: "diagrams" } });
+      createNotification({
+        userId: user.userId,
+        organizationId: user.organizationId,
+        type: NotificationType.GENERATION_COMPLETED,
+        title: "다이어그램 생성이 완료되었습니다",
+        linkUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/diagrams/${jobId}`,
+      });
 
       writer.send({ type: "complete", data: result, tokenUsage });
     } catch (err) {

@@ -12,12 +12,14 @@ import { GenerationError } from "@/components/generation-error";
 import { RecentJobsPanel } from "@/components/recent-jobs-panel";
 import { ProjectSelector } from "@/components/projects/project-selector";
 import type { SpecImproveResult } from "@/types/spec-improve";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 type ProjectSelection =
   | { type: "existing"; id: string; name: string }
   | { type: "new"; name: string };
 
 export default function ImprovePage() {
+  const { t } = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { orgSlug } = useParams<{ orgSlug?: string }>();
@@ -77,9 +79,9 @@ export default function ImprovePage() {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">기획서 개선</h2>
+          <h2 className="text-2xl font-bold tracking-tight">{t.improve.pageTitle}</h2>
           <p className="text-muted-foreground">
-            {projectSelection?.name} — AI가 기획서를 개선하고 있습니다.
+            {projectSelection?.name} — {t.improve.streaming}
           </p>
         </div>
         <GenerationProgress
@@ -98,7 +100,7 @@ export default function ImprovePage() {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">기획서 개선</h2>
+          <h2 className="text-2xl font-bold tracking-tight">{t.improve.pageTitle}</h2>
         </div>
         <GenerationError error={sse.error} />
       </div>
@@ -108,17 +110,15 @@ export default function ImprovePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">기획서 개선</h2>
-        <p className="text-muted-foreground">
-          기획 문서를 업로드하면 AI가 모범 기획서 구조로 개선해 드립니다.
-        </p>
+        <h2 className="text-2xl font-bold tracking-tight">{t.improve.pageTitle}</h2>
+        <p className="text-muted-foreground">{t.improve.pageDescription}</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">1. 프로젝트 이름</CardTitle>
+              <CardTitle className="text-base">{t.improve.step1}</CardTitle>
             </CardHeader>
             <CardContent>
               <ProjectSelector
@@ -131,7 +131,7 @@ export default function ImprovePage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">2. 기획 문서 업로드</CardTitle>
+              <CardTitle className="text-base">{t.improve.step2}</CardTitle>
             </CardHeader>
             <CardContent>
               <Dropzone onFileSelected={handleFileSelected} />
@@ -151,7 +151,7 @@ export default function ImprovePage() {
             onClick={handleGenerate}
           >
             <Wand2 className="mr-2 h-4 w-4" />
-            기획서 개선하기
+            {t.improve.generate}
           </Button>
         </div>
 

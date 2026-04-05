@@ -3,6 +3,9 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { requireRole } from "@/lib/auth/require-role";
 import { UserRole } from "@/types/enums";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/comments/id" });
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -57,7 +60,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
       updatedAt: updated.updatedAt.toISOString(),
     });
   } catch (error) {
-    console.error("코멘트 수정 오류:", error);
+    logger.error("코멘트 수정 오류", { error });
     return NextResponse.json({ error: "코멘트 수정에 실패했습니다." }, { status: 500 });
   }
 }
@@ -91,7 +94,7 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("코멘트 삭제 오류:", error);
+    logger.error("코멘트 삭제 오류", { error });
     return NextResponse.json({ error: "코멘트 삭제에 실패했습니다." }, { status: 500 });
   }
 }

@@ -1,39 +1,31 @@
-import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { errorResponse } from "@/lib/api/error-response";
+import {
+  withApiHandler,
+  ApiError,
+  updateWireframeScreenSchema,
+  type UpdateWireframeScreenBody,
+} from "@/lib/api";
 
-export async function PATCH(request: NextRequest) {
-  try {
-    const { jobId, screenId, screenType } = await request.json();
-
-    if (!jobId || !screenId || !screenType) {
-      return NextResponse.json(
-        { error: "jobId, screenId, screenType은 필수입니다." },
-        { status: 400 }
-      );
-    }
+export const PATCH = withApiHandler<UpdateWireframeScreenBody>(
+  async ({ body }) => {
+    const { jobId, screenId, screenType } = body;
 
     const job = await prisma.generationJob.findUnique({
       where: { id: jobId },
+      select: { id: true, result: true },
     });
 
     if (!job || !job.result) {
-      return NextResponse.json(
-        { error: "Job을 찾을 수 없습니다." },
-        { status: 404 }
-      );
+      throw ApiError.notFound("Job");
     }
 
     const result = JSON.parse(job.result);
     const screen = result.screens?.find(
-      (s: { id: string }) => s.id === screenId
+      (s: { id: string }) => s.id === screenId,
     );
 
     if (!screen) {
-      return NextResponse.json(
-        { error: "해당 화면을 찾을 수 없습니다." },
-        { status: 404 }
-      );
+      throw ApiError.notFound("해당 화면");
     }
 
     screen.screenType = screenType;
@@ -43,8 +35,7 @@ export async function PATCH(request: NextRequest) {
       data: { result: JSON.stringify(result) },
     });
 
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    return errorResponse(error, "화면 타입 수정에 실패했습니다.");
-  }
-}
+    return { success: true };
+  },
+  { bodySchema: updateWireframeScreenSchema },
+);

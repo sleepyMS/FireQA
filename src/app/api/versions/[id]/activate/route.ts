@@ -3,6 +3,9 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { logActivity } from "@/lib/activity/log-activity";
 import { ActivityAction } from "@/types/enums";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/versions/activate" });
 
 // PATCH /api/versions/[id]/activate — set a version as the active version
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -13,7 +16,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const { id } = await params;
     const version = await prisma.resultVersion.findUnique({
       where: { id },
-      include: { job: { include: { project: true } } },
+      select: {
+        id: true,
+        jobId: true,
+        resultJson: true,
+        job: { select: { project: { select: { organizationId: true } } } },
+      },
     });
     if (!version || version.job.project.organizationId !== user.organizationId) {
       return NextResponse.json({ error: "찾을 수 없습니다." }, { status: 404 });
@@ -29,7 +37,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("버전 활성화 오류:", error);
+    logger.error("버전 활성화 오류", { error });
     return NextResponse.json({ error: "버전 활성화에 실패했습니다." }, { status: 500 });
   }
 }

@@ -4,6 +4,9 @@ import { requireRole } from "@/lib/auth/require-role";
 import { UserRole } from "@/types/enums";
 import { stripe } from "@/lib/billing/stripe";
 import { prisma } from "@/lib/db";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/billing/portal" });
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ url: session.url });
   } catch (error) {
-    console.error("포털 세션 생성 오류:", error);
+    logger.error("포털 세션 생성 오류", { error });
     return NextResponse.json({ error: "포털 세션 생성에 실패했습니다." }, { status: 500 });
   }
 }

@@ -1,23 +1,25 @@
-import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { logActivity } from "@/lib/activity/log-activity";
 import { ActivityAction } from "@/types/enums";
+import {
+  withApiHandler,
+  ApiError,
+  getVersionsQuerySchema,
+  createVersionSchema,
+  type GetVersionsQuery,
+  type CreateVersionBody,
+} from "@/lib/api";
 
 // GET /api/versions?jobId=xxx — list versions for a job
-export async function GET(request: NextRequest) {
-  try {
-    const user = await getCurrentUser(request);
-    if (!user) return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
-
-    const jobId = request.nextUrl.searchParams.get("jobId");
-    if (!jobId) return NextResponse.json({ error: "jobId가 필요합니다." }, { status: 400 });
+export const GET = withApiHandler<unknown, GetVersionsQuery>(
+  async ({ user, query }) => {
+    const { jobId } = query;
 
     // Verify job belongs to user's org
     const job = await prisma.generationJob.findFirst({
       where: { id: jobId, project: { organizationId: user.organizationId } },
     });
-    if (!job) return NextResponse.json({ error: "찾을 수 없습니다." }, { status: 404 });
+    if (!job) throw ApiError.notFound("작업");
 
     const versions = await prisma.resultVersion.findMany({
       where: { jobId },
@@ -28,36 +30,22 @@ export async function GET(request: NextRequest) {
         changeSummary: true,
         instruction: true,
         isActive: true,
+        resultJson: true,
         createdAt: true,
         createdBy: { select: { id: true, name: true, email: true } },
       },
       orderBy: { version: "asc" },
     });
 
-    return NextResponse.json({ versions });
-  } catch (error) {
-    console.error("버전 조회 오류:", error);
-    return NextResponse.json({ error: "버전 조회에 실패했습니다." }, { status: 500 });
-  }
-}
+    return { versions };
+  },
+  { querySchema: getVersionsQuerySchema },
+);
 
 // POST /api/versions — create a new version manually
-export async function POST(request: NextRequest) {
-  try {
-    const user = await getCurrentUser(request);
-    if (!user) return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
-
-    const { jobId, changeType, changeSummary, instruction, resultJson } = await request.json() as {
-      jobId: string;
-      changeType: string;
-      changeSummary?: string;
-      instruction?: string;
-      resultJson: string;
-    };
-
-    if (!jobId || !changeType || !resultJson) {
-      return NextResponse.json({ error: "필수 항목이 누락되었습니다." }, { status: 400 });
-    }
+export const POST = withApiHandler<CreateVersionBody>(
+  async ({ user, body }) => {
+    const { jobId, changeType, changeSummary, instruction, resultJson } = body;
 
     // job 소속 검증 + 최신 버전 번호 조회를 병렬로
     const [job, latest] = await Promise.all([
@@ -70,7 +58,7 @@ export async function POST(request: NextRequest) {
         select: { version: true },
       }),
     ]);
-    if (!job) return NextResponse.json({ error: "찾을 수 없습니다." }, { status: 404 });
+    if (!job) throw ApiError.notFound("작업");
     const nextVersion = (latest?.version ?? 0) + 1;
 
     // Deactivate all current versions, create new active one
@@ -91,9 +79,7 @@ export async function POST(request: NextRequest) {
 
     logActivity({ organizationId: user.organizationId, actorId: user.userId, action: ActivityAction.VERSION_CREATED, jobId, metadata: { changeType, version: version.version } });
 
-    return NextResponse.json({ version });
-  } catch (error) {
-    console.error("버전 생성 오류:", error);
-    return NextResponse.json({ error: "버전 생성에 실패했습니다." }, { status: 500 });
-  }
-}
+    return { version };
+  },
+  { bodySchema: createVersionSchema },
+);

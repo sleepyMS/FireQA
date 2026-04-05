@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, updateCachedActiveOrg } from "@/lib/auth/get-current-user";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ module: "api/user/active-org" });
 
 export async function PATCH(request: NextRequest) {
   try {
@@ -37,7 +40,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("활성 조직 전환 오류:", error);
+    logger.error("활성 조직 전환 오류", { error });
     return NextResponse.json({ error: "조직 전환에 실패했습니다." }, { status: 500 });
   }
 }

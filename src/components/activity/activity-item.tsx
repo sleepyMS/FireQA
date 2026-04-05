@@ -1,7 +1,11 @@
+"use client";
+
 import { Zap, FolderOpen, Users, History, Activity } from "lucide-react";
 import { ActivityAction, JOB_TYPE_LABEL } from "@/types/enums";
 import { relativeTime } from "@/lib/date/relative-time";
 import type { ActivityLog } from "@/types/activity";
+import { useLocale, interp } from "@/lib/i18n/locale-provider";
+import type { Messages } from "@/lib/i18n/messages";
 
 interface ActivityItemProps {
   log: ActivityLog;
@@ -25,7 +29,11 @@ function getActionMeta(action: string) {
   return ACTION_META.find((m) => action.startsWith(m.prefix)) ?? DEFAULT_META;
 }
 
-function describeAction(action: string, metadata: Record<string, unknown>): string {
+function describeAction(
+  action: string,
+  metadata: Record<string, unknown>,
+  at: Messages["activity"],
+): string {
   const typeLabel =
     typeof metadata.type === "string"
       ? (JOB_TYPE_LABEL[metadata.type] ?? metadata.type)
@@ -33,37 +41,38 @@ function describeAction(action: string, metadata: Record<string, unknown>): stri
 
   switch (action) {
     case ActivityAction.GENERATION_COMPLETED:
-      return typeLabel ? `${typeLabel} 생성 완료` : "생성 완료";
+      return typeLabel ? interp(at.generationCompletedType, { type: typeLabel }) : at.generationCompleted;
     case ActivityAction.GENERATION_FAILED:
-      return typeLabel ? `${typeLabel} 생성 실패` : "생성 실패";
+      return typeLabel ? interp(at.generationFailedType, { type: typeLabel }) : at.generationFailed;
     case ActivityAction.PROJECT_CREATED:
-      return `프로젝트 생성: ${metadata.name ?? ""}`;
+      return interp(at.projectCreated, { name: String(metadata.name ?? "") });
     case ActivityAction.PROJECT_UPDATED:
-      return "프로젝트 정보 수정";
+      return at.projectUpdated;
     case ActivityAction.PROJECT_ARCHIVED:
-      return "프로젝트 보관";
+      return at.projectArchived;
     case ActivityAction.PROJECT_UNARCHIVED:
-      return "프로젝트 보관 해제";
+      return at.projectUnarchived;
     case ActivityAction.PROJECT_DELETED:
-      return "프로젝트 삭제";
+      return at.projectDeleted;
     case ActivityAction.PROJECT_RESTORED:
-      return "프로젝트 복구";
+      return at.projectRestored;
     case ActivityAction.MEMBER_INVITED:
-      return `멤버 초대: ${metadata.email ?? ""}`;
+      return interp(at.memberInvited, { email: String(metadata.email ?? "") });
     case ActivityAction.MEMBER_ROLE_CHANGED:
-      return "역할 변경";
+      return at.memberRoleChanged;
     case ActivityAction.MEMBER_REMOVED:
-      return "멤버 제거";
+      return at.memberRemoved;
     case ActivityAction.VERSION_CREATED:
-      return `버전 생성 (${metadata.changeType ?? ""})`;
+      return interp(at.versionCreated, { changeType: String(metadata.changeType ?? "") });
     case ActivityAction.VERSION_ACTIVATED:
-      return "버전 복원";
+      return at.versionActivated;
     default:
       return action;
   }
 }
 
 export function ActivityItem({ log }: ActivityItemProps) {
+  const { t } = useLocale();
   const { icon: Icon, iconClass, bg } = getActionMeta(log.action);
   const actorLabel = log.actorName ?? log.actorEmail ?? null;
 
@@ -84,8 +93,8 @@ export function ActivityItem({ log }: ActivityItemProps) {
             {actorLabel && (
               <span className="font-medium">{actorLabel}</span>
             )}
-            {actorLabel && "님이 "}
-            {describeAction(log.action, log.metadata)}
+            {actorLabel && t.activity.actorSuffix}
+            {describeAction(log.action, log.metadata, t.activity)}
           </p>
         </div>
         <span className="shrink-0 text-xs text-muted-foreground">

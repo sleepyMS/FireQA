@@ -9,11 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { ROLE_LABEL } from "@/types/enums";
 import { LogIn, PartyPopper, AlertCircle } from "lucide-react";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 
 function InviteContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
+  const { t } = useLocale();
 
   const [status, setStatus] = useState<
     "loading" | "valid" | "invalid" | "accepted" | "login-needed"
@@ -38,11 +40,11 @@ function InviteContent() {
         setStatus("accepted");
       } else {
         const data = await res.json();
-        setError(data.error || "초대 수락에 실패했습니다.");
+        setError(data.error || t.invite.acceptFailed);
         setStatus("invalid");
       }
     } catch {
-      setError("네트워크 오류가 발생했습니다.");
+      setError(t.invite.networkError);
       setStatus("invalid");
     } finally {
       setAccepting(false);
@@ -52,7 +54,7 @@ function InviteContent() {
   useEffect(() => {
     if (!token) {
       setStatus("invalid");
-      setError("초대 토큰이 없습니다.");
+      setError(t.invite.noToken);
       return;
     }
 
@@ -96,7 +98,7 @@ function InviteContent() {
         }
       } else {
         setStatus("invalid");
-        setError(data.reason || "유효하지 않은 초대입니다.");
+        setError(data.reason || t.invite.invalidInvite);
       }
     }
 
@@ -113,7 +115,7 @@ function InviteContent() {
         {initial}
       </div>
       <p className="text-base font-bold">{info.organizationName}</p>
-      <p className="text-sm opacity-80">조직 초대</p>
+      <p className="text-sm opacity-80">{t.invite.orgInvite}</p>
     </div>
   ) : null;
 
@@ -128,24 +130,24 @@ function InviteContent() {
       {status === "login-needed" && (
         <>
           <div className="bg-gradient-to-br from-indigo-500 to-violet-500 px-6 py-4 text-center text-white">
-            <p className="text-base font-bold">조직 초대</p>
+            <p className="text-base font-bold">{t.invite.orgInvite}</p>
           </div>
           <CardContent className="space-y-4 pt-5">
             <div className="rounded-lg bg-blue-50 px-4 py-3 text-sm text-blue-700">
-              <LogIn className="mr-1.5 inline h-4 w-4" />로그인하면 <strong>자동으로 수락</strong>됩니다. 다시 클릭할 필요 없어요.
+              <LogIn className="mr-1.5 inline h-4 w-4" />{t.invite.loginAutoAccept}
             </div>
             <Link
               href={`/login?redirect=${encodeURIComponent(`/invite?token=${token}`)}`}
               className="block"
             >
-              <Button className="w-full">로그인하여 자동 수락</Button>
+              <Button className="w-full">{t.invite.loginToAccept}</Button>
             </Link>
             <Link
               href={`/signup?redirect=${encodeURIComponent(`/invite?token=${token}`)}`}
               className="block"
             >
               <Button variant="outline" className="w-full">
-                회원가입 후 수락
+                {t.invite.signupToAccept}
               </Button>
             </Link>
           </CardContent>
@@ -158,13 +160,13 @@ function InviteContent() {
           <CardContent className="space-y-4 pt-5">
             <div className="space-y-2 rounded-lg border bg-muted/30 p-3">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">역할</span>
+                <span className="text-muted-foreground">{t.invite.roleLabel}</span>
                 <Badge variant="secondary">
                   {ROLE_LABEL[info.role] ?? info.role}
                 </Badge>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">만료</span>
+                <span className="text-muted-foreground">{t.invite.expiresLabel}</span>
                 <span>{new Date(info.expiresAt).toLocaleString("ko-KR")}</span>
               </div>
             </div>
@@ -173,7 +175,7 @@ function InviteContent() {
               onClick={handleAccept}
               disabled={accepting}
             >
-              {accepting ? "수락 중..." : `${info.organizationName} 합류하기`}
+              {accepting ? t.invite.accepting : `${info.organizationName} ${t.invite.joinOrgButton}`}
             </Button>
           </CardContent>
         </>
@@ -186,13 +188,13 @@ function InviteContent() {
           </div>
           <div>
             <p className="text-base font-bold">
-              {info?.organizationName ?? "조직"}에 합류했습니다!
+              {t.invite.joinedTitlePrefix}{info?.organizationName ?? t.invite.fallbackOrg}{t.invite.joinedTitleSuffix}
             </p>
-            <p className="mt-1 text-sm text-muted-foreground">멤버로 추가되었습니다</p>
+            <p className="mt-1 text-sm text-muted-foreground">{t.invite.memberAdded}</p>
           </div>
           <Link href="/">
             <Button className="w-full bg-emerald-600 hover:bg-emerald-700">
-              대시보드로 이동 →
+              {t.invite.goToDashboard}
             </Button>
           </Link>
         </CardContent>
@@ -206,12 +208,12 @@ function InviteContent() {
           <div>
             <p className="text-sm font-semibold text-destructive">{error}</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              조직 관리자에게 새 초대 링크를 요청하세요
+              {t.invite.requestNewInvite}
             </p>
           </div>
           <Link href="/">
             <Button variant="outline" className="w-full">
-              홈으로 돌아가기
+              {t.invite.goHome}
             </Button>
           </Link>
         </CardContent>
