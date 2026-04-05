@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { AIProvider } from "./provider";
 import type { SSEWriter } from "@/lib/sse/create-sse-stream";
+import { calcProgress } from "./calc-progress";
 
 const ANTHROPIC_MODEL = "claude-sonnet-4-5-20250929";
 
@@ -22,7 +23,6 @@ export class AnthropicProvider implements AIProvider {
     const { systemPrompt, userPrompt, jsonSchema, writer, signal, progressRange } = opts;
     const pMin = progressRange?.min ?? 40;
     const pMax = progressRange?.max ?? 90;
-    const ESTIMATED_RESPONSE_SIZE = 10_000;
 
     const toolName = jsonSchema.name;
 
@@ -55,8 +55,7 @@ export class AnthropicProvider implements AIProvider {
 
       const now = Date.now();
       if (now - lastEmitTime >= THROTTLE_MS) {
-        const ratio = Math.min(accumulatedLength / ESTIMATED_RESPONSE_SIZE, 0.95);
-        const estimatedProgress = Math.round(pMin + (pMax - pMin) * ratio);
+        const estimatedProgress = calcProgress(accumulatedLength, pMin, pMax);
         writer.send({ type: "progress", charsReceived: accumulatedLength, estimatedProgress });
         lastEmitTime = now;
       }

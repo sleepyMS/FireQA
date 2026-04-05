@@ -33,6 +33,7 @@ import { TabNav } from "@/components/ui/tab-nav";
 import { ROLE_LABEL, UserRole } from "@/types/enums";
 import { SWR_KEYS } from "@/lib/swr/keys";
 import { getAvatarColor } from "@/lib/avatar-colors";
+import { relativeTime } from "@/lib/date/relative-time";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -81,17 +82,6 @@ function RoleBadge({ role }: { role: string }) {
   return <Badge variant="secondary">{label}</Badge>;
 }
 
-function formatRelativeTime(dateStr: string | null): string {
-  if (!dateStr) return "-";
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return "방금 전";
-  if (mins < 60) return `${mins}분 전`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}시간 전`;
-  const days = Math.floor(hours / 24);
-  return `${days}일 전`;
-}
 
 // --- Overview Tab ---
 function OverviewTab() {
@@ -148,7 +138,7 @@ function OverviewTab() {
                     <span className="font-medium">{log.action}</span>
                     <div className="flex items-center gap-3 text-muted-foreground">
                       {meta.projectName && <span>{meta.projectName}</span>}
-                      <span>{formatRelativeTime(log.createdAt)}</span>
+                      <span>{relativeTime(log.createdAt)}</span>
                     </div>
                   </div>
                 );
@@ -249,7 +239,7 @@ function MembersTab() {
                     {new Date(m.joinedAt).toLocaleDateString("ko-KR")}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
-                    {formatRelativeTime(m.lastActiveAt)}
+                    {m.lastActiveAt ? relativeTime(m.lastActiveAt) : "-"}
                   </td>
                   <td className="px-4 py-3 text-right">{m.jobCount}</td>
                   <td className="px-4 py-3">

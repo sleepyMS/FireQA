@@ -1,6 +1,7 @@
 import type { AIProvider } from "./provider";
 import { openai, MODEL } from "@/lib/openai/client";
 import type { SSEWriter } from "@/lib/sse/create-sse-stream";
+import { calcProgress } from "./calc-progress";
 
 export class OpenAIProvider implements AIProvider {
   async streamWithSchema<T>(opts: {
@@ -14,7 +15,6 @@ export class OpenAIProvider implements AIProvider {
     const { systemPrompt, userPrompt, jsonSchema, writer, signal, progressRange } = opts;
     const pMin = progressRange?.min ?? 40;
     const pMax = progressRange?.max ?? 90;
-    const ESTIMATED_RESPONSE_SIZE = 10_000;
 
     const stream = await openai.chat.completions.create({
       model: MODEL,
@@ -47,8 +47,7 @@ export class OpenAIProvider implements AIProvider {
 
         const now = Date.now();
         if (now - lastEmitTime >= THROTTLE_MS) {
-          const ratio = Math.min(accumulated.length / ESTIMATED_RESPONSE_SIZE, 0.95);
-          const estimatedProgress = Math.round(pMin + (pMax - pMin) * ratio);
+          const estimatedProgress = calcProgress(accumulated.length, pMin, pMax);
           writer.send({ type: "progress", charsReceived: accumulated.length, estimatedProgress });
           lastEmitTime = now;
         }

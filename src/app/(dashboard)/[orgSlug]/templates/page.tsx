@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -90,6 +90,16 @@ export default function TemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [isCreating, setIsCreating] = useState(false);
 
+  const parsedTemplates = useMemo(
+    () =>
+      templates.map((tmpl) => ({
+        ...tmpl,
+        sheetList: JSON.parse(tmpl.sheetConfig || "[]") as { name: string; description: string }[],
+        colList: JSON.parse(tmpl.columnConfig || "[]") as ColumnDef[],
+      })),
+    [templates],
+  );
+
   // Columns managed separately (toggle-based UI)
   const [columns, setColumns] = useState<ColumnDef[]>(
     DEFAULT_COLUMNS.map((c) => ({ ...c }))
@@ -120,11 +130,7 @@ export default function TemplatesPage() {
   }
 
   useEffect(() => {
-    (async () => {
-      const res = await fetch("/api/templates");
-      const data = await res.json();
-      setTemplates(data.templates || []);
-    })();
+    loadTemplates();
   }, []);
 
   const resetForm = () => {
@@ -665,9 +671,8 @@ export default function TemplatesPage() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {templates.map((tmpl) => {
-            const sheetList: { name: string; description: string }[] = JSON.parse(tmpl.sheetConfig || "[]");
-            const colList: ColumnDef[] = JSON.parse(tmpl.columnConfig || "[]");
+          {parsedTemplates.map((tmpl) => {
+            const { sheetList, colList } = tmpl;
             return (
               <Card key={tmpl.id}>
                 <CardHeader className="flex flex-row items-start justify-between py-4">

@@ -174,24 +174,30 @@ export const POST = withApiHandler<CreateCommentBody>(
       const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
       const linkUrl = `${appUrl}/generate/${jobId}`;
 
-      // 조직 내 멤버 중 멘션된 이름과 일치하는 사용자 조회
-      prisma.organizationMembership
-        .findMany({
-          where: { organizationId: user.organizationId },
+      // DB에서 멘션된 이름을 가진 멤버만 조회 (전체 멤버 로드 방지)
+      Promise.all([
+        prisma.organizationMembership.findMany({
+          where: {
+            organizationId: user.organizationId,
+            userId: { not: user.userId },
+            user: {
+              OR: [
+                { name: { in: mentionedNames } },
+                { email: { in: mentionedNames } },
+              ],
+            },
+          },
           select: { user: { select: { id: true, name: true, email: true } } },
-        })
-        .then(async (memberships) => {
-          const mentioner = await prisma.user.findUnique({
-            where: { id: user.userId },
-            select: { name: true },
-          });
+        }),
+        prisma.user.findUnique({
+          where: { id: user.userId },
+          select: { name: true },
+        }),
+      ])
+        .then(([memberships, mentioner]) => {
           const mentionerName = mentioner?.name ?? user.email;
 
           for (const m of memberships) {
-            const memberName = m.user.name ?? m.user.email;
-            // 본인 제외, 이름이 멘션 목록에 있는 경우
-            if (m.user.id === user.userId) continue;
-            if (!mentionedNames.includes(memberName)) continue;
             // 답글 알림과 중복 방지: 이미 답글 알림을 받은 사용자 스킵
             if (parentComment && m.user.id === parentComment.authorId) continue;
 
