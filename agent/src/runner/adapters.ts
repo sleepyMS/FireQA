@@ -85,7 +85,7 @@ export async function spawnCli(
   return new Promise((resolve, reject) => {
     const child: ChildProcess = spawn(command, args, {
       stdio: ["pipe", "pipe", "pipe"],
-      env: { ...process.env, ...(options?.env ?? {}) },
+      env: options?.env ? { ...process.env, ...options.env } : process.env,
     });
 
     if (stdinPrompt) {
@@ -125,14 +125,18 @@ export async function spawnCli(
       }
     });
 
-    options?.signal?.addEventListener("abort", () => {
+    let killTimer: ReturnType<typeof setTimeout> | undefined;
+    const abortHandler = () => {
       child.kill("SIGTERM");
-      setTimeout(() => {
+      killTimer = setTimeout(() => {
         if (!child.killed) child.kill("SIGKILL");
       }, 5000);
-    });
+    };
+    options?.signal?.addEventListener("abort", abortHandler);
 
     child.on("close", (code) => {
+      clearTimeout(killTimer);
+      options?.signal?.removeEventListener("abort", abortHandler);
       if (buffer.trim()) {
         const parsed = parseStreamJsonLine(buffer.trim());
         if (parsed) {

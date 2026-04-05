@@ -13,7 +13,6 @@ const CLI_OPTIONS = [
   {
     type: "claude",
     label: "Claude Code",
-    command: "claude",
     installUrl: "https://docs.anthropic.com/claude-code",
     loginCmd: "claude auth login",
     startCmd: "npx fireqa-agent start",
@@ -21,7 +20,6 @@ const CLI_OPTIONS = [
   {
     type: "codex",
     label: "Codex CLI",
-    command: "codex",
     installUrl: "https://github.com/openai/codex",
     loginCmd: "codex login",
     startCmd: "npx fireqa-agent start --cli-type codex",
@@ -29,7 +27,6 @@ const CLI_OPTIONS = [
   {
     type: "gemini",
     label: "Gemini CLI",
-    command: "gemini",
     installUrl: "https://github.com/google-gemini/gemini-cli",
     loginCmd: "gemini auth",
     startCmd: "npx fireqa-agent start --cli-type gemini",

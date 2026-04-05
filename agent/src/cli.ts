@@ -2,6 +2,7 @@
 import { Command } from "commander";
 import { ConfigStore } from "./config/store.js";
 import { loginWithApiKey } from "./auth/api-key.js";
+import { CLI_ADAPTERS, type CliType } from "./runner/adapters.js";
 
 const program = new Command();
 const store = new ConfigStore();
@@ -53,12 +54,7 @@ program
   .description("에이전트 시작 — FireQA 작업 큐를 폴링하고 CLI를 실행")
   .option("--cli-type <type>", "사용할 LLM CLI 타입 (claude | codex | gemini)", "claude")
   .action(async (options: { cliType?: string }) => {
-    const validTypes = ["claude", "codex", "gemini"] as const;
-    type CliType = typeof validTypes[number];
-    const cliType = validTypes.includes(options.cliType as CliType)
-      ? (options.cliType as CliType)
-      : "claude";
-    const { CLI_ADAPTERS } = await import("./runner/adapters.js");
+    const cliType = (Object.keys(CLI_ADAPTERS) as CliType[]).find(v => v === options.cliType) ?? "claude";
     store.save({ cliType, cli: CLI_ADAPTERS[cliType].defaultCommand });
     const { startAgent } = await import("./runner/task-poller.js");
     await startAgent(store);
