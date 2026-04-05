@@ -1,6 +1,6 @@
 import { ConfigStore, type AgentConfig } from "../config/store.js";
 import { ApiClient } from "../reporter/api-client.js";
-import { spawnCli } from "./spawner.js";
+import { spawnCli, CLI_ADAPTERS } from "./adapters.js";
 import type { ParsedChunk } from "./output-parser.js";
 import { execSync } from "child_process";
 import { readFileSync } from "fs";
@@ -49,9 +49,11 @@ export async function startAgent(store: ConfigStore): Promise<void> {
     process.exit(1);
   }
 
+  const adapter = CLI_ADAPTERS[config.cliType];
   if (!checkCliInstalled(config.cli)) {
-    console.error(`${config.cli}가 설치되어 있지 않습니다.`);
-    console.error(`설치: npm install -g @anthropic-ai/claude-code`);
+    console.error(`${adapter.label} (${config.cli})가 설치되어 있지 않습니다.`);
+    console.error(`설치: ${adapter.installUrl}`);
+    console.error(`로그인: ${adapter.loginHint}`);
     process.exit(1);
   }
 
@@ -209,7 +211,7 @@ async function executeTask(
   }, 500);
 
   try {
-    const result = await spawnCli(config.cli, task.prompt, {
+    const result = await spawnCli(config.cliType, config.cli, task.prompt, {
       sessionId: task.sessionId ?? undefined,
       mcpTools: task.mcpTools,
       onChunk: (chunk) => { chunkBuffer.push(chunk); },

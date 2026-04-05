@@ -21,6 +21,7 @@ import {
   Activity,
   BarChart2,
   LogOut,
+  Bot,
   FlaskConical,
   Shield,
 } from "lucide-react";
@@ -44,6 +45,7 @@ function buildNavItems(nav: Messages["nav"], orgSlug: string, userRole?: string)
     { label: nav.projects, href: `/${orgSlug}/projects`, icon: FolderOpen },
     { label: nav.templates, href: `/${orgSlug}/templates`, icon: Settings },
     { label: nav.guide, href: `/${orgSlug}/guide`, icon: BookOpen },
+    { label: "에이전트", href: `/${orgSlug}/agent`, icon: Bot },
     { label: nav.testRuns, href: `/${orgSlug}/test-runs`, icon: FlaskConical },
     { label: nav.settings, href: `/${orgSlug}/settings`, icon: Settings2 },
   ];

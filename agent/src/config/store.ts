@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import os from "os";
+import type { CliType } from "../runner/adapters.js";
 
 export type AgentMode = "self_hosted" | "hosted";
 
@@ -9,7 +10,8 @@ export type AgentConfig = {
   auth?: {
     token: string;
   };
-  cli: string;
+  cliType: CliType;
+  cli: string;          // 실행할 명령어 (기본값: cliType의 defaultCommand)
   pollingIntervalMs: number;
   maxConcurrentTasks: number;
   mode: AgentMode;
@@ -17,6 +19,7 @@ export type AgentConfig = {
 
 const DEFAULTS: AgentConfig = {
   server: "https://fireqa.vercel.app",
+  cliType: "claude",
   cli: "claude",
   pollingIntervalMs: 3000,
   maxConcurrentTasks: 1,

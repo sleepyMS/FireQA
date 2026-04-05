@@ -51,7 +51,15 @@ program
 program
   .command("start")
   .description("에이전트 시작 — FireQA 작업 큐를 폴링하고 CLI를 실행")
-  .action(async () => {
+  .option("--cli-type <type>", "사용할 LLM CLI 타입 (claude | codex | gemini)", "claude")
+  .action(async (options: { cliType?: string }) => {
+    const validTypes = ["claude", "codex", "gemini"] as const;
+    type CliType = typeof validTypes[number];
+    const cliType = validTypes.includes(options.cliType as CliType)
+      ? (options.cliType as CliType)
+      : "claude";
+    const { CLI_ADAPTERS } = await import("./runner/adapters.js");
+    store.save({ cliType, cli: CLI_ADAPTERS[cliType].defaultCommand });
     const { startAgent } = await import("./runner/task-poller.js");
     await startAgent(store);
   });
