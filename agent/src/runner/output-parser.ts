@@ -9,12 +9,16 @@ export function parseStreamJsonLine(line: string): ParsedChunk | null {
   try {
     const data = JSON.parse(line);
 
-    if (data.type === "assistant") {
-      if (data.subtype === "text" && data.text) {
-        return { type: "text", content: data.text };
-      }
-      if (data.subtype === "tool_use" && data.tool_name) {
-        return { type: "tool_use", content: data.tool_name, tool: data.tool_name };
+    // Claude stream-json format: {"type":"assistant","message":{"content":[{"type":"text","text":"..."}]}}
+    if (data.type === "assistant" && data.message?.content) {
+      const content: Array<{ type: string; text?: string; name?: string; id?: string }> = data.message.content;
+      for (const block of content) {
+        if (block.type === "text" && block.text) {
+          return { type: "text", content: block.text };
+        }
+        if (block.type === "tool_use" && block.name) {
+          return { type: "tool_use", content: block.name, tool: block.name };
+        }
       }
     }
 
@@ -26,7 +30,7 @@ export function parseStreamJsonLine(line: string): ParsedChunk | null {
       return {
         type: "text",
         content: String(data.result ?? ""),
-        sessionId: data.session_id ?? undefined, // 다음 작업의 --resume에 사용
+        sessionId: data.session_id ?? undefined,
       };
     }
 
