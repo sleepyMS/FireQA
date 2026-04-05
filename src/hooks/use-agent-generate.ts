@@ -7,6 +7,7 @@ type AgentGenerateState = {
   jobId: string | null;
   agentTaskId: string | null;
   error: string | null;
+  isAgentOffline: boolean;
 };
 
 export function useAgentGenerate(url: string) {
@@ -15,10 +16,11 @@ export function useAgentGenerate(url: string) {
     jobId: null,
     agentTaskId: null,
     error: null,
+    isAgentOffline: false,
   });
 
   const submit = async (formData: FormData): Promise<{ jobId: string } | null> => {
-    setState({ isSubmitting: true, jobId: null, agentTaskId: null, error: null });
+    setState({ isSubmitting: true, jobId: null, agentTaskId: null, error: null, isAgentOffline: false });
     formData.set("executionMode", "agent");
 
     try {
@@ -26,25 +28,23 @@ export function useAgentGenerate(url: string) {
       const data = await res.json();
 
       if (!res.ok) {
-        const msg = data.error ?? "에이전트 작업 생성에 실패했습니다.";
-        setState((prev) => ({ ...prev, isSubmitting: false, error: msg }));
+        const isAgentOffline = res.status === 409;
+        const msg = isAgentOffline
+          ? "연결된 에이전트가 없습니다."
+          : (data.error ?? "에이전트 작업 생성에 실패했습니다.");
+        setState((prev) => ({ ...prev, isSubmitting: false, error: msg, isAgentOffline }));
         return null;
       }
 
-      setState({
-        isSubmitting: false,
-        jobId: data.jobId,
-        agentTaskId: data.agentTaskId,
-        error: null,
-      });
+      setState({ isSubmitting: false, jobId: data.jobId, agentTaskId: data.agentTaskId, error: null, isAgentOffline: false });
       return { jobId: data.jobId };
     } catch {
-      setState((prev) => ({ ...prev, isSubmitting: false, error: "요청에 실패했습니다." }));
+      setState((prev) => ({ ...prev, isSubmitting: false, error: "요청에 실패했습니다.", isAgentOffline: false }));
       return null;
     }
   };
 
-  const reset = () => setState({ isSubmitting: false, jobId: null, agentTaskId: null, error: null });
+  const reset = () => setState({ isSubmitting: false, jobId: null, agentTaskId: null, error: null, isAgentOffline: false });
 
   return { ...state, submit, reset };
 }

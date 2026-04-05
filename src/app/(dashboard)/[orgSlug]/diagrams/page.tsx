@@ -168,7 +168,12 @@ export default function DiagramsPage() {
             {agentGenerate.isSubmitting ? "에이전트에 전달 중..." : t.diagrams.generate}
           </Button>
           {agentGenerate.error && (
-            <p className="text-sm text-destructive">{agentGenerate.error}</p>
+            <p className="text-sm text-destructive">
+              {agentGenerate.error}{" "}
+              {agentGenerate.isAgentOffline && (
+                <a href={`/${orgSlug}/account`} className="underline">에이전트 설정하기</a>
+              )}
+            </p>
           )}
         </div>
 

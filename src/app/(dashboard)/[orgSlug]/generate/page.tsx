@@ -367,7 +367,12 @@ export default function GeneratePage() {
               : `"${selectedTemplate?.name || t.nav.templates}" ${t.generation.generateTemplate}`}
           </Button>
           {agentGenerate.error && (
-            <p className="text-sm text-destructive">{agentGenerate.error}</p>
+            <p className="text-sm text-destructive">
+              {agentGenerate.error}{" "}
+              {agentGenerate.isAgentOffline && (
+                <a href={`/${orgSlug}/account`} className="underline">에이전트 설정하기</a>
+              )}
+            </p>
           )}
         </div>
 
