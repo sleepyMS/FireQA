@@ -8,8 +8,6 @@ import SettingsMembers from "./settings-members";
 import SettingsBilling from "./settings-billing";
 import SettingsWebhooks from "./settings-webhooks";
 import SettingsApiKeys from "./settings-api-keys";
-// Phase 4.5: Anthropic 키 관리 및 크레딧 탭 추가
-import SettingsAnthropicKey from "./settings-anthropic-key";
 import SettingsCredits from "./settings-credits";
 
 type TabKey =
@@ -18,8 +16,7 @@ type TabKey =
   | "billing"
   | "credits"
   | "webhooks"
-  | "api-keys"
-  | "anthropic-key";
+  | "api-keys";
 
 const tabFallback = (
   <div className="flex justify-center py-20 text-muted-foreground">
@@ -38,7 +35,6 @@ export function SettingsTabs({ activeTab: initialTab }: { activeTab: TabKey }) {
     { key: "credits", label: "크레딧" },
     { key: "webhooks", label: t.settings.tabs.webhooks },
     { key: "api-keys", label: "API 키" },
-    { key: "anthropic-key", label: "Anthropic 키" },
   ];
 
   return (
@@ -60,8 +56,7 @@ export function SettingsTabs({ activeTab: initialTab }: { activeTab: TabKey }) {
           : activeTab === "billing" ? <SettingsBilling />
           : activeTab === "credits" ? <SettingsCredits />
           : activeTab === "webhooks" ? <SettingsWebhooks />
-          : activeTab === "api-keys" ? <SettingsApiKeys />
-          : <SettingsAnthropicKey />}
+          : <SettingsApiKeys />}
       </Suspense>
     </>
   );
