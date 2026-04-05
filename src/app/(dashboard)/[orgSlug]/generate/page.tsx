@@ -53,7 +53,7 @@ export default function GeneratePage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(
     null
   );
-  const { executionMode, setExecutionMode } = useExecutionMode();
+  const { executionMode } = useExecutionMode();
   const { selectedModel } = useModel();
 
   const sse = useSSE("/api/generate");

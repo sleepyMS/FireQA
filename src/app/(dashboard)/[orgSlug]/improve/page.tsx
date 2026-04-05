@@ -30,7 +30,7 @@ export default function ImprovePage() {
     useState<ProjectSelection | null>(null);
   const [file, setFile] = useState<File | null>(null);
 
-  const { executionMode, setExecutionMode } = useExecutionMode();
+  const { executionMode } = useExecutionMode();
   const { selectedModel } = useModel();
   const sse = useSSE<SpecImproveResult>("/api/improve");
   const agentGenerate = useAgentGenerate("/api/improve");

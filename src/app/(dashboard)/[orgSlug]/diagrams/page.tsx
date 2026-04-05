@@ -28,7 +28,7 @@ export default function DiagramsPage() {
   const [projectSelection, setProjectSelection] =
     useState<ProjectSelection | null>(null);
   const [file, setFile] = useState<File | null>(null);
-  const { executionMode, setExecutionMode } = useExecutionMode();
+  const { executionMode } = useExecutionMode();
   const { selectedModel } = useModel();
 
   const sse = useSSE("/api/diagrams");

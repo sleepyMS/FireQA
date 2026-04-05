@@ -46,7 +46,7 @@ export default function WireframesPage() {
     useState<ProjectSelection | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [screenTypeMode, setScreenTypeMode] = useState<ScreenTypeValue>("auto");
-  const { executionMode, setExecutionMode } = useExecutionMode();
+  const { executionMode } = useExecutionMode();
   const { selectedModel } = useModel();
 
   const sse = useSSE("/api/wireframes");
