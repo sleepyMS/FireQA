@@ -25,47 +25,23 @@ export function ExecutionModeSelector({ value, onChange, disabled, showWarning =
   const { data } = useSWR<AgentStatusResponse>(
     "/api/agent/status",
     fetcher,
-    {
-      refreshInterval: value === "agent" ? 5000 : 15000,
-      revalidateOnFocus: true,
-    }
+    { refreshInterval: value === "agent" ? 5000 : 15000, revalidateOnFocus: true }
   );
 
   const onlineCount = data?.onlineCount ?? null;
-
   const agentOnline = onlineCount !== null && onlineCount > 0;
 
   return (
     <div className="space-y-2">
       <div className="grid grid-cols-2 gap-2">
-        <button
-          type="button"
-          onClick={() => onChange("server")}
-          disabled={disabled}
-          className={cn(
-            "flex items-center gap-2 rounded-lg border-2 p-3 text-left text-sm transition-all",
-            value === "server"
-              ? "border-primary bg-primary/5"
-              : "border-transparent bg-muted/50 hover:bg-muted",
-            disabled && "cursor-not-allowed opacity-50"
-          )}
-        >
-          <Server className={cn("h-5 w-5 shrink-0", value === "server" ? "text-primary" : "text-muted-foreground")} />
-          <div>
-            <p className="font-medium">서버 LLM</p>
-            <p className="text-xs text-muted-foreground">빠른 스트리밍</p>
-          </div>
-        </button>
-
+        {/* 내 에이전트 — 왼쪽 */}
         <button
           type="button"
           onClick={() => onChange("agent")}
           disabled={disabled}
           className={cn(
             "flex items-center gap-2 rounded-lg border-2 p-3 text-left text-sm transition-all",
-            value === "agent"
-              ? "border-primary bg-primary/5"
-              : "border-transparent bg-muted/50 hover:bg-muted",
+            value === "agent" ? "border-primary bg-primary/5" : "border-transparent bg-muted/50 hover:bg-muted",
             disabled && "cursor-not-allowed opacity-50"
           )}
         >
@@ -82,6 +58,24 @@ export function ExecutionModeSelector({ value, onChange, disabled, showWarning =
             </p>
           </div>
         </button>
+
+        {/* 서버 LLM — 오른쪽 */}
+        <button
+          type="button"
+          onClick={() => onChange("server")}
+          disabled={disabled}
+          className={cn(
+            "flex items-center gap-2 rounded-lg border-2 p-3 text-left text-sm transition-all",
+            value === "server" ? "border-primary bg-primary/5" : "border-transparent bg-muted/50 hover:bg-muted",
+            disabled && "cursor-not-allowed opacity-50"
+          )}
+        >
+          <Server className={cn("h-5 w-5 shrink-0", value === "server" ? "text-primary" : "text-muted-foreground")} />
+          <div>
+            <p className="font-medium">서버 LLM</p>
+            <p className="text-xs text-muted-foreground">빠른 스트리밍</p>
+          </div>
+        </button>
       </div>
 
       {showWarning && value === "agent" && !agentOnline && onlineCount !== null && (
@@ -89,9 +83,7 @@ export function ExecutionModeSelector({ value, onChange, disabled, showWarning =
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <p>
             연결된 에이전트가 없습니다.{" "}
-            <a href="./account" className="underline">
-              에이전트 설정
-            </a>
+            <a href="./account" className="underline">에이전트 설정</a>
             에서 먼저 실행하세요.
           </p>
         </div>
