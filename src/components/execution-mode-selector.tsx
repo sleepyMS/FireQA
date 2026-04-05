@@ -8,7 +8,6 @@ import { type ExecutionMode } from "@/hooks/use-execution-mode";
 export type { ExecutionMode };
 
 export interface AgentStatusResponse {
-  online: boolean;
   onlineCount: number;
 }
 

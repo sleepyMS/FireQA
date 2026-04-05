@@ -27,14 +27,14 @@ export default function AccountAI() {
           showWarning={false}
         />
 
-        <div className={executionMode === "server" ? "" : "hidden"}>
-          <p className="text-xs text-muted-foreground mb-2">사용할 모델을 선택하세요.</p>
-          <ModelSelector value={selectedModel} onChange={setSelectedModel} />
-        </div>
+        {executionMode === "server" && (
+          <div>
+            <p className="text-xs text-muted-foreground mb-2">사용할 모델을 선택하세요.</p>
+            <ModelSelector value={selectedModel} onChange={setSelectedModel} />
+          </div>
+        )}
 
-        <div className={executionMode === "agent" ? "" : "hidden"}>
-          <SettingsAgent />
-        </div>
+        {executionMode === "agent" && <SettingsAgent />}
       </CardContent>
     </Card>
   );

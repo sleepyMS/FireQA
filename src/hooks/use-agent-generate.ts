@@ -44,7 +44,5 @@ export function useAgentGenerate(url: string) {
     }
   };
 
-  const reset = () => setState({ isSubmitting: false, jobId: null, agentTaskId: null, error: null, isAgentOffline: false });
-
-  return { ...state, submit, reset };
+  return { ...state, submit };
 }
