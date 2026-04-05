@@ -47,7 +47,7 @@ export function AgentDashboardClient({ orgSlug, initialConnections, initialTasks
   const [isHydrated, setIsHydrated] = useState(false);
   useLayoutEffect(() => {
     mutate(SWR_KEYS.agentDashboard, { connections: initialConnections, tasks: initialTasks }, false);
-    setIsHydrated(true);
+    setIsHydrated(true); // eslint-disable-line react-hooks/set-state-in-effect
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const dashRefresh = useDynamicRefresh<DashboardData>({

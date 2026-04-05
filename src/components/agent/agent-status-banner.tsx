@@ -11,7 +11,7 @@ export function AgentStatusBanner({ orgSlug }: { orgSlug: string }) {
   const [dismissed, setDismissed] = useState(true);
 
   useEffect(() => {
-    if (sessionStorage.getItem(DISMISS_KEY) !== "1") setDismissed(false);
+    if (sessionStorage.getItem(DISMISS_KEY) !== "1") setDismissed(false); // eslint-disable-line react-hooks/set-state-in-effect
   }, []);
 
   function handleDismiss() {

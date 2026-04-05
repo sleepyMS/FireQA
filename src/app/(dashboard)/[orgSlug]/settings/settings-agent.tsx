@@ -118,7 +118,7 @@ function Pm2Guide({ startCmd }: { startCmd: string }) {
           <CodeBlock
             lines={[
               { comment: "pm2 설치 (최초 1회)", cmd: "npm install -g pm2" },
-              { comment: "백그라운드로 에이전트 시작", cmd: `pm2 start "npx fireqa-agent@latest start" --name fireqa-agent` },
+              { comment: "백그라운드로 에이전트 시작", cmd: `pm2 start "${startCmd}" --name fireqa-agent` },
               { comment: "재부팅 후 자동 시작 설정 (선택)", cmd: "pm2 save && pm2 startup" },
             ]}
           />
@@ -202,8 +202,6 @@ export default function SettingsAgent({
   useEffect(() => {
     loadConnections()
       .then((list) => {
-        // 새 에이전트 추가 모드(alwaysStartFresh)에서는 기존 연결과 무관하게 step 1 유지
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         if (!alwaysStartFresh && list.some((c) => c.status === "online")) setStep(4);
       })
       .catch(() => {})
