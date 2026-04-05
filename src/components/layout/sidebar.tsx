@@ -258,7 +258,6 @@ export function Sidebar({ initialMemberships, initialActiveOrgId }: SidebarProps
         className="fixed left-4 top-3 z-50 rounded-md p-2 lg:hidden"
         aria-label={t.nav.mainMenu}
         onClick={() => setMobileOpen(true)}
-        aria-label="메뉴 열기"
       >
         <Menu className="h-5 w-5" />
       </button>
