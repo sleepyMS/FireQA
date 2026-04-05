@@ -1,18 +1,15 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 export type ExecutionMode = "server" | "agent";
 const STORAGE_KEY = "fireqa:executionMode";
 
 export function useExecutionMode() {
-  const [executionMode, setExecutionModeState] = useState<ExecutionMode>("server");
-
-  useEffect(() => {
+  const [executionMode, setExecutionModeState] = useState<ExecutionMode>(() => {
+    if (typeof window === "undefined") return "server";
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved === "server" || saved === "agent") {
-      setExecutionModeState(saved);
-    }
-  }, []);
+    return saved === "server" || saved === "agent" ? saved : "server";
+  });
 
   const setExecutionMode = (value: ExecutionMode) => {
     setExecutionModeState(value);

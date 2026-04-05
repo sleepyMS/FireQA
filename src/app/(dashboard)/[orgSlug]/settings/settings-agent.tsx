@@ -149,6 +149,7 @@ export default function SettingsAgent() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadConnections()
       .then((list) => { if (list.some((c) => c.status === "online")) setStep(4); })
       .catch(() => {})

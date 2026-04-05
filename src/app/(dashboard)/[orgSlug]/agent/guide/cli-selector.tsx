@@ -30,14 +30,6 @@ const CLI_OPTIONS = [
   },
 ] as const;
 
-function CodeBlock({ children }: { children: string }) {
-  return (
-    <pre className="rounded-md bg-zinc-900 p-3 text-sm font-mono text-zinc-100 overflow-x-auto">
-      {children}
-    </pre>
-  );
-}
-
 export function CliSelector() {
   const [selected, setSelected] = useState<"claude" | "codex" | "gemini">("claude");
   const cli = CLI_OPTIONS.find((c) => c.type === selected)!;
