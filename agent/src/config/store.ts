@@ -18,7 +18,7 @@ export type AgentConfig = {
 };
 
 const DEFAULTS: AgentConfig = {
-  server: "https://fireqa.vercel.app",
+  server: "https://fire-qa.vercel.app",
   cliType: "claude",
   cli: "claude",
   pollingIntervalMs: 3000,
