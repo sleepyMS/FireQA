@@ -55,6 +55,15 @@ export async function POST(request: NextRequest) {
   }
 
   if (executionMode === "agent") {
+    // 에이전트 모드 와이어프레임은 Figma에 직접 그리는 것이 유일한 목적이므로
+    // Figma 키가 없으면 작업 자체가 의미 없다. createGenerationJob 이전에 차단하여
+    // 낭비되는 document parse·DB insert·rate-limit 슬롯·고아 Project/Upload를 막는다.
+    if (!figmaFileKey) {
+      return NextResponse.json(
+        { error: "에이전트 모드 와이어프레임 생성은 Figma 파일 키가 필수입니다." },
+        { status: 400 }
+      );
+    }
     const { jobId, parsedText, projectId: pid } = await createGenerationJob(file, projectInput, JobType.WIREFRAMES, {
       userId: user.userId,
       organizationId: user.organizationId,

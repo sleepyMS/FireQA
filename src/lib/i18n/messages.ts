@@ -590,6 +590,7 @@ export interface Messages {
     figmaFileKeyLabel: string;
     figmaFileKeyPlaceholder: string;
     figmaFileKeyHelp: string;
+    figmaFileKeyRequired: string;
   };
   wireframes: {
     pageTitle: string;
@@ -620,6 +621,7 @@ export interface Messages {
     figmaFileKeyLabel: string;
     figmaFileKeyPlaceholder: string;
     figmaFileKeyHelp: string;
+    figmaFileKeyRequired: string;
   };
   improve: {
     pageTitle: string;

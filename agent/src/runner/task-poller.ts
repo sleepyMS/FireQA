@@ -165,32 +165,25 @@ export async function startAgent(store: ConfigStore): Promise<void> {
   }
 }
 
-// Figma MCP (mcp-remote) 가용성 체크: npx 실행 가능 + OAuth 토큰 캐시 존재
-let figmaMcpAvailable: boolean | null = null;
-
-function checkFigmaMcp(_cli: string): boolean {
-  if (figmaMcpAvailable !== null) return figmaMcpAvailable;
-  try {
-    // mcp-remote가 설치/실행 가능한지 확인
-    execSync("npx -y mcp-remote --version 2>/dev/null", { encoding: "utf-8", timeout: 15000 });
-    figmaMcpAvailable = true;
-  } catch {
-    figmaMcpAvailable = false;
-  }
-  return figmaMcpAvailable;
-}
-
 /**
- * Figma MCP 설정을 mcp-remote stdio 프록시 방식으로 반환.
- * --print 모드에서 HTTP MCP 로드 버그 + OAuth 토큰 갱신 버그를 동시에 우회한다.
- * mcp-remote가 ~/.mcp-auth/에 OAuth 토큰을 캐시/갱신한다.
+ * Figma MCP 설정. Claude Code 2.1.92+ 의 --print 모드는 HTTP MCP 서버를
+ * { type: "http", url } 형태로 명시하면 정상 로드한다.
+ *
+ * 과거에는 --print 모드의 HTTP MCP 로드 버그를 우회하기 위해 mcp-remote stdio
+ * 프록시를 썼으나, 두 가지 이유로 폐기했다:
+ *   1) 최신 Claude Code는 HTTP MCP를 직접 지원하므로 우회가 불필요해짐
+ *   2) mcp-remote는 Figma OAuth 서버 dynamic client registration이 HTTP 403으로
+ *      거부되어 더 이상 동작하지 않음 (직접 검증 완료)
+ *
+ * 자식 Claude는 부모 세션의 사용자 레벨 MCP 설정을 상속받지 않으므로 반드시
+ * --mcp-config 로 명시 전달해야 한다 (검증 완료: 미전달 시 mcp_servers 목록에서 누락).
  */
 function getFigmaMcpConfig(): Record<string, unknown> {
   return {
     mcpServers: {
       Figma: {
-        command: "npx",
-        args: ["-y", "mcp-remote", "https://mcp.figma.com/mcp"],
+        type: "http",
+        url: "https://mcp.figma.com/mcp",
       },
     },
   };
@@ -209,16 +202,8 @@ async function executeTask(
     timeoutMs: number;
   }
 ): Promise<void> {
-  // Figma MCP 미설정 감지: figma 도구가 필요한 작업인데 MCP가 없으면 사전 차단
-  const needsFigma = task.mcpTools?.some((t) => t.includes("figma")) &&
-    task.context?.figmaFileKey;
-  if (needsFigma && !checkFigmaMcp(config.cli)) {
-    await api.updateTaskStatus(task.id, "failed", {
-      errorMessage: "Figma MCP를 사용할 수 없습니다. 'npx mcp-remote https://mcp.figma.com/mcp'로 OAuth 인증을 먼저 완료해주세요.",
-    });
-    console.error(`작업 실패: ${task.id} — Figma MCP 미설정`);
-    return;
-  }
+  // figma 작업이면 Figma HTTP MCP를 자식 Claude에 --mcp-config로 주입한다.
+  const needsFigma = task.mcpTools.includes("figma") && task.context?.figmaFileKey;
 
   await api.updateTaskStatus(task.id, "running");
 

@@ -94,16 +94,16 @@ const AGENT_HARNESS_FIGMA = `## 중요 지시
 - JSON 텍스트 출력이 아니라 Figma MCP 도구 호출로 실제 화면을 그려야 한다
 
 ## MCP 도구 사용법
-Figma MCP 도구는 ToolSearch를 통해 발견할 수 있다.
+Figma MCP 도구는 deferred 도구로 등록되어 있어 ToolSearch를 통해 스키마를 가져와야 한다.
 먼저 ToolSearch로 "Figma" 를 검색하여 사용 가능한 Figma MCP 도구 목록을 확인하라.
-주요 도구: mcp__claude_ai_Figma__use_figma, mcp__claude_ai_Figma__generate_diagram, mcp__claude_ai_Figma__get_figjam
-- 와이어프레임/UI 생성: use_figma 도구 사용
-- 다이어그램/플로우차트: generate_diagram 도구 사용
+실제 도구 이름 prefix는 mcp__Figma__ 이다 (예: mcp__Figma__use_figma, mcp__Figma__generate_diagram, mcp__Figma__get_figjam).
+- 와이어프레임/UI 생성: mcp__Figma__use_figma (figma 글로벌 객체로 JS 코드를 실행)
+- 다이어그램/플로우차트: mcp__Figma__generate_diagram
 
 ## 작업 순서 (반드시 따를 것)
 1. ToolSearch로 "Figma" 검색하여 도구 스키마 로드
 2. 기획 문서 분석
-3. Figma MCP 도구를 호출하여 Figma 파일에 직접 요소 생성
+3. mcp__Figma__use_figma 또는 mcp__Figma__generate_diagram 호출로 Figma 파일에 직접 요소 생성
 4. 완료 후 생성한 화면 목록을 텍스트로 요약 출력`;
 
 /**
@@ -123,11 +123,11 @@ export function buildGenerationPrompt(
 
 1. ToolSearch로 "Figma"를 검색하여 Figma MCP 도구 스키마를 로드하라
 2. 아래 기획 문서를 분석하라
-3. Figma MCP 도구(use_figma, generate_diagram 등)를 호출하여 위 파일에 직접 와이어프레임/다이어그램을 생성하라
+3. mcp__Figma__use_figma 도구를 호출(fileKey: "${figmaFileKey}")하여 위 파일에 직접 와이어프레임/다이어그램을 생성하라
 4. 각 화면을 별도 Frame으로 만들고, UI 요소(텍스트, 버튼, 입력 필드 등)를 배치하라
 5. 완료 후 생성한 화면 목록을 텍스트로 요약하라
 
-중요: 절대 JSON 텍스트만 출력하지 마라. 반드시 Figma MCP 도구를 호출하여 실제 Figma 파일에 그려야 한다.`;
+중요: 절대 JSON 텍스트만 출력하지 마라. 반드시 mcp__Figma__use_figma 도구를 호출하여 실제 Figma 파일에 그려야 한다.`;
 
     switch (taskType) {
       case "diagram-generate":

@@ -87,8 +87,11 @@ export default function WireframesPage() {
     setFile(selectedFile);
   };
 
+  const figmaKeyMissing = executionMode === "agent" && !figmaFileKey.trim();
+
   const handleGenerate = async () => {
     if (!file || !projectSelection) return;
+    if (figmaKeyMissing) return;
 
     const formData = new FormData();
     formData.append("file", file);
@@ -284,12 +287,17 @@ export default function WireframesPage() {
           <Button
             className="w-full"
             size="lg"
-            disabled={!file || !projectSelection || sse.isStreaming || agentGenerate.isSubmitting}
+            disabled={!file || !projectSelection || sse.isStreaming || agentGenerate.isSubmitting || figmaKeyMissing}
             onClick={handleGenerate}
           >
             <Smartphone className="mr-2 h-4 w-4" />
             {agentGenerate.isSubmitting ? "에이전트에 전달 중..." : t.wireframes.generate}
           </Button>
+          {figmaKeyMissing && (
+            <p className="text-xs text-muted-foreground">
+              {t.wireframes.figmaFileKeyRequired}
+            </p>
+          )}
           {agentGenerate.error && (
             <p className="text-sm text-destructive">
               {agentGenerate.error}{" "}
