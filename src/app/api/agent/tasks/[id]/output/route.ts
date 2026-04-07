@@ -92,6 +92,8 @@ export async function GET(
           stage: Stage.GENERATING,
           message: chunk.content,
           progress: 0,
+          chunkType: chunk.type,
+          tool: chunk.tool,
         });
       }
       lastChunkCount = existing.length;
@@ -144,6 +146,8 @@ export async function GET(
               stage: Stage.GENERATING,
               message: chunks[i].content,
               progress: 0,
+              chunkType: chunks[i].type,
+              tool: chunks[i].tool,
             });
           }
           lastChunkCount = chunks.length;

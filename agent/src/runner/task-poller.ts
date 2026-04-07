@@ -165,18 +165,35 @@ export async function startAgent(store: ConfigStore): Promise<void> {
   }
 }
 
-// Figma MCP 가용성을 캐싱 (에이전트 수명 동안 유효)
+// Figma MCP (mcp-remote) 가용성 체크: npx 실행 가능 + OAuth 토큰 캐시 존재
 let figmaMcpAvailable: boolean | null = null;
 
-function checkFigmaMcp(cli: string): boolean {
+function checkFigmaMcp(_cli: string): boolean {
   if (figmaMcpAvailable !== null) return figmaMcpAvailable;
   try {
-    const output = execSync(`${cli} mcp list 2>/dev/null`, { encoding: "utf-8", timeout: 5000 });
-    figmaMcpAvailable = output.toLowerCase().includes("figma");
+    // mcp-remote가 설치/실행 가능한지 확인
+    execSync("npx -y mcp-remote --version 2>/dev/null", { encoding: "utf-8", timeout: 15000 });
+    figmaMcpAvailable = true;
   } catch {
-    figmaMcpAvailable = true; // 명령어 실패 시 검증 건너뜀 (soft fail)
+    figmaMcpAvailable = false;
   }
   return figmaMcpAvailable;
+}
+
+/**
+ * Figma MCP 설정을 mcp-remote stdio 프록시 방식으로 반환.
+ * --print 모드에서 HTTP MCP 로드 버그 + OAuth 토큰 갱신 버그를 동시에 우회한다.
+ * mcp-remote가 ~/.mcp-auth/에 OAuth 토큰을 캐시/갱신한다.
+ */
+function getFigmaMcpConfig(): Record<string, unknown> {
+  return {
+    mcpServers: {
+      Figma: {
+        command: "npx",
+        args: ["-y", "mcp-remote", "https://mcp.figma.com/mcp"],
+      },
+    },
+  };
 }
 
 async function executeTask(
@@ -197,7 +214,7 @@ async function executeTask(
     task.context?.figmaFileKey;
   if (needsFigma && !checkFigmaMcp(config.cli)) {
     await api.updateTaskStatus(task.id, "failed", {
-      errorMessage: "Figma MCP가 설정되어 있지 않습니다. 'claude mcp add figma' 명령으로 설정해주세요.",
+      errorMessage: "Figma MCP를 사용할 수 없습니다. 'npx mcp-remote https://mcp.figma.com/mcp'로 OAuth 인증을 먼저 완료해주세요.",
     });
     console.error(`작업 실패: ${task.id} — Figma MCP 미설정`);
     return;
@@ -222,6 +239,7 @@ async function executeTask(
     const result = await spawnCli(config.cliType, config.cli, task.prompt, {
       sessionId: task.sessionId ?? undefined,
       mcpTools: task.mcpTools,
+      mcpConfig: needsFigma ? getFigmaMcpConfig() : undefined,
       model: task.context?.model as string | undefined,
       onChunk: (chunk) => { chunkBuffer.push(chunk); },
       signal: controller.signal,
@@ -232,13 +250,19 @@ async function executeTask(
       await api.sendOutput(task.id, chunkBuffer).catch(() => {});
     }
 
-    if (result.exitCode === 0) {
-      // result 청크에서 sessionId 추출 (세션 연속성: 다음 작업에서 --resume에 사용)
-      const sessionId = result.chunks
-        .filter((c) => c.sessionId)
-        .at(-1)?.sessionId;
+    let resultChunk: typeof result.chunks[0] | undefined;
+    let textFallback = "";
+    for (const c of result.chunks) {
+      if (c.sessionId) resultChunk = c;
+      else if (c.type === "text") textFallback += c.content;
+    }
+    const sessionId = resultChunk?.sessionId;
+    const textOutput = resultChunk?.content ?? textFallback;
 
-      await api.sendResult(task.id, { output: result.fullOutput }, sessionId);
+    // exit 0 또는 SIGTERM(143)이어도 텍스트 출력이 있으면 성공 처리
+    // (SIGTERM: 타임아웃/취소 시그널 후에도 Claude가 이미 출력을 완료한 경우)
+    if (result.exitCode === 0 || (result.exitCode === 143 && textOutput)) {
+      await api.sendResult(task.id, { output: textOutput }, sessionId);
       console.log(`작업 완료: ${task.id}`);
     } else {
       await api.updateTaskStatus(task.id, "failed", {

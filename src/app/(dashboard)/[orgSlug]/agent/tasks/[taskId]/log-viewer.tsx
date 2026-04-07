@@ -1,85 +1,176 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import type { AgentOutputChunk } from "@/types/agent";
 
 interface Props {
   taskId: string;
   initialStatus: string;
-  orgSlug: string;
   initialChunks: AgentOutputChunk[];
+  onDone?: () => void;
 }
 
 const TERMINAL_STATUSES = ["completed", "failed", "cancelled", "timed_out"];
 
-// SSE 이벤트 타입 (createSSEStream 포맷)
-interface SSEStageEvent {
-  type: "stage";
-  stage: string;
-  message: string;
-  progress?: number;
+interface SSEPayload {
+  type: "stage" | "complete" | "error";
+  message?: string;
+  chunkType?: string;
+  tool?: string;
 }
 
-interface SSECompleteEvent {
-  type: "complete";
-  data: unknown;
-  tokenUsage: number;
+/* ─── Tool name → human-readable label ─── */
+
+function getToolDisplay(tool: string): { icon: string; label: string } {
+  const lower = tool.toLowerCase();
+
+  if (lower.includes("figma")) return { icon: "🎨", label: "Figma 작업 중" };
+  if (lower === "read") return { icon: "📖", label: "파일 읽는 중" };
+  if (lower === "write") return { icon: "✏️", label: "파일 작성 중" };
+  if (lower === "edit") return { icon: "✏️", label: "코드 수정 중" };
+  if (lower === "glob") return { icon: "🔍", label: "파일 검색 중" };
+  if (lower === "grep") return { icon: "🔍", label: "내용 검색 중" };
+  if (lower === "bash") return { icon: "⚙️", label: "명령 실행 중" };
+  if (lower === "agent") return { icon: "🤖", label: "서브 에이전트 실행 중" };
+  if (lower === "webfetch" || lower === "web_fetch") return { icon: "🌐", label: "웹 요청 중" };
+  if (lower === "websearch" || lower === "web_search") return { icon: "🌐", label: "웹 검색 중" };
+
+  return { icon: "🔧", label: tool };
 }
 
-interface SSEErrorEvent {
-  type: "error";
-  message: string;
+/* ─── Current phase description ─── */
+
+function getCurrentPhase(
+  events: AgentOutputChunk[],
+  hasText: boolean,
+  done: boolean,
+  errorCount: number,
+): string {
+  if (done) return errorCount > 0 ? "오류로 종료됨" : "생성 완료";
+  if (events.length === 0 && !hasText) return "에이전트 작업 준비 중";
+
+  const lastToolEvent = [...events].reverse().find((e) => e.type === "tool_use");
+  if (lastToolEvent?.tool) return getToolDisplay(lastToolEvent.tool).label;
+  if (hasText) return "📝 내용 생성 중";
+  return "분석 중";
 }
 
-type SSEPayload = SSEStageEvent | SSECompleteEvent | SSEErrorEvent;
+/* ─── Main component ─── */
 
 export function AgentTaskLogViewer({
   taskId,
   initialStatus,
   initialChunks,
+  onDone,
 }: Props) {
-  const [chunks, setChunks] = useState<AgentOutputChunk[]>(initialChunks);
-  const [connecting, setConnecting] = useState(!TERMINAL_STATUSES.includes(initialStatus));
-  const [done, setDone] = useState(TERMINAL_STATUSES.includes(initialStatus));
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
-  // 새 청크 추가 시 자동 스크롤
+  const [eventLines, setEventLines] = useState<AgentOutputChunk[]>(
+    initialChunks.filter((c) => c.type !== "text"),
+  );
+  const [textContent, setTextContent] = useState<string>(
+    initialChunks
+      .filter((c) => c.type === "text")
+      .map((c) => c.content)
+      .join(""),
+  );
+  const [connecting, setConnecting] = useState(
+    !TERMINAL_STATUSES.includes(initialStatus),
+  );
+  const [done, setDone] = useState(TERMINAL_STATUSES.includes(initialStatus));
+  const [cancelling, setCancelling] = useState(false);
+  const [timelineOpen, setTimelineOpen] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+
+  /* ── Elapsed timer ── */
+  useEffect(() => {
+    if (TERMINAL_STATUSES.includes(initialStatus)) return;
+    const start = Date.now();
+    const timer = setInterval(() => {
+      setElapsed((prev) => {
+        const next = Math.floor((Date.now() - start) / 1000);
+        return next === prev ? prev : next;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [initialStatus]);
+
+  /* ── Cancel ── */
+  const handleCancel = useCallback(async () => {
+    setCancelling(true);
+    try {
+      await fetch(`/api/agent/tasks/${taskId}`, { method: "DELETE" });
+      setDone(true);
+      setEventLines((prev) => [
+        ...prev,
+        {
+          type: "error",
+          content: "사용자가 작업을 취소했습니다.",
+          timestamp: new Date().toISOString(),
+        },
+      ]);
+    } catch {
+      setCancelling(false);
+    }
+  }, [taskId]);
+
+  /* ── Auto-scroll ── */
+  const bottomRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chunks]);
+  }, [eventLines, textContent]);
 
-  // SSE 연결 (종료 상태가 아닌 경우에만)
+  /* ── Complete handler ── */
+  const handleComplete = useCallback(() => {
+    setDone(true);
+    if (onDone) {
+      onDone();
+    } else {
+      router.refresh();
+    }
+  }, [router, onDone]);
+
+  /* ── SSE subscription ── */
   useEffect(() => {
     if (TERMINAL_STATUSES.includes(initialStatus)) return;
 
     const es = new EventSource(`/api/agent/tasks/${taskId}/output`);
 
-    es.onopen = () => {
-      setConnecting(false);
-    };
+    es.onopen = () => setConnecting(false);
 
-    // createSSEStream은 named event 없이 'message' 이벤트로 데이터를 전송
     es.onmessage = (event) => {
       try {
-        const payload: SSEPayload = JSON.parse(event.data as string);
-        if (payload.type === "stage") {
-          // stage 이벤트 — content를 text 청크로 추가
-          const newChunk: AgentOutputChunk = {
-            type: "text",
-            content: payload.message,
-            timestamp: new Date().toISOString(),
-          };
-          setChunks((prev) => [...prev, newChunk]);
+        const payload = JSON.parse(event.data as string) as SSEPayload;
+
+        if (payload.type === "stage" && payload.message !== undefined) {
+          const chunkType = payload.chunkType ?? "text";
+
+          if (chunkType === "text") {
+            setTextContent((prev) => prev + payload.message);
+          } else {
+            setEventLines((prev) => [
+              ...prev,
+              {
+                type: chunkType as AgentOutputChunk["type"],
+                content: payload.message!,
+                tool: payload.tool,
+                timestamp: new Date().toISOString(),
+              },
+            ]);
+          }
         } else if (payload.type === "complete") {
-          setDone(true);
+          handleComplete();
           es.close();
         } else if (payload.type === "error") {
-          const errChunk: AgentOutputChunk = {
-            type: "error",
-            content: payload.message,
-            timestamp: new Date().toISOString(),
-          };
-          setChunks((prev) => [...prev, errChunk]);
+          setEventLines((prev) => [
+            ...prev,
+            {
+              type: "error",
+              content: payload.message ?? "오류",
+              timestamp: new Date().toISOString(),
+            },
+          ]);
           setDone(true);
           es.close();
         }
@@ -93,94 +184,254 @@ export function AgentTaskLogViewer({
       es.close();
     };
 
-    return () => {
-      es.close();
-    };
-  }, [taskId, initialStatus]);
+    return () => es.close();
+  }, [taskId, initialStatus, handleComplete]);
+
+  /* ── Derived stats ── */
+  const toolUseCount = eventLines.filter((e) => e.type === "tool_use").length;
+  const toolResultCount = eventLines.filter(
+    (e) => e.type === "tool_result",
+  ).length;
+  const errorCount = eventLines.filter((e) => e.type === "error").length;
+  const textChars = textContent.length;
+
+  const estimatedProgress = useMemo(() => {
+    if (done) return 100;
+    if (toolUseCount === 0 && textChars === 0) return 0;
+    // tool completion pairs → ~60%, text output → ~35%, cap at 95%
+    const pairRatio =
+      toolUseCount > 0 ? Math.min(toolResultCount, toolUseCount) / toolUseCount : 0;
+    const toolPart = pairRatio * 60;
+    const textPart = Math.min(textChars / 5000, 1) * 35;
+    return Math.min(Math.round(toolPart + textPart), 95);
+  }, [done, toolUseCount, toolResultCount, textChars]);
+
+  const currentPhase = getCurrentPhase(
+    eventLines,
+    textContent.length > 0,
+    done,
+    errorCount,
+  );
+
+  const minutes = Math.floor(elapsed / 60);
+  const seconds = elapsed % 60;
+  const timeStr = minutes > 0 ? `${minutes}분 ${seconds}초` : `${seconds}초`;
+
+  const isEmpty = eventLines.length === 0 && !textContent;
+
+  const trimmed = textContent.trim();
+  const isLargeJson = trimmed.length >= 300 && (trimmed.startsWith("{") || trimmed.startsWith("["));
 
   return (
-    <div className="rounded-b-xl bg-zinc-950 overflow-y-auto max-h-[600px] p-4 font-mono text-xs">
-      {/* 연결 중 표시 */}
-      {connecting && (
-        <p className="text-zinc-400 animate-pulse">연결 중...</p>
-      )}
+    <div className="rounded-xl border border-zinc-800 bg-zinc-950 overflow-hidden text-xs font-mono">
+      {/* ── Progress header ── */}
+      {(!done || !isEmpty) && (
+        <div className="border-b border-zinc-800 px-4 py-3 space-y-2">
+          {/* Phase + stats row */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              {!done && (
+                <span className="relative flex h-2 w-2 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+                </span>
+              )}
+              {done && errorCount === 0 && (
+                <span className="text-green-500 shrink-0">✓</span>
+              )}
+              {done && errorCount > 0 && (
+                <span className="text-red-400 shrink-0">✗</span>
+              )}
+              <span
+                className={
+                  done
+                    ? errorCount > 0
+                      ? "text-red-400"
+                      : "text-zinc-400"
+                    : "text-zinc-200 font-medium"
+                }
+              >
+                {currentPhase}
+              </span>
+            </div>
+            <div className="flex items-center gap-3 text-zinc-500 shrink-0">
+              <span>{timeStr} 경과</span>
+              {textChars > 0 && (
+                <span>{(textChars / 1024).toFixed(1)} KB</span>
+              )}
+              {toolUseCount > 0 && (
+                <span>
+                  도구 {toolResultCount}/{toolUseCount}
+                </span>
+              )}
+            </div>
+          </div>
 
-      {/* 로그 없음 상태 */}
-      {!connecting && chunks.length === 0 && !done && initialStatus === "pending" && (
-        <div className="space-y-1">
-          <p className="text-yellow-400">⏳ 에이전트 대기 중...</p>
-          <p className="text-zinc-500 text-[11px]">
-            에이전트가 오프라인이거나 아직 작업을 수령하지 않았습니다.
-            터미널에서 <span className="text-zinc-300">npx fireqa-agent@latest start</span> 를 실행하세요.
-          </p>
+          {/* Progress bar */}
+          <div className="h-1 w-full rounded-full bg-zinc-800 overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-700 ease-out ${
+                done
+                  ? errorCount > 0
+                    ? "bg-red-500"
+                    : "bg-green-500"
+                  : "bg-blue-500"
+              }`}
+              style={{ width: `${estimatedProgress}%` }}
+            />
+          </div>
+
+          {/* Cancel button */}
+          {!done && (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={handleCancel}
+                disabled={cancelling}
+                className="rounded border border-red-600/30 bg-red-600/10 px-3 py-1 text-xs text-red-400 transition-colors hover:bg-red-600/20 disabled:opacity-50"
+              >
+                {cancelling ? "취소 중..." : "작업 취소"}
+              </button>
+            </div>
+          )}
         </div>
       )}
-      {!connecting && chunks.length === 0 && !done && status !== "pending" && (
-        <p className="text-zinc-500">
-          로그가 없습니다. 에이전트가 작업을 시작하면 여기에 출력됩니다.
-        </p>
+
+      {/* ── Tool activity timeline (collapsible) ── */}
+      {eventLines.length > 0 && (
+        <div className="border-b border-zinc-800">
+          <button
+            type="button"
+            onClick={() => setTimelineOpen((v) => !v)}
+            className="flex w-full items-center justify-between px-4 py-2 text-zinc-400 transition-colors hover:text-zinc-300"
+          >
+            <span>
+              {timelineOpen ? "▾" : "▸"} 작업 내역 ({eventLines.length}개)
+            </span>
+            {!timelineOpen && (
+              <LatestEventSummary events={eventLines} />
+            )}
+          </button>
+          {timelineOpen && (
+            <div className="max-h-[300px] space-y-1 overflow-y-auto px-4 pb-3">
+              {eventLines.map((chunk, i) => (
+                <EventLine key={i} chunk={chunk} />
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
-      {/* 대기 중인 경우 (done이지만 청크 없음) */}
-      {!connecting && chunks.length === 0 && done && (
-        <p className="text-zinc-500">에이전트 응답 대기 중...</p>
-      )}
+      {/* ── Text stream ── */}
+      <div className="max-h-[500px] overflow-y-auto px-4 py-3">
+        {connecting && (
+          <p className="animate-pulse text-zinc-500">연결 중...</p>
+        )}
 
-      {/* 로그 라인 */}
-      {chunks.map((chunk, i) => (
-        <LogLine key={i} chunk={chunk} />
-      ))}
+        {!connecting && isEmpty && !done && (
+          <div className="space-y-1">
+            <p className="text-yellow-400">⏳ 에이전트 응답 대기 중...</p>
+            <p className="text-zinc-600">
+              에이전트가 오프라인이면{" "}
+              <span className="text-zinc-400">
+                npx fireqa-agent@latest start
+              </span>{" "}
+              를 실행하세요.
+            </p>
+          </div>
+        )}
 
-      {/* 완료 상태 표시 */}
-      {done && chunks.length > 0 && (
-        <p className="mt-2 text-zinc-500">── 작업 완료 ──</p>
-      )}
+        {textContent && (
+          <>
+            {isLargeJson && done ? (
+              <details className="group">
+                <summary className="cursor-pointer select-none text-zinc-400 hover:text-zinc-300">
+                  📄 결과 JSON ({(textContent.length / 1024).toFixed(1)} KB) —
+                  클릭하여 펼치기
+                </summary>
+                <pre className="mt-2 max-h-[400px] overflow-y-auto whitespace-pre-wrap break-words leading-5 text-green-400">
+                  {textContent}
+                </pre>
+              </details>
+            ) : (
+              <pre className="whitespace-pre-wrap break-words leading-5 text-green-400">
+                {textContent}
+                {!done && (
+                  <span className="animate-pulse text-zinc-400">▌</span>
+                )}
+              </pre>
+            )}
+          </>
+        )}
 
-      {/* 자동 스크롤 앵커 */}
-      <div ref={bottomRef} />
+        {done && !isEmpty && (
+          <p className="mt-3 text-zinc-600">── 완료 ──</p>
+        )}
+
+        <div ref={bottomRef} />
+      </div>
     </div>
   );
 }
 
-function LogLine({ chunk }: { chunk: AgentOutputChunk }) {
+/* ─── Sub-components ─── */
+
+function LatestEventSummary({ events }: { events: AgentOutputChunk[] }) {
+  const last = events[events.length - 1];
+  if (!last) return null;
+
+  const toolName = last.tool ?? last.content;
+  const display = getToolDisplay(toolName);
+
+  return (
+    <span className="ml-4 max-w-[60%] truncate text-right text-zinc-600">
+      최근: {display.icon} {display.label}
+    </span>
+  );
+}
+
+function EventLine({ chunk }: { chunk: AgentOutputChunk }) {
   const timeStr = chunk.timestamp
     ? new Date(chunk.timestamp).toISOString().slice(11, 19)
     : "";
 
   if (chunk.type === "tool_use") {
+    const display = getToolDisplay(chunk.tool ?? chunk.content);
     return (
-      <div className="flex gap-2 leading-5">
-        <span className="text-zinc-600 shrink-0">{timeStr}</span>
+      <div className="flex items-baseline gap-2">
+        <span className="shrink-0 text-zinc-600">{timeStr}</span>
         <span className="text-yellow-400">
-          {"\uD83D\uDD27"} tool: {chunk.tool ?? chunk.content}
+          {display.icon} {display.label}
         </span>
+        {chunk.tool && display.label !== chunk.tool && (
+          <span className="text-[10px] text-zinc-700">({chunk.tool})</span>
+        )}
       </div>
     );
   }
 
   if (chunk.type === "tool_result") {
+    const preview =
+      chunk.content.length > 100
+        ? chunk.content.slice(0, 100) + "…"
+        : chunk.content;
     return (
-      <div className="flex gap-2 leading-5">
-        <span className="text-zinc-600 shrink-0">{timeStr}</span>
-        <span className="text-cyan-400">{"\u2713"} {chunk.content}</span>
+      <div className="flex items-baseline gap-2">
+        <span className="shrink-0 text-zinc-600">{timeStr}</span>
+        <span className="text-cyan-400">✓</span>
+        <span className="truncate text-zinc-500">{preview}</span>
       </div>
     );
   }
 
   if (chunk.type === "error") {
     return (
-      <div className="flex gap-2 leading-5">
-        <span className="text-zinc-600 shrink-0">{timeStr}</span>
-        <span className="text-red-400">{chunk.content}</span>
+      <div className="flex items-baseline gap-2">
+        <span className="shrink-0 text-zinc-600">{timeStr}</span>
+        <span className="text-red-400">✗ {chunk.content}</span>
       </div>
     );
   }
 
-  // type === "text" (기본)
-  return (
-    <div className="flex gap-2 leading-5">
-      <span className="text-zinc-600 shrink-0">{timeStr}</span>
-      <span className="text-green-400 whitespace-pre-wrap break-words">{chunk.content}</span>
-    </div>
-  );
+  return null;
 }

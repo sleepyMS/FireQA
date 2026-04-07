@@ -8,6 +8,7 @@ import { JobStatus } from "@/types/enums";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { CommentSection } from "@/components/comments/comment-section";
 import { ExportButton } from "@/components/ui/export-button";
+import { FigmaCompletion } from "@/components/figma-completion";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { SetCurrentProject } from "@/components/set-current-project";
 
@@ -67,7 +68,15 @@ export default async function DiagramResultPage({
         orgSlug={orgSlug}
       />
 
-      {job.status === JobStatus.COMPLETED && result && (
+      {job.status === JobStatus.COMPLETED && result && result.figma && (
+        <FigmaCompletion
+          description="다이어그램"
+          figmaFileKey={result.figmaFileKey}
+          summary={result.summary}
+        />
+      )}
+
+      {job.status === JobStatus.COMPLETED && result && !result.figma && (
         <>
           <div className="flex flex-wrap gap-2">
             <ExportButton href={`/api/export/mermaid?jobId=${job.id}`} label="Mermaid 다운로드" />

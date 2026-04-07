@@ -56,6 +56,7 @@ export async function handleAgentMode(params: {
       status: AgentTaskStatus.PENDING,
       prompt,
       context: JSON.stringify({ generationJobId: jobId, ...(figmaFileKey ? { figmaFileKey } : {}), ...(model ? { model } : {}) }),
+      ...(figmaFileKey ? { mcpTools: JSON.stringify(["figma"]) } : {}),
       timeoutMs: 600_000, // 10분
     },
     select: { id: true },

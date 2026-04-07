@@ -29,7 +29,13 @@ export const CLI_ADAPTERS: Record<CliType, {
   },
 };
 
-function buildArgs(cliType: CliType, prompt: string, sessionId?: string, model?: string): { args: string[]; stdinPrompt: string | null } {
+const DISALLOWED_TOOLS = ["Skill", "Glob", "Grep", "Read", "Edit", "Write", "Bash", "Agent"] as const;
+
+function buildArgs(cliType: CliType, prompt: string, options?: {
+  sessionId?: string;
+  model?: string;
+  mcpConfig?: Record<string, unknown>;
+}): { args: string[]; stdinPrompt: string | null } {
   switch (cliType) {
     case "claude":
       return {
@@ -37,15 +43,19 @@ function buildArgs(cliType: CliType, prompt: string, sessionId?: string, model?:
           "--print",
           "--output-format", "stream-json",
           "--verbose",
-          ...(model ? ["--model", model] : []),
-          ...(sessionId ? ["--resume", sessionId] : []),
+          "--dangerously-skip-permissions",
+          // ToolSearch 허용 필수: MCP 도구는 deferred로 로드되며 ToolSearch로만 스키마를 가져올 수 있음
+          "--disallowed-tools", DISALLOWED_TOOLS.join(","),
+          ...(options?.mcpConfig ? ["--mcp-config", JSON.stringify(options.mcpConfig)] : []),
+          ...(options?.model ? ["--model", options.model] : []),
+          ...(options?.sessionId ? ["--resume", options.sessionId] : []),
         ],
         stdinPrompt: prompt,
       };
 
     case "codex": {
-      const args = ["exec", "--json", ...(model ? ["--model", model] : [])];
-      if (sessionId) args.push("resume", sessionId, "-");
+      const args = ["exec", "--json", ...(options?.model ? ["--model", options.model] : [])];
+      if (options?.sessionId) args.push("resume", options.sessionId, "-");
       else args.push("-");
       return { args, stdinPrompt: prompt };
     }
@@ -56,9 +66,9 @@ function buildArgs(cliType: CliType, prompt: string, sessionId?: string, model?:
           "--output-format", "stream-json",
           "--approval-mode", "yolo",
           "--sandbox=none",
-          ...(model ? ["--model", model] : []),
+          ...(options?.model ? ["--model", options.model] : []),
           "--prompt", prompt,
-          ...(sessionId ? ["--resume", sessionId] : []),
+          ...(options?.sessionId ? ["--resume", options.sessionId] : []),
         ],
         stdinPrompt: null,
       };
@@ -78,16 +88,27 @@ export async function spawnCli(
   options?: {
     sessionId?: string;
     mcpTools?: string[];
+    mcpConfig?: Record<string, unknown>;
     model?: string;
     onChunk?: (chunk: ParsedChunk) => void;
     signal?: AbortSignal;
     env?: Record<string, string>;
+    cwd?: string;
   }
 ): Promise<SpawnResult> {
-  const { args, stdinPrompt } = buildArgs(cliType, prompt, options?.sessionId, options?.model);
+  const { args, stdinPrompt } = buildArgs(cliType, prompt, {
+    sessionId: options?.sessionId,
+    model: options?.model,
+    mcpConfig: options?.mcpConfig,
+  });
+
+  // 에이전트 시작 디렉토리(=프로젝트)에서 실행: 프로젝트 MCP 설정 접근 가능
+  // --disallowed-tools로 파일 도구는 차단되므로 코드베이스 탐색 불가
+  const cwd = options?.cwd ?? process.cwd();
 
   return new Promise((resolve, reject) => {
     const child: ChildProcess = spawn(command, args, {
+      cwd,
       stdio: ["pipe", "pipe", "pipe"],
       env: options?.env ? { ...process.env, ...options.env } : process.env,
     });

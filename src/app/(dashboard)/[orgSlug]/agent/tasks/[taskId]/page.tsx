@@ -118,7 +118,6 @@ export default async function AgentTaskDetailPage({
               <AgentTaskLogViewer
                 taskId={taskId}
                 initialStatus={task.status}
-                orgSlug={orgSlug}
                 initialChunks={initialChunks}
               />
             </CardContent>

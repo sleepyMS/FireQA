@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -33,9 +33,6 @@ import { useUser } from "@/lib/auth/user-provider";
 import { hasRole } from "@/lib/auth/require-role";
 import { UserRole } from "@/types/enums";
 import { useCurrentProject } from "@/lib/current-project-context";
-
-// 조직별 마지막 방문 프로젝트 캐시 — 모듈 수준 Map으로 클라이언트에만 존재
-const lastProjectPerOrg = new Map<string, string>();
 
 function buildNavItems(nav: Messages["nav"], orgSlug: string, userRole?: string) {
   const items = [
@@ -110,6 +107,7 @@ export function Sidebar({ initialMemberships, initialActiveOrgId }: SidebarProps
   const params = useParams<{ orgSlug?: string }>();
   const orgSlug = params.orgSlug ?? "";
   const [mobileOpen, setMobileOpen] = useState(false);
+  const lastProjectPerOrg = useRef(new Map<string, string>());
   const authUser = useUser();
   const { t } = useLocale();
   const router = useRouter();
@@ -128,11 +126,11 @@ export function Sidebar({ initialMemberships, initialActiveOrgId }: SidebarProps
 
   // 렌더 시점에 캐시 갱신 — 조직별 마지막 프로젝트를 기억
   const resolvedProjectId = urlProjectId ?? contextProjectId ?? null;
-  if (resolvedProjectId && orgSlug && lastProjectPerOrg.get(orgSlug) !== resolvedProjectId) {
-    lastProjectPerOrg.set(orgSlug, resolvedProjectId);
+  if (resolvedProjectId && orgSlug && lastProjectPerOrg.current.get(orgSlug) !== resolvedProjectId) {
+    lastProjectPerOrg.current.set(orgSlug, resolvedProjectId);
   }
   // 다른 조직으로 전환 시 해당 조직의 캐시가 없으면 null → 프로젝트 nav 숨김
-  const currentProjectId = resolvedProjectId ?? lastProjectPerOrg.get(orgSlug) ?? null;
+  const currentProjectId = resolvedProjectId ?? lastProjectPerOrg.current.get(orgSlug) ?? null;
   const projectNavItems = currentProjectId ? buildProjectNavItems(t.nav, currentProjectId, orgSlug) : [];
 
   const navContent = (

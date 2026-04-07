@@ -62,7 +62,6 @@ export function JobStatusDisplay({
           <AgentTaskLogViewer
             taskId={agentTaskId}
             initialStatus={status}
-            orgSlug={orgSlug}
             initialChunks={[]}
           />
         </div>

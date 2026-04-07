@@ -4,11 +4,13 @@ import { useState } from "react";
 import { TabNav } from "@/components/ui/tab-nav";
 import AccountAI from "./account-ai";
 import AccountDanger from "./account-danger";
+import AccountChatTest from "./account-chat-test";
 
-type TabKey = "ai" | "account";
+type TabKey = "ai" | "chat" | "account";
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "ai", label: "AI 실행 방식" },
+  { key: "chat", label: "채팅 테스트" },
   { key: "account", label: "계정" },
 ];
 
@@ -28,7 +30,7 @@ export default function AccountPage() {
         onValueChange={setTab}
       />
 
-      {tab === "ai" ? <AccountAI /> : <AccountDanger />}
+      {tab === "ai" ? <AccountAI /> : tab === "chat" ? <AccountChatTest /> : <AccountDanger />}
     </div>
   );
 }

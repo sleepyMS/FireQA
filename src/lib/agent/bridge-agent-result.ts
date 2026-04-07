@@ -48,6 +48,33 @@ export async function bridgeAgentResult(
     return;
   }
 
+  // Figma MCP 모드: CLI가 Figma에 직접 그렸으므로 JSON 파싱 불필요
+  const hasFigmaKey = !!(context.figmaFileKey);
+  if (hasFigmaKey) {
+    const summary = typeof rawResult === "string"
+      ? (JSON.parse(rawResult)?.output ?? rawResult).substring(0, 2000)
+      : String(rawResult).substring(0, 2000);
+    await completeJob(generationJobId, { figma: true, figmaFileKey: context.figmaFileKey, summary }, 0, auth.userId);
+
+    logActivity({
+      organizationId: auth.organizationId,
+      actorId: auth.userId,
+      action: ActivityAction.GENERATION_COMPLETED,
+      jobId: generationJobId,
+      projectId: generationJob.projectId ?? undefined,
+      metadata: { type: generationJob.type, source: "agent-figma" },
+    });
+
+    createNotification({
+      userId: auth.userId,
+      organizationId: auth.organizationId,
+      type: NotificationType.GENERATION_COMPLETED,
+      title: JOB_TYPE_TITLE[generationJob.type] ?? "생성이 완료되었습니다",
+      linkUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}${JOB_TYPE_PATH[generationJob.type] ?? ""}/${generationJobId}`,
+    });
+    return;
+  }
+
   const parsed = parseTaskResult(taskType, rawResult);
 
   let result: unknown;

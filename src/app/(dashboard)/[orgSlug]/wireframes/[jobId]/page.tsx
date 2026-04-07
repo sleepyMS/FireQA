@@ -7,6 +7,7 @@ import { WireframeResults } from "@/components/wireframes/wireframe-results";
 import { JobStatus } from "@/types/enums";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { CommentSection } from "@/components/comments/comment-section";
+import { FigmaCompletion } from "@/components/figma-completion";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { SetCurrentProject } from "@/components/set-current-project";
 
@@ -62,7 +63,15 @@ export default async function WireframeResultPage({
         orgSlug={orgSlug}
       />
 
-      {job.status === JobStatus.COMPLETED && result && (
+      {job.status === JobStatus.COMPLETED && result && result.figma && (
+        <FigmaCompletion
+          description="와이어프레임"
+          figmaFileKey={result.figmaFileKey}
+          summary={result.summary}
+        />
+      )}
+
+      {job.status === JobStatus.COMPLETED && result && !result.figma && (
         <WireframeResults
           jobId={job.id}
           screens={result.screens || []}

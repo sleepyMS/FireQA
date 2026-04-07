@@ -22,6 +22,7 @@ import { GenerationProgress } from "@/components/generation-progress";
 import { GenerationError } from "@/components/generation-error";
 import { RecentJobsPanel } from "@/components/recent-jobs-panel";
 import { ProjectSelector } from "@/components/projects/project-selector";
+import { AgentTaskLogViewer } from "@/app/(dashboard)/[orgSlug]/agent/tasks/[taskId]/log-viewer";
 import { useLocale } from "@/lib/i18n/locale-provider";
 
 interface Template {
@@ -145,14 +146,31 @@ export default function GeneratePage() {
     }
 
     if (executionMode === "agent") {
-      const res = await agentGenerate.submit(formData);
-      if (res?.jobId) {
-        router.push(`${orgSlug ? `/${orgSlug}` : ""}/generate/${res.jobId}`);
-      }
+      await agentGenerate.submit(formData);
     } else {
       sse.start(formData);
     }
   };
+
+  // 에이전트 모드: 작업 생성 후 인라인 스트리밍 뷰
+  if (agentGenerate.agentTaskId) {
+    return (
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">{t.generation.pageTitle}</h2>
+          <p className="text-muted-foreground">
+            {projectSelection?.name} — 에이전트가 작업 중입니다
+          </p>
+        </div>
+        <AgentTaskLogViewer
+          taskId={agentGenerate.agentTaskId}
+          initialStatus="pending"
+          initialChunks={[]}
+          onDone={() => router.push(`${orgSlug ? `/${orgSlug}` : ""}/generate/${agentGenerate.jobId}`)}
+        />
+      </div>
+    );
+  }
 
   // 스트리밍 중이면 진행상태 표시
   if (sse.isStreaming) {
